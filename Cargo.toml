@@ -1,0 +1,6 @@
+[package]
+name = "scout"
+version = "0.1.0"
+authors = ["Juan Hernández <juan.hernandez.babon@gmail.com>"]
+
+[dependencies]
