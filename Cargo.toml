@@ -6,3 +6,4 @@ authors = ["Juan Hernández <juan.hernandez.babon@gmail.com>"]
 [dependencies]
 termios = "*"
 termion = "*"
+regex   = "*"

@@ -1,5 +1,15 @@
+// TODO: Clean code, please
+// TODO: Check types used. Try to minimize thee memory used (check lazy_static)
+// TODO: Add more tests.
+// TODO: Add command line options: --help, --version
+// TODO: Handle empty imput
+// TODO: Better UI. Colors? Num of matches?
+// TODO: Try to do the fuzzy search async?
 extern crate termios;
 extern crate termion;
+extern crate regex;
+
+pub mod fuzzy;
 
 use termios::{Termios, TCSANOW, ECHO, ICANON, tcsetattr};
 use termion::event::Key;
@@ -10,10 +20,10 @@ use std::io::{Read, Write};
 use std::os::unix::io::AsRawFd;
 
 fn magic() -> Result<String, io::Error> {
-    println!("The magic begins");
-
-    let mut input = String::new();
-    try!(io::stdin().read_to_string(&mut input));
+    // Collect initial input
+    let mut buffer = String::new();
+    try!(io::stdin().read_to_string(&mut buffer));
+    let input: Vec<&str> = buffer.split("\n").collect();
 
     // I need to transform tty into raw mode to get chars byte by byte.
     // Check termios crate
@@ -34,19 +44,28 @@ fn magic() -> Result<String, io::Error> {
     let mut buffer: Vec<u8> = Vec::with_capacity(2);
 
     'event: loop {
-        write!(&mut screen, "{}{}", termion::clear::All, termion::cursor::Goto(1, 0)).unwrap();
-
         let s: String = query.iter().cloned().collect();
+        let query_chars: Vec<char> = query.iter().cloned().collect();
+        let suggestions = fuzzy::finder(&input, &query_chars);
+
         write!(
             &mut screen,
-            "{}{}> {}\n{}{}",
+            "{}{}> {}\n",
             termion::clear::All,
             termion::cursor::Goto(1, 1),
             s,
-            input,
+        ).unwrap();
+
+        for item in suggestions.iter().take(21).cloned() {
+            writeln!(&mut screen, "{}", item).unwrap();
+        }
+
+        write!(
+            &mut screen,
+            "{}",
             termion::cursor::Goto((s.len() + 3) as u16, 1),
         ).unwrap();
-        // writeln!(&mut screen, "{}{}", input, termion::cursor::Goto(1, 0)).unwrap();
+
         screen.flush().unwrap();
 
         // Some chars are 2 bytes at a time, so better
@@ -81,7 +100,10 @@ fn magic() -> Result<String, io::Error> {
                     let _ = query.pop();
                 },
                 Key::Char('\n') => {
-                    result = query.iter().cloned().collect();
+                    // result = query.iter().cloned().collect();
+                    if let Some(&choice) = suggestions.first() {
+                        result = String::from(choice);
+                    }
                     break 'event
                 },
                 Key::Char(c) => {
