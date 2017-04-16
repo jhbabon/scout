@@ -5,7 +5,6 @@
 // TODO: Better UI. Colors? Num of matches?
 // TODO: Try to do the fuzzy search async?
 extern crate scout;
-extern crate rustc_serialize;
 extern crate docopt;
 extern crate termios;
 extern crate termion;
@@ -34,14 +33,8 @@ Options:
   -v --version   Show version.
 
 Example:
-  ls | scout
+  $ ls | scout
 ";
-
-#[derive(Debug, RustcDecodable)]
-struct Args {
-    flag_help: bool,
-    flag_version: bool,
-}
 
 fn magic() -> Result<String, io::Error> {
     // Collect initial input
@@ -146,13 +139,13 @@ fn magic() -> Result<String, io::Error> {
 }
 
 pub fn main() {
-    let argv: Vec<String> = env::args().collect();
-    let _args: Args = docopt::Docopt::new(USAGE).and_then(|d| {
-        d.argv(argv)
-            .options_first(true)
-            .version(Some(scout::version()))
-            .decode()
-    }).unwrap_or_else(|e| e.exit());;
+    docopt::Docopt::new(USAGE)
+        .and_then(|doc| {
+            doc.argv(env::args())
+                .version(Some(scout::version()))
+                .parse()
+        })
+        .unwrap_or_else(|e| e.exit());;
 
     match magic() {
         Ok(result) => println!("{}", result),
