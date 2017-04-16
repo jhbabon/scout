@@ -1,7 +1,6 @@
 // TODO: Clean code, please
 // TODO: Check types used. Try to minimize the memory used
 // TODO: Add more tests.
-// TODO: Handle empty imput
 // TODO: Better UI. Colors? Num of matches?
 // TODO: Try to do the fuzzy search async?
 extern crate scout;
@@ -40,7 +39,10 @@ fn magic() -> Result<String, io::Error> {
     // Collect initial input
     let mut buffer = String::new();
     try!(io::stdin().read_to_string(&mut buffer));
-    let input: Vec<&str> = buffer.split("\n").collect();
+    let input: Vec<&str> = buffer.split("\n")
+        .filter(|s| !s.is_empty())
+        .collect();
+    let width = format!("{}", input.len()).len();
 
     // I need to transform tty into raw mode to get chars byte by byte.
     // Check termios crate
@@ -65,23 +67,23 @@ fn magic() -> Result<String, io::Error> {
         let query_chars: Vec<char> = query.iter().cloned().collect();
         let suggestions = scout::explore(&input, &query_chars);
 
-        write!(
+        // Clear the screen and put the cursor at the beginning
+        writeln!(
             &mut screen,
-            "{}{}> {}\n",
+            "{}{}",
             termion::clear::All,
             termion::cursor::Goto(1, 1),
-            s,
         ).unwrap();
 
+        // Print all the suggestions
         for item in suggestions.iter().take(21).cloned() {
             writeln!(&mut screen, "{}", item).unwrap();
         }
 
-        write!(
-            &mut screen,
-            "{}",
-            termion::cursor::Goto((s.len() + 3) as u16, 1),
-        ).unwrap();
+        // Go to the beginning again and redraw the prompt.
+        // This will put the cursor at the end of it
+        let prompt = format!("{:width$} > {}", suggestions.len(), s, width = width);
+        write!(&mut screen, "{}{}", termion::cursor::Goto(1, 1), prompt).unwrap();
 
         screen.flush().unwrap();
 
@@ -126,9 +128,7 @@ fn magic() -> Result<String, io::Error> {
                 Key::Char(c) => {
                     query.push(c as char);
                 },
-                _ => {
-                    query.push('?');
-                },
+                _ => {},
             }
         }
     };
