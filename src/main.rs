@@ -1,5 +1,5 @@
 // TODO: Clean code, please
-// TODO: Check types used. Try to minimize thee memory used (check lazy_static)
+// TODO: Check types used. Try to minimize the memory used
 // TODO: Add more tests.
 // TODO: Add command line options: --help, --version
 // TODO: Handle empty imput
