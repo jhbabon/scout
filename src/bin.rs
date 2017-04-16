@@ -1,23 +1,47 @@
 // TODO: Clean code, please
 // TODO: Check types used. Try to minimize the memory used
 // TODO: Add more tests.
-// TODO: Add command line options: --help, --version
 // TODO: Handle empty imput
 // TODO: Better UI. Colors? Num of matches?
 // TODO: Try to do the fuzzy search async?
+extern crate scout;
+extern crate rustc_serialize;
+extern crate docopt;
 extern crate termios;
 extern crate termion;
-extern crate regex;
 
-pub mod fuzzy;
+use std::env;
 
 use termios::{Termios, TCSANOW, ECHO, ICANON, tcsetattr};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::screen::*;
-use std::{fs, io};
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 use std::os::unix::io::AsRawFd;
+
+const USAGE: &'static str = "
+Scout: Small fuzzy finder
+
+This program expects a list of items in the
+standard input, so it is better to use it
+with pipes.
+
+Usage:
+  scout [options]
+
+Options:
+  -h --help      Show this screen.
+  -v --version   Show version.
+
+Example:
+  ls | scout
+";
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    flag_help: bool,
+    flag_version: bool,
+}
 
 fn magic() -> Result<String, io::Error> {
     // Collect initial input
@@ -28,7 +52,7 @@ fn magic() -> Result<String, io::Error> {
     // I need to transform tty into raw mode to get chars byte by byte.
     // Check termios crate
     // see: http://stackoverflow.com/a/37416107
-    let tty = try!(fs::OpenOptions::new().read(true).write(true).open("/dev/tty"));
+    let tty = termion::get_tty().unwrap();
     let fd = tty.as_raw_fd();
     let original_tty = Termios::from_fd(fd).unwrap();
     let mut new_tty = original_tty.clone();  // make a mutable copy of termios
@@ -46,7 +70,7 @@ fn magic() -> Result<String, io::Error> {
     'event: loop {
         let s: String = query.iter().cloned().collect();
         let query_chars: Vec<char> = query.iter().cloned().collect();
-        let suggestions = fuzzy::finder(&input, &query_chars);
+        let suggestions = scout::explore(&input, &query_chars);
 
         write!(
             &mut screen,
@@ -79,7 +103,7 @@ fn magic() -> Result<String, io::Error> {
         // junk.
         //
         // If the amount is 2, put both in the buffer
-        match screen.read(&mut int_buffer) { 
+        match screen.read(&mut int_buffer) {
             Ok(1) => {
                 buffer.push(int_buffer[0])
             },
@@ -121,7 +145,15 @@ fn magic() -> Result<String, io::Error> {
     Ok(result)
 }
 
-fn main() {
+pub fn main() {
+    let argv: Vec<String> = env::args().collect();
+    let _args: Args = docopt::Docopt::new(USAGE).and_then(|d| {
+        d.argv(argv)
+            .options_first(true)
+            .version(Some(scout::version()))
+            .decode()
+    }).unwrap_or_else(|e| e.exit());;
+
     match magic() {
         Ok(result) => println!("{}", result),
         Err(e) => println!("{:?}", e),

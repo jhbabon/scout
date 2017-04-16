@@ -1,8 +1,10 @@
+extern crate regex;
+
 use regex::Regex;
 
 // Idea taken from:
 //   http://blog.amjith.com/fuzzyfinder-in-10-lines-of-python
-pub fn finder<'a>(list: &'a [&'a str], query: &'a [char]) -> Vec<&'a str> {
+pub fn explore<'a>(list: &'a [&'a str], query: &'a [char]) -> Vec<&'a str> {
     let pattern: String = query.iter()
                         .map(|ch| format!("(?i){}.*?", ch)) // (?i) for case insensitive
                         .collect();
@@ -17,6 +19,18 @@ pub fn finder<'a>(list: &'a [&'a str], query: &'a [char]) -> Vec<&'a str> {
 
     suggestions.sort();
     suggestions.iter().map(|&(_, _, item)| item).collect()
+}
+
+/// Get the version of the program.
+pub fn version() -> String {
+    let (maj, min, pat) = (option_env!("CARGO_PKG_VERSION_MAJOR"),
+                           option_env!("CARGO_PKG_VERSION_MINOR"),
+                           option_env!("CARGO_PKG_VERSION_PATCH"));
+
+    match (maj, min, pat) {
+        (Some(maj), Some(min), Some(pat)) => format!("{}.{}.{}", maj, min, pat),
+        _ => "".to_string(),
+    }
 }
 
 #[cfg(test)]
@@ -39,7 +53,7 @@ mod tests {
             "/some/deeper/path/users.rs",
         ];
 
-        assert_eq!(expected, finder(&LIST, &query));
+        assert_eq!(expected, explore(&LIST, &query));
     }
 
     #[test]
@@ -51,7 +65,7 @@ mod tests {
             "/some/deeper/path/users.rs",
         ];
 
-        assert_eq!(expected, finder(&LIST, &query));
+        assert_eq!(expected, explore(&LIST, &query));
     }
 
     #[test]
@@ -59,6 +73,6 @@ mod tests {
         let query = [];
         let expected: Vec<&str> = LIST.iter().map(|&s| s).collect();
 
-        assert_eq!(expected, finder(&LIST, &query));
+        assert_eq!(expected, explore(&LIST, &query));
     }
 }

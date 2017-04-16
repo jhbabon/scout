@@ -2,8 +2,25 @@
 name = "scout"
 version = "0.1.0"
 authors = ["Juan Hernández <juan.hernandez.babon@gmail.com>"]
+description = "Small fuzzy finder for the command line"
+homepage = "https://github.com/jhbabon/scout"
+repository = "https://github.com/jhbabon/scout"
+readme = "README.md"
+keywords = ["scout", "fuzzy", "fuzzyfinder", "cli"]
+license = "MIT"
+
+[lib]
+name = "scout"
+path = "src/lib.rs"
+
+[[bin]]
+name = "scout"
+path = "src/bin.rs"
+doc = false
 
 [dependencies]
-termios = "*"
-termion = "*"
-regex   = "*"
+termios = "0.2"
+termion = "1.3"
+regex   = "0.2"
+docopt  = "0.7"
+rustc-serialize = "0.3"
