@@ -14,7 +14,7 @@ use termios::{Termios, TCSANOW, ECHO, ICANON, tcsetattr};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::screen::*;
-use termion::color;
+use termion::{color, style};
 use std::io::{self, Read, Write};
 use std::os::unix::io::AsRawFd;
 
@@ -78,7 +78,7 @@ fn magic() -> Result<String, io::Error> {
         ).unwrap();
 
         // Print all the choices
-        for choice in choices.iter().take(21).cloned() {
+        for (i, choice) in choices.iter().take(21).cloned().enumerate() {
             // Split the string in different areas
             // to highlight the matching part
             let string = choice.to_string();
@@ -89,15 +89,20 @@ fn magic() -> Result<String, io::Error> {
                 rest.split_at(choice.end())
             };
 
-            writeln!(
-                &mut screen,
+            let line = format!(
                 "{before}{highlight}{middle}{reset}{after}",
                 before = before,
-                highlight = color::Fg(color::Red),
+                highlight = color::Fg(color::LightGreen),
                 middle = middle,
                 reset = color::Fg(color::Reset),
                 after = after
-            ).unwrap();
+            );
+
+            if i == 0 {
+                writeln!(&mut screen, "{}{}{}", style::Invert, line, style::Reset).unwrap();
+            } else {
+                writeln!(&mut screen, "{}", line).unwrap();
+            }
         }
 
         // Go to the beginning again and redraw the prompt.
