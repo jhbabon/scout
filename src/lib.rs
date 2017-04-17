@@ -29,6 +29,14 @@ impl<'b, 'a> Choice<'a> {
     pub fn from(string: &'a str) -> Choice<'a> {
         Choice { string: string, ..Default::default() }
     }
+
+    pub fn start(&self) -> usize {
+        self.subrank
+    }
+
+    pub fn end(&self) -> usize {
+        self.rank + self.subrank
+    }
 }
 
 impl<'a> fmt::Display for Choice<'a> {

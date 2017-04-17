@@ -14,6 +14,7 @@ use termios::{Termios, TCSANOW, ECHO, ICANON, tcsetattr};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::screen::*;
+use termion::color;
 use std::io::{self, Read, Write};
 use std::os::unix::io::AsRawFd;
 
@@ -78,7 +79,25 @@ fn magic() -> Result<String, io::Error> {
 
         // Print all the choices
         for choice in choices.iter().take(21).cloned() {
-            writeln!(&mut screen, "{}", choice).unwrap();
+            // Split the string in different areas
+            // to highlight the matching part
+            let string = choice.to_string();
+            let (before, rest) = string.split_at(choice.start());
+            let (middle, after) = if rest.len() <= choice.end() {
+                (rest, "")
+            } else {
+                rest.split_at(choice.end())
+            };
+
+            writeln!(
+                &mut screen,
+                "{before}{highlight}{middle}{reset}{after}",
+                before = before,
+                highlight = color::Fg(color::Red),
+                middle = middle,
+                reset = color::Fg(color::Reset),
+                after = after
+            ).unwrap();
         }
 
         // Go to the beginning again and redraw the prompt.
@@ -149,6 +168,6 @@ pub fn main() {
 
     match magic() {
         Ok(result) => println!("{}", result),
-        Err(e) => println!("{:?}", e),
+        Err(e) => panic!(e),
     }
 }
