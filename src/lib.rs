@@ -1,6 +1,37 @@
 extern crate regex;
 
+use std::fmt;
 use regex::Regex;
+
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
+pub struct Choice<'a> {
+    rank: usize,
+    subrank: usize,
+    string: &'a str,
+}
+
+impl<'b, 'a> Choice<'a> {
+    pub fn build(re: &'b Regex, string: &'a str) -> Option<Choice<'a>> {
+        match re.find(string) {
+            Some(matching) => {
+                let choice = Choice {
+                    rank: matching.as_str().len(),
+                    subrank: matching.start(),
+                    string: string,
+                };
+
+                Some(choice)
+            },
+            None => None
+        }
+    }
+}
+
+impl<'a> fmt::Display for Choice<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.string)
+    }
+}
 
 /// Get the version of the program.
 pub fn version() -> String {
@@ -16,19 +47,19 @@ pub fn version() -> String {
 
 // Idea taken from:
 //   http://blog.amjith.com/fuzzyfinder-in-10-lines-of-python
-pub fn explore<'a>(list: &'a [&'a str], query: &'a [char]) -> Vec<&'a str> {
+pub fn explore<'a>(list: &'a [&'a str], query: &'a [char]) -> Vec<Choice<'a>> {
     let pattern = build_pattern(query);
     let re = Regex::new(&pattern).unwrap();
 
-    let mut suggestions: Vec<(usize, usize, &str)> = list.iter()
-        .map(|item| (re.find(item), *item))
-        .filter(|tup| tup.0.is_some())
-        .map(|(m, item)| (m.unwrap(), item))
-        .map(|(m, item)| (m.as_str().len(), m.start(), item))
+    let mut choices: Vec<Choice> = list.iter()
+        .map(|string| Choice::build(&re, string))
+        .filter(|choice| choice.is_some())
+        .map(|choice| choice.unwrap())
         .collect();
 
-    suggestions.sort();
-    suggestions.iter().map(|&(_, _, item)| item).collect()
+    choices.sort();
+
+    choices
 }
 
 fn build_pattern<'a>(query: &'a [char]) -> String {
@@ -43,10 +74,11 @@ fn build_pattern<'a>(query: &'a [char]) -> String {
 mod tests {
     use super::*;
 
-    const LIST: [&'static str; 6] = [
+    const LIST: [&'static str; 7] = [
         "/some/deeper/path/users.rs",
         "/some/path/api_user.rs",
         "/some/path/user_group.rs",
+        "/some/path/use_remote.rs",
         "foobar.rs",
         "reserved?*.rs",
         "ßℝ💣",
@@ -56,9 +88,10 @@ mod tests {
     fn it_gets_best_matches() {
         let query = ['u', 's', 'r'];
         let expected = vec![
-            "/some/path/user_group.rs",
-            "/some/path/api_user.rs",
-            "/some/deeper/path/users.rs",
+            Choice { rank: 4, subrank: 11, string: "/some/path/user_group.rs" },
+            Choice { rank: 4, subrank: 15, string: "/some/path/api_user.rs" },
+            Choice { rank: 4, subrank: 18, string: "/some/deeper/path/users.rs" },
+            Choice { rank: 5, subrank: 11, string: "/some/path/use_remote.rs" },
         ];
 
         assert_eq!(expected, explore(&LIST, &query));
@@ -68,9 +101,10 @@ mod tests {
     fn it_is_case_insensitive() {
         let query = ['U', 's', 'R'];
         let expected = vec![
-            "/some/path/user_group.rs",
-            "/some/path/api_user.rs",
-            "/some/deeper/path/users.rs",
+            Choice { rank: 4, subrank: 11, string: "/some/path/user_group.rs" },
+            Choice { rank: 4, subrank: 15, string: "/some/path/api_user.rs" },
+            Choice { rank: 4, subrank: 18, string: "/some/deeper/path/users.rs" },
+            Choice { rank: 5, subrank: 11, string: "/some/path/use_remote.rs" },
         ];
 
         assert_eq!(expected, explore(&LIST, &query));
@@ -80,7 +114,7 @@ mod tests {
     fn it_takes_reserved_chars() {
         let query = ['?', '*', '.'];
         let expected = vec![
-            "reserved?*.rs"
+            Choice { rank: 3, subrank: 8, string: "reserved?*.rs" }
         ];
 
         assert_eq!(expected, explore(&LIST, &query));
@@ -90,7 +124,7 @@ mod tests {
     fn it_takes_special_chars() {
         let query = ['ß', '💣'];
         let expected = vec![
-            "ßℝ💣"
+            Choice { rank: 9, subrank: 0, string: "ßℝ💣" }
         ];
 
         assert_eq!(expected, explore(&LIST, &query));
@@ -99,8 +133,7 @@ mod tests {
     #[test]
     fn it_returns_the_same_on_empty_query() {
         let query = [];
-        let expected: Vec<&str> = LIST.iter().map(|&s| s).collect();
 
-        assert_eq!(expected, explore(&LIST, &query));
+        assert_eq!(LIST.len(), explore(&LIST, &query).len());
     }
 }

@@ -65,7 +65,7 @@ fn magic() -> Result<String, io::Error> {
     'event: loop {
         let s: String = query.iter().cloned().collect();
         let query_chars: Vec<char> = query.iter().cloned().collect();
-        let suggestions = scout::explore(&input, &query_chars);
+        let choices = scout::explore(&input, &query_chars);
 
         // Clear the screen and put the cursor at the beginning
         writeln!(
@@ -75,14 +75,14 @@ fn magic() -> Result<String, io::Error> {
             termion::cursor::Goto(1, 1),
         ).unwrap();
 
-        // Print all the suggestions
-        for item in suggestions.iter().take(21).cloned() {
-            writeln!(&mut screen, "{}", item).unwrap();
+        // Print all the choices
+        for choice in choices.iter().take(21).cloned() {
+            writeln!(&mut screen, "{}", choice).unwrap();
         }
 
         // Go to the beginning again and redraw the prompt.
         // This will put the cursor at the end of it
-        let prompt = format!("{:width$} > {}", suggestions.len(), s, width = width);
+        let prompt = format!("{:width$} > {}", choices.len(), s, width = width);
         write!(&mut screen, "{}{}", termion::cursor::Goto(1, 1), prompt).unwrap();
 
         screen.flush().unwrap();
@@ -119,9 +119,8 @@ fn magic() -> Result<String, io::Error> {
                     let _ = query.pop();
                 },
                 Key::Char('\n') => {
-                    // result = query.iter().cloned().collect();
-                    if let Some(&choice) = suggestions.first() {
-                        result = String::from(choice);
+                    if let Some(choice) = choices.first() {
+                        result = choice.to_string();
                     }
                     break 'event
                 },
