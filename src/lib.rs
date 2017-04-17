@@ -15,7 +15,7 @@ impl<'b, 'a> Choice<'a> {
         match re.find(string) {
             Some(matching) => {
                 let choice = Choice {
-                    rank: matching.as_str().len(),
+                    rank: matching.end() - matching.start(),
                     subrank: matching.start(),
                     string: string,
                 };
@@ -24,6 +24,10 @@ impl<'b, 'a> Choice<'a> {
             },
             None => None
         }
+    }
+
+    pub fn from(string: &'a str) -> Choice<'a> {
+        Choice { string: string, ..Default::default() }
     }
 }
 
@@ -47,7 +51,15 @@ pub fn version() -> String {
 
 // Idea taken from:
 //   http://blog.amjith.com/fuzzyfinder-in-10-lines-of-python
+//
+// TODO: Return Result to handle errors
 pub fn explore<'a>(list: &'a [&'a str], query: &'a [char]) -> Vec<Choice<'a>> {
+    if query.is_empty() {
+        return list.into_iter()
+            .map(|string| Choice::from(string))
+            .collect::<Vec<Choice>>()
+    }
+
     let pattern = build_pattern(query);
     let re = Regex::new(&pattern).unwrap();
 
@@ -133,7 +145,15 @@ mod tests {
     #[test]
     fn it_returns_the_same_on_empty_query() {
         let query = [];
+        let list = LIST;
+        let expected: Vec<String> = list.iter()
+            .map(|&s| String::from(s))
+            .collect();
 
-        assert_eq!(LIST.len(), explore(&LIST, &query).len());
+        let choices: Vec<String> = explore(&list, &query).iter()
+            .map(|choice| choice.to_string())
+            .collect();
+
+        assert_eq!(expected, choices);
     }
 }
