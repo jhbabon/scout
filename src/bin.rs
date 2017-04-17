@@ -40,6 +40,7 @@ fn magic() -> Result<String, io::Error> {
     let mut buffer = String::new();
     try!(io::stdin().read_to_string(&mut buffer));
     let input: Vec<&str> = buffer.split("\n")
+        .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
     let width = format!("{}", input.len()).len();
