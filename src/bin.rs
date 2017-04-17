@@ -45,6 +45,7 @@ fn magic() -> Result<String, io::Error> {
         .filter(|s| !s.is_empty())
         .collect();
     let width = format!("{}", input.len()).len();
+    let mut selection = 0; // current selected item
 
     // I need to transform tty into raw mode to get chars byte by byte.
     // Check termios crate
@@ -62,7 +63,7 @@ fn magic() -> Result<String, io::Error> {
     let mut screen = AlternateScreen::from(tty);
     let mut result = String::new();
     let mut query: Vec<char> = vec![];
-    let mut buffer: Vec<u8> = Vec::with_capacity(2);
+    let mut buffer: Vec<u8> = vec![];
 
     'event: loop {
         let s: String = query.iter().cloned().collect();
@@ -98,7 +99,7 @@ fn magic() -> Result<String, io::Error> {
                 after = after
             );
 
-            if i == 0 {
+            if i == selection {
                 writeln!(&mut screen, "{}{}{}", style::Invert, line, style::Reset).unwrap();
             } else {
                 writeln!(&mut screen, "{}", line).unwrap();
@@ -112,9 +113,9 @@ fn magic() -> Result<String, io::Error> {
 
         screen.flush().unwrap();
 
-        // Some chars are 2 bytes at a time, so better
-        // to read 2 by 2. E.g: Arrow keys
-        let mut int_buffer = [0;2];
+        // Read a maximum of 3 bytes to handle special keys like
+        // Up and Down arrow keys
+        let mut int_buffer = [0;3];
         buffer.clear();
         // Ensure that we read 2 bytes in an intermediate buffer
         //
@@ -124,13 +125,9 @@ fn magic() -> Result<String, io::Error> {
         //
         // If the amount is 2, put both in the buffer
         match screen.read(&mut int_buffer) {
-            Ok(1) => {
-                buffer.push(int_buffer[0])
+            Ok(n) => {
+                buffer = int_buffer.iter().take(n).map(|&x| x).collect()
             },
-            Ok(2) => {
-                buffer = int_buffer.iter().map(|&x| x).collect()
-            }
-            Ok(_) => {},
             Err(_) => {}
         };
 
@@ -139,19 +136,45 @@ fn magic() -> Result<String, io::Error> {
         // to read and transform those bytes into proper keys
         for c in buffer.keys() {
             match c.unwrap() {
-                Key::Esc => break 'event,
                 Key::Backspace => {
                     let _ = query.pop();
                 },
-                Key::Char('\n') => {
-                    if let Some(choice) = choices.first() {
-                        result = choice.to_string();
-                    }
+                Key::Ctrl('p') | Key::Up => {
+                    selection = if selection == 0 {
+                        // TODO: This should be only over the visible
+                        // window
+                        choices.len() - 1
+                    } else {
+                        selection - 1
+                    };
+                },
+                Key::Ctrl('n') | Key::Down => {
+                    // TODO: This should be only over the visible
+                    // window
+                    // TODO: The loop shouldn't be trigger again,
+                    // we should render the screen without
+                    // doing a full search. In the next event loop
+                    // iteration the selection should be reset to
+                    // 0 again
+                    selection = if selection == (choices.len() - 1) {
+                        0
+                    } else {
+                        selection + 1
+                    };
+                },
+                Key::Char('\n') | Key::Ctrl('j') | Key::Ctrl('m') => {
+                    let choice = choices[selection];
+                    result = choice.to_string();
+
                     break 'event
                 },
-                Key::Char(c) => {
-                    query.push(c as char);
+                Key::Ctrl('u') => {
+                    query.clear();
                 },
+                Key::Char(c) => {
+                    query.push(c);
+                },
+                Key::Esc => break 'event,
                 _ => {},
             }
         }
