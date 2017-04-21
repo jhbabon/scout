@@ -83,21 +83,23 @@ fn magic() -> Result<String, io::Error> {
             // Split the string in different areas
             // to highlight the matching part
             let string = choice.to_string();
-            let (before, rest) = string.split_at(choice.start());
-            let (middle, after) = if rest.len() <= choice.end() {
-                (rest, "")
-            } else {
-                rest.split_at(choice.end())
-            };
+            let chars = string.char_indices();
+            let mut ended = None;
+            let mut line: String = chars.map(|(index, ch)| {
+                if index == choice.start() && index < choice.end() {
+                    format!("{}{}", color::Fg(color::LightGreen), ch)
+                } else if index == choice.end() {
+                    ended = Some(index);
+                    format!("{}{}", color::Fg(color::Reset), ch)
+                } else {
+                    format!("{}", ch)
+                }
+            }).collect();
 
-            let line = format!(
-                "{before}{highlight}{middle}{reset}{after}",
-                before = before,
-                highlight = color::Fg(color::LightGreen),
-                middle = middle,
-                reset = color::Fg(color::Reset),
-                after = after
-            );
+            // Ensure that we stop highlihting things
+            if ended.is_none() {
+                line = format!("{}{}", line, color::Fg(color::Reset));
+            }
 
             if i == selection {
                 writeln!(&mut screen, "{}{}{}", style::Invert, line, style::Reset).unwrap();

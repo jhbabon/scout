@@ -5,6 +5,8 @@ use regex::Regex;
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Choice<'a> {
+    // TODO: Make custom ordering because strings order by
+    // byte and that is a little bit strange
     rank: usize,
     subrank: usize,
     string: &'a str,
@@ -12,11 +14,29 @@ pub struct Choice<'a> {
 
 impl<'b, 'a> Choice<'a> {
     pub fn build(re: &'b Regex, string: &'a str) -> Option<Choice<'a>> {
-        match re.find(string) {
-            Some(matching) => {
+        let mut indexes = string.char_indices().map(|(index, _)| index);
+        let mut matches = vec![];
+
+        loop {
+            match indexes.next() {
+                Some(index) => {
+                    let ma = re.find(&string[index..]);
+                    match ma {
+                        Some(matching) => matches.push((index, matching)),
+                        None => break
+                    }
+                }
+                None => break
+            }
+        }
+        let min = matches.into_iter()
+            .min_by_key(|&(_, m)| (m.end() - m.start(), m.start()));
+
+        match min {
+            Some((index, matching)) => {
                 let choice = Choice {
                     rank: matching.end() - matching.start(),
-                    subrank: matching.start(),
+                    subrank: matching.start() + index,
                     string: string,
                 };
 
@@ -83,10 +103,13 @@ pub fn explore<'a>(list: &'a [&'a str], query: &'a [char]) -> Vec<Choice<'a>> {
 }
 
 fn build_pattern<'a>(query: &'a [char]) -> String {
-    query.iter()
+    let last_index = query.len() - 1;
+    let partial: String = query[0..last_index].iter()
         .map(|ch| regex::escape(&ch.to_string()))
-        .map(|esc| format!("(?i){}.*?", esc)) // (?i) for case insensitive
-        .collect()
+        .map(|esc| format!("{}.*?", esc)) // (?i) for case insensitive
+        .collect();
+
+    format!("(?i){}{}", partial, regex::escape(&query[last_index].to_string()))
 }
 
 
