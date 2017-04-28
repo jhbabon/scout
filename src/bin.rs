@@ -115,13 +115,13 @@ fn magic() -> Result<String, io::Error> {
 
         screen.flush().unwrap();
 
-        // Read a maximum of 3 bytes to handle special keys like
+        // Read a maximum of 4 bytes to handle special keys like
         // Up and Down arrow keys
-        let mut int_buffer = [0;3];
+        let mut int_buffer = [0;4];
         buffer.clear();
-        // Ensure that we read 2 bytes in an intermediate buffer
+        // Ensure that we read 4 bytes in an intermediate buffer
         //
-        // If the amount of real bytes read is less than 2,
+        // If the amount of real bytes read is less than 4,
         // put only that byte in the buffer so we don't carry
         // junk.
         //
