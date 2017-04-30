@@ -11,7 +11,7 @@ license = "MIT"
 
 [lib]
 name = "scout"
-path = "src/lib.rs"
+path = "src/scout/lib.rs"
 
 [[bin]]
 name = "scout"
