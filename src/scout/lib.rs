@@ -2,8 +2,10 @@ mod score;
 mod choice;
 mod pattern;
 mod explore;
+mod terminal;
 
 pub use explore::explore;
+pub use terminal::Terminal;
 
 /// Get the version of the program.
 pub fn version() -> String {
