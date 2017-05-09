@@ -99,7 +99,6 @@ fn magic() -> Result<String, io::Error> {
         terminal.flush().unwrap();
 
         for c in terminal.input().keys() {
-            debug!("In for loop");
             match c.unwrap() {
                 Key::Backspace => {
                     let _ = query.pop();
