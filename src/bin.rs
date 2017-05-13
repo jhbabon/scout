@@ -5,15 +5,11 @@
 // TODO: Try to do the fuzzy search async?
 extern crate scout;
 extern crate docopt;
-extern crate termios;
-extern crate termion;
 
 use std::env;
+use std::io::{self, Read};
 
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::{color, style};
-use std::io::{self, Read, Write};
+use scout::ui::Action;
 
 const USAGE: &'static str = "
 Scout: Small fuzzy finder
@@ -41,7 +37,7 @@ fn magic() -> Result<String, io::Error> {
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
-    let width = format!("{}", input.len()).len();
+    let total = input.len();
     let mut selection = 0; // current selected item
 
     let mut terminal = scout::Terminal::new();
@@ -53,57 +49,15 @@ fn magic() -> Result<String, io::Error> {
         let query_chars: Vec<char> = query.iter().cloned().collect();
         let choices = scout::explore(&input, &query_chars);
 
-        // Clear the terminal and put the cursor at the beginning
-        writeln!(
-            &mut terminal,
-            "{}{}",
-            termion::clear::All,
-            termion::cursor::Goto(1, 1),
-        ).unwrap();
+        scout::ui::render(&mut terminal, &s, &choices, selection, total)?;
 
-        // Print all the choices
-        for (i, choice) in choices.iter().take(21).cloned().enumerate() {
-            // Split the string in different areas
-            // to highlight the matching part
-            let string = choice.to_string();
-            let chars = string.char_indices();
-            let mut ended = None;
-            let mut line: String = chars.map(|(index, ch)| {
-                if index == choice.start() && index < choice.end() {
-                    format!("{}{}", color::Fg(color::LightGreen), ch)
-                } else if index == choice.end() {
-                    ended = Some(index);
-                    format!("{}{}", color::Fg(color::Reset), ch)
-                } else {
-                    format!("{}", ch)
-                }
-            }).collect();
-
-            // Ensure that we stop highlihting things
-            if ended.is_none() {
-                line = format!("{}{}", line, color::Fg(color::Reset));
-            }
-
-            if i == selection {
-                writeln!(&mut terminal, "{}{}{}", style::Invert, line, style::Reset).unwrap();
-            } else {
-                writeln!(&mut terminal, "{}", line).unwrap();
-            }
-        }
-
-        // Go to the beginning again and redraw the prompt.
-        // This will put the cursor at the end of it
-        let prompt = format!("{:width$} > {}", choices.len(), s, width = width);
-        write!(&mut terminal, "{}{}", termion::cursor::Goto(1, 1), prompt).unwrap();
-
-        terminal.flush().unwrap();
-
-        for c in terminal.input().keys() {
-            match c.unwrap() {
-                Key::Backspace => {
+        let inputs = scout::ui::interact(terminal.input());
+        for input in inputs {
+            match input {
+                Some(Action::DeleteChar) => {
                     let _ = query.pop();
                 },
-                Key::Ctrl('p') | Key::Up => {
+                Some(Action::MoveUp) => {
                     selection = if selection == 0 {
                         // TODO: This should be only over the visible
                         // window
@@ -112,7 +66,7 @@ fn magic() -> Result<String, io::Error> {
                         selection - 1
                     };
                 },
-                Key::Ctrl('n') | Key::Down => {
+                Some(Action::MoveDown) => {
                     // TODO: This should be only over the visible
                     // window
                     // TODO: The loop shouldn't be trigger again,
@@ -126,24 +80,24 @@ fn magic() -> Result<String, io::Error> {
                         selection + 1
                     };
                 },
-                Key::Char('\n') | Key::Ctrl('j') | Key::Ctrl('m') => {
+                Some(Action::Clear) => {
+                    query.clear();
+                },
+                Some(Action::Add(c)) => {
+                    query.push(c);
+                },
+                Some(Action::Done) => {
                     let choice = choices[selection];
                     result = choice.to_string();
 
                     break 'event
                 },
-                Key::Ctrl('u') => {
-                    query.clear();
-                },
-                Key::Char(c) => {
-                    query.push(c);
-                },
-                Key::Esc => break 'event,
-                _ => {},
+                Some(Action::Exit) => break 'event,
+                None => {}
             }
         }
-    };
 
+    };
 
     Ok(result)
 }
