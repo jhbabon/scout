@@ -10,6 +10,15 @@ crazy, but life is too sort to iterate over endless strings keeping track of
 indexes of chars with variable sizes. Ok, maybe I'm just bad doing those kind of
 algorithms. Also, I like regexes, they are kind of a drug for me.
 
+## WARNING
+
+I consider this a beta. There are a lot of tests missing and, to be
+honest, there are parts of `rust` that I don't understand and I basically copy
+and paste things from around, so there is a lot of room for improvement.
+
+Scout has been only tested agains linux. It probably works against macOS or
+any other UNIX as well, but it is not intended to work on Windows.
+
 ## Installation
 
 Scout is made with `rust`, so you will need the [latest stable version][rust-stable]
@@ -30,7 +39,7 @@ The main idea is to use this tool with pipes. You get a list of items that you
 want to filter and pass it to `scout`. Once you select the item you want,
 `scout` will print it to the standard output (stdout).
 
-TODO: asciicast
+[![asciicast](https://asciinema.org/a/120469.png)](https://asciinema.org/a/120469)
 
 You can always check the `--help` option for more info:
 
