@@ -8,8 +8,7 @@ use std::io::{self, Write};
 use std::fmt;
 use choice::Choice;
 
-const MAX_LINES: usize = 21;
-
+#[derive(Clone, Copy, Debug)]
 pub enum Action {
     DeleteChar,
     MoveUp,
@@ -37,9 +36,89 @@ impl Action {
     }
 }
 
+#[derive(Clone, Copy, Default, Debug)]
+pub struct Window {
+    prompt_width: usize,
+    width: usize,
+    height: usize,
+    selection: usize,
+}
+
+impl Window {
+    pub fn refine(&mut self, actions: &Vec<Option<Action>>) {
+        let max_index = self.choices_len() - 1;
+        let mut new_selection = self.selection();
+
+        for action in actions {
+            new_selection = match action {
+                &Some(Action::MoveUp) => {
+                    if new_selection == 0 {
+                        max_index
+                    } else {
+                        new_selection - 1
+                    }
+                },
+                &Some(Action::MoveDown) => {
+                    if new_selection == max_index {
+                        0
+                    } else {
+                        new_selection + 1
+                    }
+                },
+                &Some(_) | &None => 0
+            }
+        }
+
+        self.selection = new_selection;
+    }
+
+    pub fn prompt_width(&self) -> usize {
+        self.prompt_width
+    }
+
+    pub fn selection(&self) -> usize {
+        self.selection
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn choices_len(&self) -> usize {
+        self.height() - 2
+    }
+}
+
+impl From<usize> for Window {
+    fn from(input_length: usize) -> Self {
+        let prompt_width = format!("{}", input_length).len();
+        let (width, height) = match termion::terminal_size() {
+            Ok((w, h)) => (w as usize, h as usize),
+            Err(_) => (0, 0),
+        };
+        let selection = 0;
+
+        Window { prompt_width, width, height, selection }
+    }
+}
+
 struct Line<'a> {
     choice: Choice<'a>,
+    width: usize,
     selected: bool,
+}
+
+impl<'a> Line<'a> {
+    pub fn new(choice: Choice<'a>, position: usize, window: &Window) -> Self {
+        let width = window.width();
+        let selected = position == window.selection();
+
+        Self { choice, width, selected }
+    }
 }
 
 impl<'a> fmt::Display for Line<'a> {
@@ -50,7 +129,7 @@ impl<'a> fmt::Display for Line<'a> {
         // Split the choice string in different areas
         // to highlight the matching part
         let choice = self.choice.to_string();
-        let chars = choice.char_indices();
+        let chars = choice.char_indices().take(self.width);
         let mut ended = None;
         let mut line: String = chars.map(|(index, ch)| {
             if index == self.choice.start() && index < self.choice.end() {
@@ -84,10 +163,10 @@ pub fn interact(buffer: Vec<u8>) -> Vec<Option<Action>> {
 }
 
 // Renders the whole UI
-pub fn render<W: Write>(screen: &mut W, query: &str, choices: &Vec<Choice>, selection: usize, total: usize) -> Result<(), io::Error> {
+pub fn render<W: Write>(screen: &mut W, query: &str, choices: &Vec<Choice>, window: &Window) -> Result<(), io::Error> {
     clear(screen)?;
-    render_choices(screen, choices, selection)?;
-    render_prompt(screen, query, choices.len(), total)?;
+    render_choices(screen, choices, window)?;
+    render_prompt(screen, query, choices.len(), window)?;
 
     screen.flush()?;
 
@@ -102,9 +181,9 @@ fn clear<W: Write>(screen: &mut W) -> Result<(), io::Error> {
 }
 
 // Renders each choice
-fn render_choices<W: Write>(screen: &mut W, choices: &Vec<Choice>, selection: usize) -> Result<(), io::Error> {
-    for (index, choice) in choices.iter().take(MAX_LINES).cloned().enumerate() {
-        let line = Line { choice, selected: index == selection };
+fn render_choices<W: Write>(screen: &mut W, choices: &Vec<Choice>, window: &Window) -> Result<(), io::Error> {
+    for (index, choice) in choices.iter().take(window.choices_len()).cloned().enumerate() {
+        let line = Line::new(choice, index, window);
         writeln!(screen, "{}", line)?;
     }
 
@@ -112,10 +191,10 @@ fn render_choices<W: Write>(screen: &mut W, choices: &Vec<Choice>, selection: us
 }
 
 // Renders the prompt line
-fn render_prompt<W: Write>(screen: &mut W, query: &str, matches: usize, total: usize) -> Result<(), io::Error> {
+fn render_prompt<W: Write>(screen: &mut W, query: &str, matches: usize, window: &Window) -> Result<(), io::Error> {
     // Go to the beginning again and redraw the prompt.
     // This will put the cursor at the end of it
-    let width = format!("{}", total).len();
+    let width = window.prompt_width();
     let prompt = format!("{:width$} > {}", matches, query, width = width);
 
     write!(screen, "{}{}", cursor::Goto(1, 1), prompt)?;

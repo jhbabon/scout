@@ -3,8 +3,8 @@ mod choice;
 mod pattern;
 mod explore;
 mod terminal;
-pub mod ui;
 
+pub mod ui;
 pub use explore::explore;
 pub use terminal::Terminal;
 

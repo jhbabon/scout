@@ -1,8 +1,3 @@
-// TODO: Clean code, please
-// TODO: Check types used. Try to minimize the memory used
-// TODO: Add more tests.
-// TODO: Better UI. Colors? Num of matches?
-// TODO: Try to do the fuzzy search async?
 extern crate scout;
 extern crate docopt;
 
@@ -38,47 +33,25 @@ fn magic() -> Result<String, io::Error> {
         .filter(|s| !s.is_empty())
         .collect();
     let total = input.len();
-    let mut selection = 0; // current selected item
 
+    let mut window: scout::ui::Window = total.into();
+    let mut last_actions: Vec<Option<Action>> = vec![];
     let mut terminal = scout::Terminal::new();
     let mut result = String::new();
     let mut query: Vec<char> = vec![];
 
     'event: loop {
+        window.refine(&last_actions);
         let s: String = query.iter().cloned().collect();
-        let query_chars: Vec<char> = query.iter().cloned().collect();
-        let choices = scout::explore(&input, &query_chars);
+        let choices = scout::explore(&input, &query);
 
-        scout::ui::render(&mut terminal, &s, &choices, selection, total)?;
+        scout::ui::render(&mut terminal, &s, &choices, &window)?;
 
-        let inputs = scout::ui::interact(terminal.input());
-        for input in inputs {
-            match input {
+        let actions = scout::ui::interact(terminal.input());
+        for action in actions.iter().cloned() {
+            match action {
                 Some(Action::DeleteChar) => {
                     let _ = query.pop();
-                },
-                Some(Action::MoveUp) => {
-                    selection = if selection == 0 {
-                        // TODO: This should be only over the visible
-                        // window
-                        choices.len() - 1
-                    } else {
-                        selection - 1
-                    };
-                },
-                Some(Action::MoveDown) => {
-                    // TODO: This should be only over the visible
-                    // window
-                    // TODO: The loop shouldn't be trigger again,
-                    // we should render the terminal without
-                    // doing a full search. In the next event loop
-                    // iteration the selection should be reset to
-                    // 0 again
-                    selection = if selection == (choices.len() - 1) {
-                        0
-                    } else {
-                        selection + 1
-                    };
                 },
                 Some(Action::Clear) => {
                     query.clear();
@@ -87,16 +60,17 @@ fn magic() -> Result<String, io::Error> {
                     query.push(c);
                 },
                 Some(Action::Done) => {
-                    let choice = choices[selection];
+                    let choice = choices[window.selection()];
                     result = choice.to_string();
 
                     break 'event
                 },
                 Some(Action::Exit) => break 'event,
-                None => {}
+                Some(_) | None => {}
             }
         }
 
+        last_actions = actions;
     };
 
     Ok(result)
