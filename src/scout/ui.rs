@@ -24,14 +24,14 @@ impl Action {
     // an Option and TryFrom is still experimental.
     pub fn from(key: Key) -> Option<Self> {
         match key {
-            Key::Backspace                   => Some(Action::DeleteChar),
-            Key::Ctrl('p')  | Key::Up        => Some(Action::MoveUp),
-            Key::Ctrl('n')  | Key::Down      => Some(Action::MoveDown),
-            Key::Char('\n') | Key::Ctrl('j') => Some(Action::Done),
-            Key::Ctrl('u')                   => Some(Action::Clear),
-            Key::Char(c)                     => Some(Action::Add(c)),
-            Key::Esc                         => Some(Action::Exit),
-            _                                => None,
+            Key::Backspace             => Some(Action::DeleteChar),
+            Key::Ctrl('u')             => Some(Action::Clear),
+            Key::Ctrl('n') | Key::Down => Some(Action::MoveDown),
+            Key::Ctrl('p') | Key::Up   => Some(Action::MoveUp),
+            Key::Char('\n')            => Some(Action::Done),
+            Key::Ctrl('c') | Key::Esc  => Some(Action::Exit),
+            Key::Char(c)               => Some(Action::Add(c)),
+            _                          => None,
         }
     }
 }
