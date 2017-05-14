@@ -1,7 +1,13 @@
+extern crate libc;
+extern crate termios;
+extern crate termion;
+extern crate regex;
+
 mod score;
 mod choice;
 mod pattern;
 mod explore;
+mod terminal_size;
 mod terminal;
 
 pub mod ui;

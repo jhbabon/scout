@@ -1,11 +1,11 @@
-extern crate termios;
-extern crate termion;
-
-use self::termios::{Termios};
-use self::termion::screen::AlternateScreen;
+use termios::{self, Termios};
+use termion;
+use termion::screen::AlternateScreen;
 use std::io::{self, Read, Write};
 use std::fs::File;
 use std::os::unix::io::{RawFd, AsRawFd};
+
+use terminal_size::terminal_size;
 
 pub struct Terminal {
     fd: RawFd, // File Descriptor of /dev/tty
@@ -46,6 +46,13 @@ impl Terminal {
         };
 
         buffer
+    }
+
+    pub fn size(&self) -> (usize, usize) {
+        match terminal_size(self.fd) {
+            Ok((width, height)) => (width as usize, height as usize),
+            Err(_) => (0, 0)
+        }
     }
 }
 

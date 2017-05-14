@@ -1,6 +1,4 @@
-extern crate regex;
-
-use self::regex::Regex;
+use regex::Regex;
 use super::choice::Choice;
 use super::pattern::Pattern;
 

@@ -1,5 +1,4 @@
-extern crate regex;
-
+use regex;
 use std::fmt;
 
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]

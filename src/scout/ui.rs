@@ -1,12 +1,11 @@
-extern crate termion;
-
-use self::termion::{cursor, color, style};
-use self::termion::event::Key;
-use self::termion::input::TermRead;
+use termion::{self, cursor, color, style};
+use termion::event::Key;
+use termion::input::TermRead;
 
 use std::io::{self, Write};
 use std::fmt;
 use choice::Choice;
+use terminal::Terminal;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Action {
@@ -45,8 +44,20 @@ pub struct Window {
 }
 
 impl Window {
+    pub fn new(terminal: &Terminal, input_length: usize) -> Self {
+        let prompt_width = format!("{}", input_length).len();
+        let (width, height) = terminal.size();
+        let selection = 0;
+
+        Window { prompt_width, width, height, selection }
+    }
+
     pub fn refine(&mut self, actions: &Vec<Option<Action>>) {
-        let max_index = self.choices_len() - 1;
+        let max_index = if self.choices_len() == 0 {
+            0
+        } else {
+            self.choices_len() - 1
+        };
         let mut new_selection = self.selection();
 
         for action in actions {
@@ -89,20 +100,11 @@ impl Window {
     }
 
     pub fn choices_len(&self) -> usize {
-        self.height() - 2
-    }
-}
-
-impl From<usize> for Window {
-    fn from(input_length: usize) -> Self {
-        let prompt_width = format!("{}", input_length).len();
-        let (width, height) = match termion::terminal_size() {
-            Ok((w, h)) => (w as usize, h as usize),
-            Err(_) => (0, 0),
-        };
-        let selection = 0;
-
-        Window { prompt_width, width, height, selection }
+        if self.height() > 0 {
+            self.height() - 2
+        } else {
+            0
+        }
     }
 }
 

@@ -65,9 +65,9 @@ pub fn main() {
 fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
     let total = list.len();
 
-    let mut window: Window = total.into();
     let mut last_actions: Vec<Option<Action>> = vec![];
     let mut terminal = Terminal::new();
+    let mut window = Window::new(&terminal, total);
     let mut result = String::new();
     let mut query: Vec<char> = vec![];
     let mut query_string: String;
