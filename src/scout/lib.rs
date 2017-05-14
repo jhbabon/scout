@@ -6,6 +6,7 @@ mod terminal;
 
 pub mod ui;
 pub use explore::explore;
+pub use choice::Choice;
 pub use terminal::Terminal;
 
 /// Get the version of the program.

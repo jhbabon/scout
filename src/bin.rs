@@ -3,6 +3,7 @@ extern crate docopt;
 
 use std::env;
 use std::io::{self, Read};
+use std::collections::HashMap;
 
 use scout::ui::Action;
 
@@ -39,13 +40,16 @@ fn magic() -> Result<String, io::Error> {
     let mut terminal = scout::Terminal::new();
     let mut result = String::new();
     let mut query: Vec<char> = vec![];
+    let mut query_string: String;
+    let mut history: HashMap<String, Vec<scout::Choice>> = HashMap::new();
 
     'event: loop {
         window.refine(&last_actions);
-        let s: String = query.iter().cloned().collect();
-        let choices = scout::explore(&input, &query);
+        query_string = query.iter().cloned().collect();
+        let choices = history.entry(query_string.to_owned())
+            .or_insert_with(|| scout::explore(&input, &query));
 
-        scout::ui::render(&mut terminal, &s, &choices, &window)?;
+        scout::ui::render(&mut terminal, &query_string, &choices, &window)?;
 
         let actions = scout::ui::interact(terminal.input());
         for action in actions.iter().cloned() {
