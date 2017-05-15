@@ -24,12 +24,22 @@ any other UNIX as well, but it is not intended to work on Windows.
 Scout is made with `rust`, so you will need the [latest stable version][rust-stable]
 of it to compile and run the program.
 
-Clone the repository and run `cargo install`. You can also run `cargo build` if
-you want only to play with it:
+### Install via cargo
+
+Scout is in the main [crates] repository, so you can install it just with `cargo`:
 
 ```
-$ git clone https://github.com/jhbabon/scout.git scout
-$ cd scout
+$ cargo install scout
+```
+
+### Install via git
+
+Clone the repository and run `cargo install` from it. You can also run `cargo build`
+if you just want to play with it:
+
+```
+$ git clone https://github.com/jhbabon/scout.git path/to/scout
+$ cd path/to/scout
 $ cargo install
 ```
 
@@ -73,7 +83,19 @@ You can use the [selecta] vim snippets with `scout`, they pretty much work. A
 fancier plugin to integrate `scout` with [neovim] is in the works, so stay
 tunned!
 
+## Development
+
+Scout compiles against the [latest stable `rust` version][rust-stable],
+so if you want to hack with it be sure to use it.
+
+There are (some) tests. You can run them with `cargo test`:
+
+```
+$ cargo test
+```
+
 [selecta]: https://github.com/garybernhardt/selecta
 [regular expressions]: http://blog.amjith.com/fuzzyfinder-in-10-lines-of-python
 [rust-stable]: https://www.rust-lang.org/downloads.html
+[crates]: https://crates.io/crates/scout
 [neovim]: https://neovim.io/
