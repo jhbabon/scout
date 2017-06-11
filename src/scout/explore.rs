@@ -2,20 +2,16 @@ use regex::Regex;
 use super::choice::Choice;
 use super::pattern::Pattern;
 
-// Idea taken from:
-//   http://blog.amjith.com/fuzzyfinder-in-10-lines-of-python
-//
-// TODO: Return Result to handle errors
-pub fn explore<'a, 'b>(list: &'a [&'a str], query: &'b [char]) -> Vec<Choice<'a>> {
+pub fn explore<'a, 'b>(list: &'a [&'a str], query: &'b [char]) -> Vec<Choice> {
     if query.is_empty() {
-        return list.iter().map(|&text| text.into()).collect::<Vec<Choice>>()
+        return list.iter().map(|&text| text.to_string().into()).collect::<Vec<Choice>>()
     }
 
     let pattern = Pattern::build(query);
     let re = Regex::new(&pattern.to_string()).unwrap();
 
     let mut choices: Vec<Choice> = list.iter()
-        .map(|text| filter(&re, text))
+        .map(|text| filter(&re, text.to_string()))
         .filter(|choice| choice.is_some())
         .map(|choice| choice.unwrap())
         .collect();
@@ -25,7 +21,8 @@ pub fn explore<'a, 'b>(list: &'a [&'a str], query: &'b [char]) -> Vec<Choice<'a>
     choices
 }
 
-fn filter<'a, 'b>(re: &'b Regex, text: &'a str) -> Option<Choice<'a>> {
+fn filter<'b>(re: &'b Regex, text: String) -> Option<Choice> {
+    let text = &text;
     let mut indexes = text.char_indices().map(|(index, _)| index);
     let mut matches: Vec<Choice> = vec![];
     let mut last_match = 0;
@@ -42,7 +39,7 @@ fn filter<'a, 'b>(re: &'b Regex, text: &'a str) -> Option<Choice<'a>> {
                 match ma {
                     Some(matching) => {
                         last_match = matching.start();
-                        let choice = (text, matching.start() + index, matching.end() + index).into();
+                        let choice = (text.to_string(), matching.start() + index, matching.end() + index).into();
                         matches.push(choice)
                     },
                     None => break
@@ -75,7 +72,7 @@ mod tests {
         let query = vec!['a', 'b', 'c'];
         let pattern = Pattern::build(&query);
         let re = Regex::new(&pattern.to_string()).unwrap();
-        let text = "axby";
+        let text = "axby".to_string();
 
         assert_eq!(None, filter(&re, text));
     }
@@ -86,9 +83,9 @@ mod tests {
         let pattern = Pattern::build(&query);
         let re = Regex::new(&pattern.to_string()).unwrap();
         let text = "axbyc";
-        let expected = Some(Choice::new(text, 0, 5));
+        let expected = Some(Choice::new(text.to_string(), 0, 5));
 
-        assert_eq!(expected, filter(&re, text));
+        assert_eq!(expected, filter(&re, text.to_string()));
     }
 
     #[test]
@@ -99,9 +96,9 @@ mod tests {
         // the second match, after the "/",
         // scores better because it's shorter
         let text = "axbyc/abyc"; 
-        let expected = Some(Choice::new(text, 6, 10));
+        let expected = Some(Choice::new(text.to_string(), 6, 10));
 
-        assert_eq!(expected, filter(&re, text));
+        assert_eq!(expected, filter(&re, text.to_string()));
     }
 
     #[test]
@@ -110,19 +107,19 @@ mod tests {
         let pattern = Pattern::build(&query);
         let re = Regex::new(&pattern.to_string()).unwrap();
         let text = "axbyabzcc";
-        let expected = Some(Choice::new(text, 4, 8));
+        let expected = Some(Choice::new(text.to_string(), 4, 8));
 
-        assert_eq!(expected, filter(&re, text));
+        assert_eq!(expected, filter(&re, text.to_string()));
     }
 
     #[test]
     fn it_gets_best_matches() {
         let query = ['u', 's', 'r'];
         let expected = vec![
-            Choice::new("/some/path/user_group.rs", 11, 15),
-            Choice::new("/some/path/api_user.rs", 15, 19),
-            Choice::new("/some/deeper/path/users.rs", 18, 22),
-            Choice::new("/some/path/use_remote.rs", 11, 16),
+            Choice::new("/some/path/user_group.rs".to_string(), 11, 15),
+            Choice::new("/some/path/api_user.rs".to_string(), 15, 19),
+            Choice::new("/some/deeper/path/users.rs".to_string(), 18, 22),
+            Choice::new("/some/path/use_remote.rs".to_string(), 11, 16),
         ];
 
         assert_eq!(expected, explore(&LIST, &query));
@@ -132,10 +129,10 @@ mod tests {
     fn it_is_case_insensitive() {
         let query = ['U', 's', 'R'];
         let expected = vec![
-            Choice::new("/some/path/user_group.rs", 11, 15),
-            Choice::new("/some/path/api_user.rs", 15, 19),
-            Choice::new("/some/deeper/path/users.rs", 18, 22),
-            Choice::new("/some/path/use_remote.rs", 11, 16),
+            Choice::new("/some/path/user_group.rs".to_string(), 11, 15),
+            Choice::new("/some/path/api_user.rs".to_string(), 15, 19),
+            Choice::new("/some/deeper/path/users.rs".to_string(), 18, 22),
+            Choice::new("/some/path/use_remote.rs".to_string(), 11, 16),
         ];
 
         assert_eq!(expected, explore(&LIST, &query));
@@ -145,7 +142,7 @@ mod tests {
     fn it_takes_reserved_chars() {
         let query = ['?', '*', '.'];
         let expected = vec![
-            Choice::new("reserved?*.rs", 8, 11)
+            Choice::new("reserved?*.rs".to_string(), 8, 11)
         ];
 
         assert_eq!(expected, explore(&LIST, &query));
@@ -155,7 +152,7 @@ mod tests {
     fn it_takes_special_chars() {
         let query = ['ß', '💣'];
         let expected = vec![
-            Choice::new("ßℝ💣", 0, 9)
+            Choice::new("ßℝ💣".to_string(), 0, 9)
         ];
 
         assert_eq!(expected, explore(&LIST, &query));

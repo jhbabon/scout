@@ -3,43 +3,43 @@ use std::cmp::Ordering;
 
 use super::score::Score;
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-struct OrderlyStr<'a>(&'a str);
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct OrderlyString(String);
 
-impl<'a> Ord for OrderlyStr<'a> {
-    fn cmp(&self, other: &OrderlyStr) -> Ordering {
+impl Ord for OrderlyString {
+    fn cmp(&self, other: &OrderlyString) -> Ordering {
         self.0.len().cmp(&other.0.len())
     }
 }
 
-impl<'a> PartialOrd for OrderlyStr<'a> {
-    fn partial_cmp(&self, other: &OrderlyStr) -> Option<Ordering> {
+impl PartialOrd for OrderlyString {
+    fn partial_cmp(&self, other: &OrderlyString) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a> fmt::Display for OrderlyStr<'a> {
+impl fmt::Display for OrderlyString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-impl<'a> From<&'a str> for OrderlyStr<'a> {
-    fn from(text: &'a str) -> Self {
-        OrderlyStr(text)
+impl From<String> for OrderlyString {
+    fn from(text: String) -> Self {
+        OrderlyString(text)
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct Choice<'a> {
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Choice {
     match_start: usize,
     match_end: usize,
     score: Score,
-    text: OrderlyStr<'a>,
+    text: OrderlyString,
 }
 
-impl<'a> Choice<'a> {
-    pub fn new(text: &'a str, match_start: usize, match_end: usize) -> Choice<'a> {
+impl Choice {
+    pub fn new(text: String, match_start: usize, match_end: usize) -> Choice {
         Choice {
             match_start,
             match_end,
@@ -57,7 +57,7 @@ impl<'a> Choice<'a> {
     }
 }
 
-impl<'a> Ord for Choice<'a> {
+impl Ord for Choice {
     fn cmp(&self, other: &Choice) -> Ordering {
         let by_score = self.score.cmp(&other.score);
 
@@ -65,26 +65,26 @@ impl<'a> Ord for Choice<'a> {
     }
 }
 
-impl<'a> PartialOrd for Choice<'a> {
+impl PartialOrd for Choice {
     fn partial_cmp(&self, other: &Choice) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a> fmt::Display for Choice<'a> {
+impl fmt::Display for Choice {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.text)
     }
 }
 
-impl<'a> From<(&'a str, usize, usize)> for Choice<'a> {
-    fn from(tuple: (&'a str, usize, usize)) -> Self {
+impl From<(String, usize, usize)> for Choice {
+    fn from(tuple: (String, usize, usize)) -> Self {
         Self::new(tuple.0, tuple.1, tuple.2)
     }
 }
 
-impl<'a> From<&'a str> for Choice<'a> {
-    fn from(text: &'a str) -> Self {
+impl From<String> for Choice {
+    fn from(text: String) -> Self {
         Self::new(text, 0, 0)
     }
 }
@@ -100,10 +100,10 @@ mod tests {
             match_start: 1,
             match_end: 3,
             score: (1, 3).into(),
-            text: text.into(),
+            text: text.to_string().into(),
         };
 
-        assert_eq!(expected, Choice::new(text, 1, 3));
+        assert_eq!(expected, Choice::new(text.to_string(), 1, 3));
     }
 
     #[test]
@@ -113,10 +113,10 @@ mod tests {
             match_start: 1,
             match_end: 3,
             score: (1, 3).into(),
-            text: text.into(),
+            text: text.to_string().into(),
         };
 
-        assert_eq!(expected, (text, 1, 3).into());
+        assert_eq!(expected, (text.to_string(), 1, 3).into());
     }
 
     #[test]
@@ -126,25 +126,25 @@ mod tests {
             match_start: 0,
             match_end: 0,
             score: (0, 0).into(),
-            text: text.into(),
+            text: text.to_string().into(),
         };
 
-        assert_eq!(expected, text.into());
+        assert_eq!(expected, text.to_string().into());
     }
 
     #[test]
     fn it_orders_first_choices_with_better_matching() {
         let text = "aacde";
-        let better = Choice::new(text, 1, 3);
-        let worse = Choice::new(text, 0, 3);
+        let better = Choice::new(text.to_string(), 1, 3);
+        let worse = Choice::new(text.to_string(), 0, 3);
 
         assert!(better < worse);
     }
 
     #[test]
     fn on_equal_scores_it_orders_first_choices_with_shorter_text() {
-        let better = Choice::new("bbb", 0, 3);
-        let worse = Choice::new("abbb", 0, 3);
+        let better = Choice::new("bbb".to_string(), 0, 3);
+        let worse = Choice::new("abbb".to_string(), 0, 3);
 
         assert!(better < worse);
     }

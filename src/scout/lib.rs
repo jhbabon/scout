@@ -2,6 +2,8 @@ extern crate libc;
 extern crate termios;
 extern crate termion;
 extern crate regex;
+extern crate futures;
+extern crate futures_cpupool;
 
 mod score;
 mod choice;

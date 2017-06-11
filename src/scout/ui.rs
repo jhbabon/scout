@@ -108,14 +108,14 @@ impl Window {
     }
 }
 
-struct Line<'a> {
-    choice: Choice<'a>,
+struct Line {
+    choice: Choice,
     width: usize,
     selected: bool,
 }
 
-impl<'a> Line<'a> {
-    pub fn new(choice: Choice<'a>, position: usize, window: &Window) -> Self {
+impl Line {
+    pub fn new(choice: Choice, position: usize, window: &Window) -> Self {
         let width = window.width();
         let selected = position == window.selection();
 
@@ -123,7 +123,7 @@ impl<'a> Line<'a> {
     }
 }
 
-impl<'a> fmt::Display for Line<'a> {
+impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let highlight_color = color::Fg(color::LightGreen);
         let reset_color = color::Fg(color::Reset);

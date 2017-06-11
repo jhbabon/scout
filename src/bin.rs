@@ -94,7 +94,7 @@ fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
                     query.push(c);
                 },
                 Some(Action::Done) => {
-                    let choice = choices[window.selection()];
+                    let ref choice = choices[window.selection()];
                     result = choice.to_string();
 
                     break 'event
