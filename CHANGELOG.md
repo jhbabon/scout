@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Info about tests
 - The CHANGELOG.md file (this file).
 
+## Changed
+- Do the fuzzy search with different threads in parallel. 
+
 ## [0.8.0] - 2017-05-14
 ### Added
 - You can pipe in a list of items to filter.
