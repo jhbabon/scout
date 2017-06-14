@@ -6,7 +6,7 @@ use std::process;
 use std::io::{self, Read, Write};
 use std::collections::HashMap;
 
-use scout::{Terminal, Choice};
+use scout::{Terminal, Choice, Scout};
 use scout::ui::{self, Window, Action};
 
 use docopt::Docopt;
@@ -72,12 +72,13 @@ fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
     let mut query: Vec<char> = vec![];
     let mut query_string: String;
     let mut history: HashMap<String, Vec<Choice>> = HashMap::new();
+    let scout = Scout::new(list);
 
     'event: loop {
         window.refine(&last_actions);
         query_string = query.iter().cloned().collect();
         let choices = history.entry(query_string.to_owned())
-            .or_insert_with(|| scout::explore(&list, &query));
+            .or_insert_with(|| scout.explore(&query));
 
         ui::render(&mut terminal, &query_string, &choices, &window)?;
 

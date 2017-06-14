@@ -2,20 +2,23 @@ extern crate libc;
 extern crate termios;
 extern crate termion;
 extern crate regex;
+extern crate num_cpus;
 extern crate futures;
 extern crate futures_cpupool;
 
 mod score;
 mod choice;
 mod pattern;
-mod explore;
 mod terminal_size;
 mod terminal;
+mod scout;
+mod refine;
 
 pub mod ui;
-pub use explore::explore;
 pub use choice::Choice;
 pub use terminal::Terminal;
+pub use scout::Scout;
+pub use refine::refine;
 
 /// Get the version of the program.
 pub fn version() -> String {
