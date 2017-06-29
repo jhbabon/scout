@@ -52,12 +52,19 @@ impl Window {
         Window { prompt_width, width, height, selection }
     }
 
-    pub fn refine(&mut self, actions: &Vec<Option<Action>>) {
-        let max_index = if self.choices_len() == 0 {
+    pub fn refine(&mut self, actions: &Vec<Option<Action>>, choices_len: usize) {
+        let max_choices = if choices_len >= self.lines_len() {
+            self.lines_len()
+        } else {
+            choices_len
+        };
+
+        let max_index = if max_choices == 0 {
             0
         } else {
-            self.choices_len() - 1
+            max_choices - 1
         };
+
         let mut new_selection = self.selection();
 
         for action in actions {
@@ -80,7 +87,7 @@ impl Window {
             }
         }
 
-        self.selection = new_selection;
+        self.set_selection(new_selection);
     }
 
     pub fn prompt_width(&self) -> usize {
@@ -91,6 +98,10 @@ impl Window {
         self.selection
     }
 
+    fn set_selection(&mut self, new_selection: usize) {
+        self.selection = new_selection;
+    }
+
     pub fn width(&self) -> usize {
         self.width
     }
@@ -99,7 +110,7 @@ impl Window {
         self.height
     }
 
-    pub fn choices_len(&self) -> usize {
+    pub fn lines_len(&self) -> usize {
         if self.height() > 0 {
             self.height() - 2
         } else {
@@ -184,7 +195,7 @@ fn clear<W: Write>(screen: &mut W) -> Result<(), io::Error> {
 
 // Renders each choice
 fn render_choices<W: Write>(screen: &mut W, choices: &Vec<Choice>, window: &Window) -> Result<(), io::Error> {
-    for (index, choice) in choices.iter().take(window.choices_len()).cloned().enumerate() {
+    for (index, choice) in choices.iter().take(window.lines_len()).cloned().enumerate() {
         let line = Line::new(choice, index, window);
         writeln!(screen, "{}", line)?;
     }

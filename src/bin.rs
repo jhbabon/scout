@@ -75,11 +75,11 @@ fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
     let scout = Scout::new(list);
 
     'event: loop {
-        window.refine(&last_actions);
         query_string = query.iter().cloned().collect();
         let choices = history.entry(query_string.to_owned())
             .or_insert_with(|| scout.explore(&query));
 
+        window.refine(&last_actions, choices.len());
         ui::render(&mut terminal, &query_string, &choices, &window)?;
 
         let actions = ui::interact(terminal.input());
