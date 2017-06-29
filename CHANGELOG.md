@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Fixed
+- Fix the movement of the current choice selected through the choices list
 
 ## [0.9.1] - 2017-06-14
 ### Fixed
