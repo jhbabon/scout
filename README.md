@@ -3,9 +3,9 @@
 Scout is a small fuzzy finder for you terminal made with `rust`.
 
 Yes, this is yet another tool inspired by [selecta]. The main difference with
-[selecta], apart of the language, is the matching and scoring algorithm.
+[selecta][], apart of the language, is the matching and scoring algorithm.
 
-I decided to implement the matching algorithm with [regular expressions]. Call me
+I decided to implement the matching algorithm with [regular expressions][]. Call me
 crazy, but life is too sort to iterate over endless strings keeping track of
 indexes of chars with variable sizes. Ok, maybe I'm just bad doing those kind of
 algorithms. Also, I like regexes, they are kind of a drug for me.
@@ -22,26 +22,34 @@ any other UNIX as well, but it is not intended to work on Windows.
 ## Installation
 
 Scout is made with `rust`, so you will need the [latest stable version][rust-stable]
-of it to compile and run the program.
+of it to compile and run the program. Check out [rustup][] for `rust`
+installations.
 
 ### Install via cargo
 
-Scout is in the main [crates] repository, so you can install it just with `cargo`:
+Scout is in the main [crates][] repository, so you can install it just with `cargo`:
 
 ```
 $ cargo install scout
 ```
 
+Remember to put `cargo` bin path to the main `$PATH` env variable:
+
+```
+export PATH=$PATH:~/.cargo/bin
+```
+
 ### Install via git
 
-Clone the repository and run `cargo install` from it. You can also run `cargo build`
-if you just want to play with it:
+Clone the repository and run `cargo install` from it:
 
 ```
 $ git clone https://github.com/jhbabon/scout.git path/to/scout
 $ cd path/to/scout
 $ cargo install
 ```
+
+You can also run `cargo build --release` if you just want to play with it.
 
 ## Usage
 
@@ -77,11 +85,10 @@ Example:
   $ ls | scout
 ```
 
-### VIM integration
+### NEOVIM integration
 
-You can use the [selecta] vim snippets with `scout`, they pretty much work. A
-fancier plugin to integrate `scout` with [neovim] is in the works, so stay
-tunned!
+I made a plugin to use `scout` inside [neovim][] thanks to its built in
+`:terminal` emulator. It's called [scout.vim][].
 
 ## Development
 
@@ -94,8 +101,25 @@ There are (some) tests. You can run them with `cargo test`:
 $ cargo test
 ```
 
+### Code formatting
+
+Use [rustfmt][] to format the code in a consistent manner. More precisely, use
+`rustfmt-nightly`. Since `scout` is built against the stable version of `rust`,
+you can use `rustfmt-nightly` with [rustup][]:
+
+```
+# Install rustfmt-nightly
+$ rustup run nightly cargo install rustfmt-nightly
+
+# Run it with cargo
+$ rustup run nightly cargo fmt
+```
+
 [selecta]: https://github.com/garybernhardt/selecta
 [regular expressions]: http://blog.amjith.com/fuzzyfinder-in-10-lines-of-python
 [rust-stable]: https://www.rust-lang.org/downloads.html
 [crates]: https://crates.io/crates/scout
 [neovim]: https://neovim.io/
+[rustfmt]: https://github.com/rust-lang-nursery/rustfmt
+[rustup]: https://www.rustup.rs/
+[scout.vim]: https://github.com/jhbabon/scout.vim
