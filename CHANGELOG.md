@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - `rustfmt` config file.
 - Instructions of how to use `rustfmt` in the project.
+- Add link to scout.vim to README
 
 ### Changed
 - Reformatted `rust` source code with `rustfmt`.
