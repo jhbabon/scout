@@ -57,7 +57,7 @@ impl Window {
         }
     }
 
-    pub fn refine(&mut self, actions: &Vec<Option<Action>>, choices_len: usize) {
+    pub fn refine(&mut self, actions: &[Option<Action>], choices_len: usize) {
         let max_choices = if choices_len >= self.lines_len() {
             self.lines_len()
         } else {
@@ -73,22 +73,22 @@ impl Window {
         let mut new_selection = self.selection();
 
         for action in actions {
-            new_selection = match action {
-                &Some(Action::MoveUp) => {
+            new_selection = match *action {
+                Some(Action::MoveUp) => {
                     if new_selection == 0 {
                         max_index
                     } else {
                         new_selection - 1
                     }
                 }
-                &Some(Action::MoveDown) => {
+                Some(Action::MoveDown) => {
                     if new_selection == max_index {
                         0
                     } else {
                         new_selection + 1
                     }
                 }
-                &Some(_) | &None => 0,
+                Some(_) | None => 0,
             }
         }
 
@@ -180,10 +180,10 @@ impl fmt::Display for Line {
 }
 
 // Interact with what the user typed in and get the Action
-pub fn interact(buffer: Vec<u8>) -> Vec<Option<Action>> {
+pub fn interact(buffer: &[u8]) -> Vec<Option<Action>> {
     buffer
         .keys()
-        .map(|result| result.map(|key| Action::from(key)).unwrap_or(None))
+        .map(|result| result.map(Action::from).unwrap_or(None))
         .collect()
 }
 
@@ -191,7 +191,7 @@ pub fn interact(buffer: Vec<u8>) -> Vec<Option<Action>> {
 pub fn render<W: Write>(
     screen: &mut W,
     query: &str,
-    choices: &Vec<Choice>,
+    choices: &[Choice],
     window: &Window,
 ) -> Result<(), io::Error> {
     clear(screen)?;
@@ -213,7 +213,7 @@ fn clear<W: Write>(screen: &mut W) -> Result<(), io::Error> {
 // Renders each choice
 fn render_choices<W: Write>(
     screen: &mut W,
-    choices: &Vec<Choice>,
+    choices: &[Choice],
     window: &Window,
 ) -> Result<(), io::Error> {
     for (index, choice) in choices.iter().take(window.lines_len()).cloned().enumerate() {

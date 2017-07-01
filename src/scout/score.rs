@@ -5,7 +5,7 @@ pub struct Score {
 }
 
 impl Score {
-    pub fn new<'a>(match_start: usize, match_end: usize) -> Self {
+    pub fn new(match_start: usize, match_end: usize) -> Self {
         Score {
             index: match_start,
             match_length: match_end - match_start,

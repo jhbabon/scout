@@ -1,8 +1,8 @@
 use regex::Regex;
 use super::choice::Choice;
 
-pub fn refine<'b>(re: &'b Regex, text: String) -> Option<Choice> {
-    let text = &text;
+pub fn refine(re: &Regex, text: &str) -> Option<Choice> {
+    // let text = &text;
     let mut indexes = text.char_indices().map(|(index, _)| index);
     let mut matches: Vec<Choice> = vec![];
     let mut last_match = 0;
@@ -46,7 +46,7 @@ mod tests {
         let query = vec!['a', 'b', 'c'];
         let pattern = Pattern::build(&query);
         let re = Regex::new(&pattern.to_string()).unwrap();
-        let text = "axby".to_string();
+        let text = "axby";
 
         assert_eq!(None, refine(&re, text));
     }
@@ -59,7 +59,7 @@ mod tests {
         let text = "axbyc";
         let expected = Some(Choice::new(text.to_string(), 0, 5));
 
-        assert_eq!(expected, refine(&re, text.to_string()));
+        assert_eq!(expected, refine(&re, text));
     }
 
     #[test]
@@ -72,7 +72,7 @@ mod tests {
         let text = "axbyc/abyc";
         let expected = Some(Choice::new(text.to_string(), 6, 10));
 
-        assert_eq!(expected, refine(&re, text.to_string()));
+        assert_eq!(expected, refine(&re, text));
     }
 
     #[test]
@@ -83,6 +83,6 @@ mod tests {
         let text = "axbyabzcc";
         let expected = Some(Choice::new(text.to_string(), 4, 8));
 
-        assert_eq!(expected, refine(&re, text.to_string()));
+        assert_eq!(expected, refine(&re, text));
     }
 }

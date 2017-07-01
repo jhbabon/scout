@@ -4,6 +4,7 @@ use termion::screen::AlternateScreen;
 use std::io::{self, Read, Write};
 use std::fs::File;
 use std::os::unix::io::{RawFd, AsRawFd};
+use std::default::Default;
 
 use terminal_size::terminal_size;
 
@@ -25,9 +26,9 @@ impl Terminal {
         //
         // We'll call this "raw mode"
         let tty = Termios::from_fd(fd).unwrap();
-        let mut raw_tty = tty.clone();
+        let mut raw_tty = tty;
         raw_tty.c_lflag &= !(termios::ICANON | termios::ECHO);
-        termios::tcsetattr(fd, termios::TCSANOW, &mut raw_tty).unwrap();
+        termios::tcsetattr(fd, termios::TCSANOW, &raw_tty).unwrap();
 
         let alternate = AlternateScreen::from(dev_tty);
 
@@ -38,9 +39,8 @@ impl Terminal {
         let mut internal = [0; 4];
         let mut buffer: Vec<u8> = vec![];
 
-        match self.alternate.read(&mut internal) {
-            Ok(n) => buffer = internal.iter().take(n).map(|&x| x).collect(),
-            Err(_) => {}
+        if let Ok(n) = self.alternate.read(&mut internal) {
+            buffer = internal.iter().take(n).cloned().collect()
         };
 
         buffer
@@ -68,5 +68,11 @@ impl Write for Terminal {
 
     fn flush(&mut self) -> io::Result<()> {
         self.alternate.flush()
+    }
+}
+
+impl Default for Terminal {
+    fn default() -> Self {
+        Self::new()
     }
 }

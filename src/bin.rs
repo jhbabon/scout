@@ -5,6 +5,7 @@ use std::env;
 use std::process;
 use std::io::{self, Read, Write};
 use std::collections::HashMap;
+use std::default::Default;
 
 use scout::{Terminal, Choice, Scout};
 use scout::ui::{self, Window, Action};
@@ -48,26 +49,26 @@ pub fn main() {
     let stdin = io::stdin();
     match stdin.lock().read_to_string(&mut buffer) {
         Ok(_) => {}
-        Err(error) => fatal(error),
+        Err(error) => fatal(&error),
     };
 
     let list: Vec<&str> = buffer
-        .split("\n")
+        .split('\n')
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
 
     match magic(list) {
         Ok(result) => println!("{}", result),
-        Err(e) => fatal(e),
+        Err(error) => fatal(&error),
     }
 }
 
-fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
+fn magic(list: Vec<&str>) -> Result<String, io::Error> {
     let total = list.len();
 
     let mut last_actions: Vec<Option<Action>> = vec![];
-    let mut terminal = Terminal::new();
+    let mut terminal: Terminal = Default::default();
     let mut window = Window::new(&terminal, total);
     let mut result = String::new();
     let mut query: Vec<char> = vec![];
@@ -82,9 +83,9 @@ fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
             .or_insert_with(|| scout.explore(&query));
 
         window.refine(&last_actions, choices.len());
-        ui::render(&mut terminal, &query_string, &choices, &window)?;
+        ui::render(&mut terminal, &query_string, choices, &window)?;
 
-        let actions = ui::interact(terminal.input());
+        let actions = ui::interact(&terminal.input());
         for action in actions.iter().cloned() {
             match action {
                 Some(Action::DeleteChar) => {
@@ -97,7 +98,7 @@ fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
                     query.push(c);
                 }
                 Some(Action::Done) => {
-                    let ref choice = choices[window.selection()];
+                    let choice = &choices[window.selection()];
                     result = choice.to_string();
 
                     break 'event;
@@ -113,7 +114,7 @@ fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
     Ok(result)
 }
 
-fn fatal(error: io::Error) {
+fn fatal(error: &io::Error) {
     let stderr = io::stderr();
     writeln!(stderr.lock(), "ERROR: {}", error).expect("ERROR while writting to STDERR");
 

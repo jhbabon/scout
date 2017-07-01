@@ -11,7 +11,7 @@ impl fmt::Display for Pattern {
 }
 
 impl Pattern {
-    pub fn build<'a>(query: &'a [char]) -> Self {
+    pub fn build(query: &[char]) -> Self {
         let last_index = query.len() - 1;
         let partial: String = query[0..last_index]
             .iter()

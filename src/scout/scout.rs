@@ -14,7 +14,7 @@ pub struct Scout {
 }
 
 impl Scout {
-    pub fn new<'a>(list: Vec<&'a str>) -> Self {
+    pub fn new(list: Vec<&str>) -> Self {
         let size = num_cpus::get();
         let chunk_size = if list.len() < size {
             list.len()
@@ -24,9 +24,7 @@ impl Scout {
 
         let list: Vec<String> = list.iter().map(|t| String::from(*t)).collect();
 
-        let chunks = list.chunks(chunk_size)
-            .map(|section| Vec::from(section))
-            .collect();
+        let chunks = list.chunks(chunk_size).map(Vec::from).collect();
 
         let pool = CpuPool::new(size);
 
@@ -52,7 +50,7 @@ impl Scout {
 
                 self.pool.spawn_fn(move || {
                     let choices: Vec<Option<Choice>> =
-                        lines.into_iter().map(|line| refine(&reg, line)).collect();
+                        lines.into_iter().map(|line| refine(&reg, &line)).collect();
                     let result: Result<Vec<Option<Choice>>, ()> = Ok(choices);
                     result
                 })
