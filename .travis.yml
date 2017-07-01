@@ -1,0 +1,11 @@
+language: rust
+cache: cargo
+dist: trusty
+os:
+  - linux
+rust:
+  - stable
+
+script:
+  - cargo build
+  - cargo test
