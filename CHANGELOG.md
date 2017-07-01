@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [0.10.0] - 2017-07-01
 ### Added
 - `rustfmt` config file.
 - Instructions of how to use `rustfmt` in the project.
@@ -43,7 +45,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/jhbabon/scout/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/jhbabon/scout/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/jhbabon/scout/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/jhbabon/scout/compare/v0.8.0...v0.9.0
