@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- `rustfmt` config file.
+- Instructions of how to use `rustfmt` in the project.
+
+### Changed
+- Reformatted `rust` source code with `rustfmt`.
 
 ## [0.9.2] - 2017-06-29
 ### Fixed
