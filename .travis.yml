@@ -10,7 +10,7 @@ rust:
 before_script:
   - |
       if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
-        cargo install rustfmt-nightly;
+        which rustfmt || cargo install rustfmt-nightly
       fi
   - export PATH=$PATH:~/.cargo/bin
 
