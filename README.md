@@ -1,5 +1,7 @@
 # Scout
 
+[![Build Status](https://travis-ci.org/jhbabon/scout.svg?branch=master)](https://travis-ci.org/jhbabon/scout)
+
 Scout is a small fuzzy finder for you terminal made with `rust`.
 
 Yes, this is yet another tool inspired by [selecta]. The main difference with
