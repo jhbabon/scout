@@ -117,6 +117,21 @@ $ rustup run nightly cargo install rustfmt-nightly
 $ rustup run nightly cargo fmt
 ```
 
+### Linter
+
+Use [clippy][] to improve the code. As with `rustfmt`, `clippy` needs nightly
+version of `rust` to run:
+
+```
+# Install clippy
+$ rustup run nightly cargo install clippy
+
+# Run it with cargo
+$ rustup run nightly cargo clippy
+```
+
+Now you can go through the list of warnings and fix them.
+
 [selecta]: https://github.com/garybernhardt/selecta
 [regular expressions]: http://blog.amjith.com/fuzzyfinder-in-10-lines-of-python
 [rust-stable]: https://www.rust-lang.org/downloads.html
@@ -125,3 +140,4 @@ $ rustup run nightly cargo fmt
 [rustfmt]: https://github.com/rust-lang-nursery/rustfmt
 [rustup]: https://www.rustup.rs/
 [scout.vim]: https://github.com/jhbabon/scout.vim
+[clippy]: https://github.com/Manishearth/rust-clippy
