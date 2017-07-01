@@ -23,14 +23,14 @@ impl Action {
     // an Option and TryFrom is still experimental.
     pub fn from(key: Key) -> Option<Self> {
         match key {
-            Key::Backspace             => Some(Action::DeleteChar),
-            Key::Ctrl('u')             => Some(Action::Clear),
+            Key::Backspace => Some(Action::DeleteChar),
+            Key::Ctrl('u') => Some(Action::Clear),
             Key::Ctrl('n') | Key::Down => Some(Action::MoveDown),
-            Key::Ctrl('p') | Key::Up   => Some(Action::MoveUp),
-            Key::Char('\n')            => Some(Action::Done),
-            Key::Ctrl('c') | Key::Esc  => Some(Action::Exit),
-            Key::Char(c)               => Some(Action::Add(c)),
-            _                          => None,
+            Key::Ctrl('p') | Key::Up => Some(Action::MoveUp),
+            Key::Char('\n') => Some(Action::Done),
+            Key::Ctrl('c') | Key::Esc => Some(Action::Exit),
+            Key::Char(c) => Some(Action::Add(c)),
+            _ => None,
         }
     }
 }
@@ -49,7 +49,12 @@ impl Window {
         let (width, height) = terminal.size();
         let selection = 0;
 
-        Window { prompt_width, width, height, selection }
+        Window {
+            prompt_width,
+            width,
+            height,
+            selection,
+        }
     }
 
     pub fn refine(&mut self, actions: &Vec<Option<Action>>, choices_len: usize) {
@@ -75,15 +80,15 @@ impl Window {
                     } else {
                         new_selection - 1
                     }
-                },
+                }
                 &Some(Action::MoveDown) => {
                     if new_selection == max_index {
                         0
                     } else {
                         new_selection + 1
                     }
-                },
-                &Some(_) | &None => 0
+                }
+                &Some(_) | &None => 0,
             }
         }
 
@@ -130,7 +135,11 @@ impl Line {
         let width = window.width();
         let selected = position == window.selection();
 
-        Self { choice, width, selected }
+        Self {
+            choice,
+            width,
+            selected,
+        }
     }
 }
 
@@ -144,16 +153,18 @@ impl fmt::Display for Line {
         let choice = self.choice.to_string();
         let chars = choice.char_indices().take(self.width);
         let mut ended = None;
-        let mut line: String = chars.map(|(index, ch)| {
-            if index == self.choice.start() && index < self.choice.end() {
-                format!("{}{}", highlight_color, ch)
-            } else if index == self.choice.end() {
-                ended = Some(index);
-                format!("{}{}", reset_color, ch)
-            } else {
-                format!("{}", ch)
-            }
-        }).collect();
+        let mut line: String = chars
+            .map(|(index, ch)| {
+                if index == self.choice.start() && index < self.choice.end() {
+                    format!("{}{}", highlight_color, ch)
+                } else if index == self.choice.end() {
+                    ended = Some(index);
+                    format!("{}{}", reset_color, ch)
+                } else {
+                    format!("{}", ch)
+                }
+            })
+            .collect();
 
         // Ensure that we stop highlighting things
         if ended.is_none() {
@@ -170,13 +181,19 @@ impl fmt::Display for Line {
 
 // Interact with what the user typed in and get the Action
 pub fn interact(buffer: Vec<u8>) -> Vec<Option<Action>> {
-    buffer.keys()
+    buffer
+        .keys()
         .map(|result| result.map(|key| Action::from(key)).unwrap_or(None))
         .collect()
 }
 
 // Renders the whole UI
-pub fn render<W: Write>(screen: &mut W, query: &str, choices: &Vec<Choice>, window: &Window) -> Result<(), io::Error> {
+pub fn render<W: Write>(
+    screen: &mut W,
+    query: &str,
+    choices: &Vec<Choice>,
+    window: &Window,
+) -> Result<(), io::Error> {
     clear(screen)?;
     render_choices(screen, choices, window)?;
     render_prompt(screen, query, choices.len(), window)?;
@@ -194,7 +211,11 @@ fn clear<W: Write>(screen: &mut W) -> Result<(), io::Error> {
 }
 
 // Renders each choice
-fn render_choices<W: Write>(screen: &mut W, choices: &Vec<Choice>, window: &Window) -> Result<(), io::Error> {
+fn render_choices<W: Write>(
+    screen: &mut W,
+    choices: &Vec<Choice>,
+    window: &Window,
+) -> Result<(), io::Error> {
     for (index, choice) in choices.iter().take(window.lines_len()).cloned().enumerate() {
         let line = Line::new(choice, index, window);
         writeln!(screen, "{}", line)?;
@@ -204,7 +225,12 @@ fn render_choices<W: Write>(screen: &mut W, choices: &Vec<Choice>, window: &Wind
 }
 
 // Renders the prompt line
-fn render_prompt<W: Write>(screen: &mut W, query: &str, matches: usize, window: &Window) -> Result<(), io::Error> {
+fn render_prompt<W: Write>(
+    screen: &mut W,
+    query: &str,
+    matches: usize,
+    window: &Window,
+) -> Result<(), io::Error> {
     // Go to the beginning again and redraw the prompt.
     // This will put the cursor at the end of it
     let width = window.prompt_width();

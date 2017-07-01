@@ -35,13 +35,11 @@ impl Terminal {
     }
 
     pub fn input(&mut self) -> Vec<u8> {
-        let mut internal = [0;4];
+        let mut internal = [0; 4];
         let mut buffer: Vec<u8> = vec![];
 
         match self.alternate.read(&mut internal) {
-            Ok(n) => {
-                buffer = internal.iter().take(n).map(|&x| x).collect()
-            },
+            Ok(n) => buffer = internal.iter().take(n).map(|&x| x).collect(),
             Err(_) => {}
         };
 
@@ -51,7 +49,7 @@ impl Terminal {
     pub fn size(&self) -> (usize, usize) {
         match terminal_size(self.fd) {
             Ok((width, height)) => (width as usize, height as usize),
-            Err(_) => (0, 0)
+            Err(_) => (0, 0),
         }
     }
 }

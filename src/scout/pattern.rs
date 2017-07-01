@@ -13,12 +13,17 @@ impl fmt::Display for Pattern {
 impl Pattern {
     pub fn build<'a>(query: &'a [char]) -> Self {
         let last_index = query.len() - 1;
-        let partial: String = query[0..last_index].iter()
+        let partial: String = query[0..last_index]
+            .iter()
             .map(|ch| regex::escape(&ch.to_string()))
             .map(|esc| format!("{}.*?", esc))
             .collect();
 
-        let pattern = format!("(?i){}{}", partial, regex::escape(&query[last_index].to_string()));
+        let pattern = format!(
+            "(?i){}{}",
+            partial,
+            regex::escape(&query[last_index].to_string())
+        );
 
         Pattern(pattern)
     }

@@ -22,14 +22,14 @@ pub fn refine<'b>(re: &'b Regex, text: String) -> Option<Choice> {
                         let choice = (
                             text.to_string(),
                             matching.start() + index,
-                            matching.end() + index
+                            matching.end() + index,
                         ).into();
                         matches.push(choice)
-                    },
-                    None => break
+                    }
+                    None => break,
                 }
             }
-            None => break
+            None => break,
         }
     }
 

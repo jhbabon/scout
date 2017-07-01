@@ -22,9 +22,7 @@ impl Scout {
             list.len() / size
         };
 
-        let list: Vec<String> = list.iter()
-            .map(|t| String::from(*t))
-            .collect();
+        let list: Vec<String> = list.iter().map(|t| String::from(*t)).collect();
 
         let chunks = list.chunks(chunk_size)
             .map(|section| Vec::from(section))
@@ -37,10 +35,11 @@ impl Scout {
 
     pub fn explore<'b>(&self, query: &'b [char]) -> Vec<Choice> {
         if query.is_empty() {
-            return self.list.iter()
+            return self.list
+                .iter()
                 .cloned()
                 .map(|text| text.into())
-                .collect::<Vec<Choice>>()
+                .collect::<Vec<Choice>>();
         }
 
         let re = self.regex(query);
@@ -52,9 +51,8 @@ impl Scout {
                 let reg = re.clone();
 
                 self.pool.spawn_fn(move || {
-                    let choices: Vec<Option<Choice>> = lines.into_iter()
-                        .map(|line| refine(&reg, line))
-                        .collect();
+                    let choices: Vec<Option<Choice>> =
+                        lines.into_iter().map(|line| refine(&reg, line)).collect();
                     let result: Result<Vec<Option<Choice>>, ()> = Ok(choices);
                     result
                 })
@@ -133,9 +131,7 @@ mod tests {
     #[test]
     fn it_takes_reserved_chars() {
         let query = ['?', '*', '.'];
-        let expected = vec![
-            Choice::new("reserved?*.rs".to_string(), 8, 11)
-        ];
+        let expected = vec![Choice::new("reserved?*.rs".to_string(), 8, 11)];
 
         let scout = Scout::new(LIST.to_vec());
 
@@ -145,9 +141,7 @@ mod tests {
     #[test]
     fn it_takes_special_chars() {
         let query = ['ß', '💣'];
-        let expected = vec![
-            Choice::new("ßℝ💣".to_string(), 0, 9)
-        ];
+        let expected = vec![Choice::new("ßℝ💣".to_string(), 0, 9)];
 
         let scout = Scout::new(LIST.to_vec());
 
@@ -157,13 +151,13 @@ mod tests {
     #[test]
     fn it_returns_the_same_on_empty_query() {
         let query = [];
-        let expected: Vec<String> = LIST.iter()
-            .map(|&s| String::from(s))
-            .collect();
+        let expected: Vec<String> = LIST.iter().map(|&s| String::from(s)).collect();
 
         let scout = Scout::new(LIST.to_vec());
 
-        let choices: Vec<String> = scout.explore(&query).iter()
+        let choices: Vec<String> = scout
+            .explore(&query)
+            .iter()
             .map(|choice| choice.to_string())
             .collect();
 

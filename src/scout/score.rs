@@ -25,14 +25,20 @@ mod tests {
 
     #[test]
     fn it_builds_a_new_score() {
-        let expected = Score { index: 1, match_length: 2 };
+        let expected = Score {
+            index: 1,
+            match_length: 2,
+        };
 
         assert_eq!(expected, Score::new(1, 3));
     }
 
     #[test]
     fn it_builds_a_new_score_from_a_tuple() {
-        let expected = Score { index: 1, match_length: 2 };
+        let expected = Score {
+            index: 1,
+            match_length: 2,
+        };
 
         assert_eq!(expected, (1, 3).into());
     }

@@ -47,11 +47,12 @@ pub fn main() {
     let mut buffer = String::new();
     let stdin = io::stdin();
     match stdin.lock().read_to_string(&mut buffer) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(error) => fatal(error),
     };
 
-    let list: Vec<&str> = buffer.split("\n")
+    let list: Vec<&str> = buffer
+        .split("\n")
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
@@ -76,7 +77,8 @@ fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
 
     'event: loop {
         query_string = query.iter().cloned().collect();
-        let choices = history.entry(query_string.to_owned())
+        let choices = history
+            .entry(query_string.to_owned())
             .or_insert_with(|| scout.explore(&query));
 
         window.refine(&last_actions, choices.len());
@@ -87,36 +89,33 @@ fn magic<'a>(list: Vec<&'a str>) -> Result<String, io::Error> {
             match action {
                 Some(Action::DeleteChar) => {
                     let _ = query.pop();
-                },
+                }
                 Some(Action::Clear) => {
                     query.clear();
-                },
+                }
                 Some(Action::Add(c)) => {
                     query.push(c);
-                },
+                }
                 Some(Action::Done) => {
                     let ref choice = choices[window.selection()];
                     result = choice.to_string();
 
-                    break 'event
-                },
-                Some(Action::Exit) => {
-                    break 'event
-                },
+                    break 'event;
+                }
+                Some(Action::Exit) => break 'event,
                 Some(_) | None => {}
             }
         }
 
         last_actions = actions;
-    };
+    }
 
     Ok(result)
 }
 
 fn fatal(error: io::Error) {
     let stderr = io::stderr();
-    writeln!(stderr.lock(), "ERROR: {}", error)
-        .expect("ERROR while writting to STDERR");
+    writeln!(stderr.lock(), "ERROR: {}", error).expect("ERROR while writting to STDERR");
 
     process::exit(1);
 }
