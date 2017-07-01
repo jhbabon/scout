@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `rustfmt` config file.
 - Instructions of how to use `rustfmt` in the project.
 - Add link to scout.vim to README
+- Integrate the project with Travis CI.
 
 ### Changed
 - Reformatted `rust` source code with `rustfmt`.
