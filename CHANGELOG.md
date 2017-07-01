@@ -1,4 +1,4 @@
-# Change Log
+# Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Instructions of how to use `rustfmt` in the project.
 - Add link to scout.vim to README
 - Integrate the project with Travis CI.
+- Instructions of how to use `clippy` in the project.
 
 ### Changed
 - Reformatted `rust` source code with `rustfmt`.
+- Refactored the code to remove `clippy` offenses.
 
 ## [0.9.2] - 2017-06-29
 ### Fixed
