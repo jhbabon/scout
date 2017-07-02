@@ -20,10 +20,10 @@ doc = false
 
 [dependencies]
 termios = "0.2"
-termion = "1.3"
+termion = "1.4"
 regex = "0.2"
 docopt = "0.7"
-libc  = "0.2.21"
-num_cpus = "1.5"
+libc  = "0.2.24"
+num_cpus = "1.6"
 futures = "0.1"
 futures-cpupool = "0.1"
