@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- Tests for the UI module.
+
+### Changed
+- Refactored the UI module into several files.
+- Upgraded dependencies.
 
 ## [0.10.0] - 2017-07-01
 ### Added
@@ -13,13 +19,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add link to scout.vim to README
 - Integrate the project with Travis CI.
 - Instructions of how to use `clippy` in the project.
-- Tests for the UI module.
 
 ### Changed
 - Reformatted `rust` source code with `rustfmt`.
 - Refactored the code to remove `clippy` offenses.
-- Refactored the UI module into several files.
-- Upgraded dependencies.
 
 ## [0.9.2] - 2017-06-29
 ### Fixed
