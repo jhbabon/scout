@@ -39,7 +39,7 @@ pub fn refine(re: &Regex, text: &str) -> Option<Choice> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::pattern::Pattern;
+    use pattern::Pattern;
 
     #[test]
     fn returns_none_when_there_is_no_match() {

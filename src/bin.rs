@@ -82,7 +82,7 @@ fn magic(list: Vec<&str>) -> Result<String, io::Error> {
             .entry(query_string.to_owned())
             .or_insert_with(|| scout.explore(&query));
 
-        window.refine(&last_actions, choices.len());
+        window.outline(&last_actions, choices.len());
         ui::render(&mut terminal, &query_string, choices, &window)?;
 
         let actions = ui::interact(&terminal.input());

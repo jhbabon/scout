@@ -5,7 +5,7 @@ use termion::input::TermRead;
 use std::io::{self, Write};
 use std::fmt;
 use choice::Choice;
-use terminal::Terminal;
+use terminal::Measurable;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Action {
@@ -44,8 +44,8 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn new(terminal: &Terminal, input_length: usize) -> Self {
-        let prompt_width = format!("{}", input_length).len();
+    pub fn new<T: Measurable>(terminal: &T, input_len: usize) -> Self {
+        let prompt_width = format!("{}", input_len).len();
         let (width, height) = terminal.size();
         let selection = 0;
 
@@ -57,7 +57,7 @@ impl Window {
         }
     }
 
-    pub fn refine(&mut self, actions: &[Option<Action>], choices_len: usize) {
+    pub fn outline(&mut self, actions: &[Option<Action>], choices_len: usize) {
         let max_choices = if choices_len >= self.lines_len() {
             self.lines_len()
         } else {
@@ -116,7 +116,7 @@ impl Window {
     }
 
     pub fn lines_len(&self) -> usize {
-        if self.height() > 0 {
+        if self.height() > 1 {
             self.height() - 2
         } else {
             0
@@ -179,7 +179,7 @@ impl fmt::Display for Line {
     }
 }
 
-// Interact with what the user typed in and get the Action
+// Interact with what the user typed in and get the Actions
 pub fn interact(buffer: &[u8]) -> Vec<Option<Action>> {
     buffer
         .keys()
@@ -239,4 +239,266 @@ fn render_prompt<W: Write>(
     write!(screen, "{}{}", cursor::Goto(1, 1), prompt)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fmt::Write;
+    use super::*;
+    use terminal::Measurable;
+
+    struct DummyTerminal {
+        width: usize,
+        height: usize,
+    }
+
+    impl Measurable for DummyTerminal {
+        fn size(&self) -> (usize, usize) {
+            (self.width, self.height)
+        }
+    }
+
+    #[test]
+    fn window_is_built_with_correct_proportions() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 30,
+        };
+
+        let window = Window::new(&terminal, input_len);
+
+        assert_eq!(2, window.prompt_width());
+        assert_eq!(100, window.width());
+        assert_eq!(30, window.height());
+        assert_eq!(0, window.selection());
+    }
+
+    #[test]
+    fn window_lines_len_is_proportional_to_its_height() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 30,
+        };
+
+        let window = Window::new(&terminal, input_len);
+
+        assert_eq!(28, window.lines_len());
+    }
+
+    #[test]
+    fn window_lines_len_is_zero_on_small_terminals() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 1,
+        };
+
+        let window = Window::new(&terminal, input_len);
+
+        assert_eq!(0, window.lines_len());
+    }
+
+    #[test]
+    fn window_moves_the_selection_down_when_refining() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 4,
+        };
+        let choices_len = 10;
+
+        let mut window = Window::new(&terminal, input_len);
+        let actions = [Some(Action::MoveDown)];
+
+        window.outline(&actions, choices_len);
+
+        assert_eq!(1, window.selection());
+    }
+
+    #[test]
+    fn window_moves_the_selection_back_up_when_refining() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 4,
+        };
+        let choices_len = 10;
+
+        let mut window = Window::new(&terminal, input_len);
+        let actions = [Some(Action::MoveDown), Some(Action::MoveUp)];
+
+        window.outline(&actions, choices_len);
+
+        assert_eq!(0, window.selection());
+    }
+
+    #[test]
+    fn window_cycles_through_the_selections_when_refining() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 4,
+        };
+        let choices_len = 10;
+
+        let mut window = Window::new(&terminal, input_len);
+
+        let actions = [Some(Action::MoveDown), Some(Action::MoveDown)];
+        window.outline(&actions, choices_len);
+
+        assert_eq!(0, window.selection());
+
+        let actions = [Some(Action::MoveUp)];
+        window.outline(&actions, choices_len);
+
+        assert_eq!(1, window.selection());
+    }
+
+    #[test]
+    fn window_cycles_through_the_selections_when_refining_using_choices_len_when_necessary() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 40,
+        };
+        let choices_len = 2;
+
+        let mut window = Window::new(&terminal, input_len);
+
+        let actions = [Some(Action::MoveDown), Some(Action::MoveDown)];
+        window.outline(&actions, choices_len);
+
+        assert_eq!(0, window.selection());
+
+        let actions = [Some(Action::MoveUp)];
+        window.outline(&actions, choices_len);
+
+        assert_eq!(1, window.selection());
+    }
+
+    #[test]
+    fn line_highlights_the_choice_matching_section() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 4,
+        };
+        let window = Window::new(&terminal, input_len);
+        let position = 1;
+
+        let choice = Choice::new("sample_file.rs".to_string(), 2, 8);
+
+        let line = Line::new(choice, position, &window);
+
+        let expected = format!(
+            "sa{}mple_f{}ile.rs",
+            color::Fg(color::LightGreen),
+            color::Fg(color::Reset)
+        );
+        let mut actual = String::new();
+
+        write!(&mut actual, "{}", line).unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn line_highlights_the_choice_matching_section_on_small_width() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 6,
+            height: 4,
+        };
+        let window = Window::new(&terminal, input_len);
+        let position = 1;
+
+        let choice = Choice::new("sample_file.rs".to_string(), 2, 8);
+
+        let line = Line::new(choice, position, &window);
+
+        let expected = format!(
+            "sa{}mple{}",
+            color::Fg(color::LightGreen),
+            color::Fg(color::Reset)
+        );
+        let mut actual = String::new();
+
+        write!(&mut actual, "{}", line).unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn line_highlights_the_choice_matching_section_when_selected() {
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 4,
+        };
+        let window = Window::new(&terminal, input_len);
+        let position = 0; // the current selection
+
+        let choice = Choice::new("sample_file.rs".to_string(), 2, 8);
+
+        let line = Line::new(choice, position, &window);
+
+        let expected = format!(
+            "{}sa{}mple_f{}ile.rs{}",
+            style::Invert,
+            color::Fg(color::LightGreen),
+            color::Fg(color::Reset),
+            style::Reset
+        );
+        let mut actual = String::new();
+
+        write!(&mut actual, "{}", line).unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn it_renders_the_ui() {
+        // First we print the list of choices, then the
+        // prompt using control sequences to change the
+        // position of the cursor.
+        //
+        // This would look like this (with colors):
+        //
+        //   2 > abc
+        //   a/b/c.rs
+        //
+        // Only one choice is displayed because the window
+        // is created without enough height
+        let expected = format!(
+            "{}{}\n{}{}a/b/c{}.rs{}\n{} 2 > abc",
+            termion::clear::All,
+            cursor::Goto(1, 1),
+            style::Invert,
+            color::Fg(color::LightGreen),
+            color::Fg(color::Reset),
+            style::Reset,
+            cursor::Goto(1, 1),
+        );
+
+        let mut screen: Vec<u8> = vec![];
+        let query = "abc";
+        let choices = [
+            Choice::new("a/b/c.rs".to_string(), 0, 5),
+            Choice::new("foo/a/b/c.rs".to_string(), 4, 9),
+        ];
+
+        let input_len = 10;
+        let terminal = DummyTerminal {
+            width: 100,
+            height: 3,
+        };
+        let window = Window::new(&terminal, input_len);
+
+        assert!(render(&mut screen, query, &choices, &window).is_ok());
+
+        let actual = String::from_utf8(screen).unwrap();
+        assert_eq!(expected, actual);
+    }
 }

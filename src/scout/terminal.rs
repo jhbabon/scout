@@ -8,6 +8,10 @@ use std::default::Default;
 
 use terminal_size::terminal_size;
 
+pub trait Measurable {
+    fn size(&self) -> (usize, usize);
+}
+
 pub struct Terminal {
     fd: RawFd, // File Descriptor of /dev/tty
     tty: Termios, // Termios /dev/tty representation
@@ -17,8 +21,8 @@ pub struct Terminal {
 impl Terminal {
     // TODO: Use Result
     pub fn new() -> Self {
-        let dev_tty = termion::get_tty().unwrap();
-        let fd = dev_tty.as_raw_fd();
+        let device_tty = termion::get_tty().unwrap();
+        let fd = device_tty.as_raw_fd();
 
         // Modify the tty so it doesn't print back
         // user's input and it takes input without
@@ -30,23 +34,24 @@ impl Terminal {
         raw_tty.c_lflag &= !(termios::ICANON | termios::ECHO);
         termios::tcsetattr(fd, termios::TCSANOW, &raw_tty).unwrap();
 
-        let alternate = AlternateScreen::from(dev_tty);
+        let alternate = AlternateScreen::from(device_tty);
 
         Terminal { fd, tty, alternate }
     }
 
     pub fn input(&mut self) -> Vec<u8> {
-        let mut internal = [0; 4];
-        let mut buffer: Vec<u8> = vec![];
+        // We only want to read as much as 4 bytes
+        let mut buffer = [0; 4];
 
-        if let Ok(n) = self.alternate.read(&mut internal) {
-            buffer = internal.iter().take(n).cloned().collect()
-        };
-
-        buffer
+        match self.alternate.read(&mut buffer) {
+            Ok(n) => buffer.iter().take(n).cloned().collect(),
+            Err(_) => vec![],
+        }
     }
+}
 
-    pub fn size(&self) -> (usize, usize) {
+impl Measurable for Terminal {
+    fn size(&self) -> (usize, usize) {
         match terminal_size(self.fd) {
             Ok((width, height)) => (width as usize, height as usize),
             Err(_) => (0, 0),
