@@ -5,9 +5,9 @@ use std::env;
 use std::process;
 use std::io::{self, Read, Write};
 use std::collections::HashMap;
-use std::default::Default;
 
 use scout::{Terminal, Choice, Scout};
+use scout::errors::Error;
 use scout::ui::{self, Window, Action};
 
 use docopt::Docopt;
@@ -49,7 +49,7 @@ pub fn main() {
     let stdin = io::stdin();
     match stdin.lock().read_to_string(&mut buffer) {
         Ok(_) => {}
-        Err(error) => fatal(&error),
+        Err(error) => fatal(&error.into()),
     };
 
     let list: Vec<&str> = buffer
@@ -64,11 +64,11 @@ pub fn main() {
     }
 }
 
-fn magic(list: Vec<&str>) -> Result<String, io::Error> {
+fn magic(list: Vec<&str>) -> Result<String, Error> {
     let total = list.len();
 
-    let mut last_actions: Vec<Option<Action>> = vec![];
-    let mut terminal: Terminal = Default::default();
+    let mut last_actions: Vec<Action> = vec![];
+    let mut terminal = Terminal::new()?;
     let mut window = Window::new(&terminal, total);
     let mut result = String::new();
     let mut query: Vec<char> = vec![];
@@ -88,23 +88,23 @@ fn magic(list: Vec<&str>) -> Result<String, io::Error> {
         let actions = ui::interact(&terminal.input());
         for action in actions.iter().cloned() {
             match action {
-                Some(Action::DeleteChar) => {
+                Action::DeleteChar => {
                     let _ = query.pop();
                 }
-                Some(Action::Clear) => {
+                Action::Clear => {
                     query.clear();
                 }
-                Some(Action::Add(c)) => {
+                Action::Add(c) => {
                     query.push(c);
                 }
-                Some(Action::Done) => {
+                Action::Done => {
                     let choice = &choices[window.selection()];
                     result = choice.to_string();
 
                     break 'event;
                 }
-                Some(Action::Exit) => break 'event,
-                Some(_) | None => {}
+                Action::Exit => break 'event,
+                _ => {}
             }
         }
 
@@ -114,7 +114,7 @@ fn magic(list: Vec<&str>) -> Result<String, io::Error> {
     Ok(result)
 }
 
-fn fatal(error: &io::Error) {
+fn fatal(error: &Error) {
     let stderr = io::stderr();
     writeln!(stderr.lock(), "ERROR: {}", error).expect("ERROR while writting to STDERR");
 

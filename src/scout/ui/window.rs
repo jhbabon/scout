@@ -23,7 +23,7 @@ impl Window {
         }
     }
 
-    pub fn outline(&mut self, actions: &[Option<Action>], choices_len: usize) {
+    pub fn outline(&mut self, actions: &[Action], choices_len: usize) {
         let max_choices = if choices_len >= self.lines_len() {
             self.lines_len()
         } else {
@@ -40,21 +40,21 @@ impl Window {
 
         for action in actions {
             new_selection = match *action {
-                Some(Action::MoveUp) => {
+                Action::MoveUp => {
                     if new_selection == 0 {
                         max_index
                     } else {
                         new_selection - 1
                     }
                 }
-                Some(Action::MoveDown) => {
+                Action::MoveDown => {
                     if new_selection == max_index {
                         0
                     } else {
                         new_selection + 1
                     }
                 }
-                Some(_) | None => 0,
+                _ => 0,
             }
         }
 
@@ -158,7 +158,7 @@ mod tests {
         let choices_len = 10;
 
         let mut window = Window::new(&terminal, input_len);
-        let actions = [Some(Action::MoveDown)];
+        let actions = [Action::MoveDown];
 
         window.outline(&actions, choices_len);
 
@@ -175,7 +175,7 @@ mod tests {
         let choices_len = 10;
 
         let mut window = Window::new(&terminal, input_len);
-        let actions = [Some(Action::MoveDown), Some(Action::MoveUp)];
+        let actions = [Action::MoveDown, Action::MoveUp];
 
         window.outline(&actions, choices_len);
 
@@ -193,12 +193,12 @@ mod tests {
 
         let mut window = Window::new(&terminal, input_len);
 
-        let actions = [Some(Action::MoveDown), Some(Action::MoveDown)];
+        let actions = [Action::MoveDown, Action::MoveDown];
         window.outline(&actions, choices_len);
 
         assert_eq!(0, window.selection());
 
-        let actions = [Some(Action::MoveUp)];
+        let actions = [Action::MoveUp];
         window.outline(&actions, choices_len);
 
         assert_eq!(1, window.selection());
@@ -215,12 +215,12 @@ mod tests {
 
         let mut window = Window::new(&terminal, input_len);
 
-        let actions = [Some(Action::MoveDown), Some(Action::MoveDown)];
+        let actions = [Action::MoveDown, Action::MoveDown];
         window.outline(&actions, choices_len);
 
         assert_eq!(0, window.selection());
 
-        let actions = [Some(Action::MoveUp)];
+        let actions = [Action::MoveUp];
         window.outline(&actions, choices_len);
 
         assert_eq!(1, window.selection());

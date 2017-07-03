@@ -4,8 +4,8 @@ use termion::screen::AlternateScreen;
 use std::io::{self, Read, Write};
 use std::fs::File;
 use std::os::unix::io::{RawFd, AsRawFd};
-use std::default::Default;
 
+use errors::Error;
 use terminal_size::terminal_size;
 
 pub trait Measurable {
@@ -20,8 +20,8 @@ pub struct Terminal {
 
 impl Terminal {
     // TODO: Use Result
-    pub fn new() -> Self {
-        let device_tty = termion::get_tty().unwrap();
+    pub fn new() -> Result<Self, Error> {
+        let device_tty = termion::get_tty()?;
         let fd = device_tty.as_raw_fd();
 
         // Modify the tty so it doesn't print back
@@ -29,14 +29,15 @@ impl Terminal {
         // parsing it.
         //
         // We'll call this "raw mode"
-        let tty = Termios::from_fd(fd).unwrap();
+        let tty = Termios::from_fd(fd)?;
         let mut raw_tty = tty;
         raw_tty.c_lflag &= !(termios::ICANON | termios::ECHO);
-        termios::tcsetattr(fd, termios::TCSANOW, &raw_tty).unwrap();
+        termios::tcsetattr(fd, termios::TCSANOW, &raw_tty)?;
 
         let alternate = AlternateScreen::from(device_tty);
+        let terminal = Terminal { fd, tty, alternate };
 
-        Terminal { fd, tty, alternate }
+        Ok(terminal)
     }
 
     pub fn input(&mut self) -> Vec<u8> {
@@ -62,7 +63,8 @@ impl Measurable for Terminal {
 impl Drop for Terminal {
     fn drop(&mut self) {
         // Restore the /dev/tty to its original config
-        termios::tcsetattr(self.fd, termios::TCSANOW, &self.tty).unwrap();
+        termios::tcsetattr(self.fd, termios::TCSANOW, &self.tty)
+            .expect("Error restoring the original tty configuration");
     }
 }
 
@@ -73,11 +75,5 @@ impl Write for Terminal {
 
     fn flush(&mut self) -> io::Result<()> {
         self.alternate.flush()
-    }
-}
-
-impl Default for Terminal {
-    fn default() -> Self {
-        Self::new()
     }
 }

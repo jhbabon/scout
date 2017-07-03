@@ -5,18 +5,20 @@ mod line;
 use termion::{self, cursor};
 use termion::input::TermRead;
 
-use std::io::{self, Write};
+use std::io::Write;
 use choice::Choice;
+use errors::Error;
 
 use self::line::Line;
 pub use self::action::Action;
 pub use self::window::Window;
 
 // Interact with what the user typed in and get the Actions
-pub fn interact(buffer: &[u8]) -> Vec<Option<Action>> {
+pub fn interact(buffer: &[u8]) -> Vec<Action> {
     buffer
         .keys()
         .map(|result| result.map(Action::from).unwrap_or(None))
+        .filter_map(|action| action)
         .collect()
 }
 
@@ -26,7 +28,7 @@ pub fn render<W: Write>(
     query: &str,
     choices: &[Choice],
     window: &Window,
-) -> Result<(), io::Error> {
+) -> Result<(), Error> {
     clear(screen)?;
     render_choices(screen, choices, window)?;
     render_prompt(screen, query, choices.len(), window)?;
@@ -37,7 +39,7 @@ pub fn render<W: Write>(
 }
 
 // Clears the screen
-fn clear<W: Write>(screen: &mut W) -> Result<(), io::Error> {
+fn clear<W: Write>(screen: &mut W) -> Result<(), Error> {
     writeln!(screen, "{}{}", termion::clear::All, cursor::Goto(1, 1))?;
 
     Ok(())
@@ -48,7 +50,7 @@ fn render_choices<W: Write>(
     screen: &mut W,
     choices: &[Choice],
     window: &Window,
-) -> Result<(), io::Error> {
+) -> Result<(), Error> {
     for (index, choice) in choices.iter().take(window.lines_len()).cloned().enumerate() {
         let line = Line::new(choice, index, window);
         writeln!(screen, "{}", line)?;
@@ -63,7 +65,7 @@ fn render_prompt<W: Write>(
     query: &str,
     matches: usize,
     window: &Window,
-) -> Result<(), io::Error> {
+) -> Result<(), Error> {
     // Go to the beginning again and redraw the prompt.
     // This will put the cursor at the end of it
     let width = window.prompt_width();

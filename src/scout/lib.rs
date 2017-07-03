@@ -15,6 +15,7 @@ mod scout;
 mod refine;
 
 pub mod ui;
+pub mod errors;
 pub use choice::Choice;
 pub use terminal::Terminal;
 pub use scout::Scout;

@@ -3,9 +3,11 @@ use num_cpus;
 use futures::future::{Future, join_all};
 use futures_cpupool::CpuPool;
 
+// TODO: Review the use of super
 use super::choice::Choice;
 use super::pattern::Pattern;
 use super::refine;
+use super::errors::Error;
 
 pub struct Scout {
     list: Vec<String>,
@@ -40,7 +42,10 @@ impl Scout {
                 .collect::<Vec<Choice>>();
         }
 
-        let re = self.regex(query);
+        let re = match self.regex(query) {
+            Ok(r) => r,
+            Err(e) => panic!("{:?}", e),
+        };
 
         let futures = self.chunks
             .iter()
@@ -57,28 +62,32 @@ impl Scout {
             })
             .collect::<Vec<_>>();
 
-        let mut choices: Vec<Choice> = join_all(futures)
+        let waiting = join_all(futures)
             .map(|values| {
                 values
                     .iter()
                     .cloned()
                     .flat_map(|choices| choices)
-                    .filter(|choice| choice.is_some())
-                    .map(|choice| choice.unwrap())
+                    .filter_map(|choice| choice)
                     .collect::<Vec<Choice>>()
             })
-            .wait()
-            .unwrap();
+            .wait();
+
+        let mut choices: Vec<Choice> = match waiting {
+            Ok(values) => values,
+            Err(_) => vec![],
+        };
 
         choices.sort();
 
         choices
     }
 
-    fn regex<'b>(&self, query: &'b [char]) -> Regex {
+    fn regex<'b>(&self, query: &'b [char]) -> Result<Regex, Error> {
         let pattern = Pattern::build(query);
+        let regex = Regex::new(&pattern.to_string())?;
 
-        Regex::new(&pattern.to_string()).unwrap()
+        Ok(regex)
     }
 }
 
