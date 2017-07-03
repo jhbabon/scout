@@ -1,16 +1,14 @@
+#![warn(missing_docs)]
+
 extern crate scout;
 extern crate docopt;
 
 use std::env;
 use std::process;
 use std::io::{self, Read, Write};
-use std::collections::HashMap;
-
-use scout::{Terminal, Choice, Scout};
-use scout::errors::Error;
-use scout::ui::{self, Window, Action};
 
 use docopt::Docopt;
+use scout::errors::Error;
 
 const USAGE: &'static str = "
 Scout: Small fuzzy finder
@@ -32,7 +30,7 @@ Supported keys:
    * ESC to quit without selecting a match
 
 Example:
-  $ ls | scout
+  $ find * -type f | scout
 ";
 
 pub fn main() {
@@ -58,60 +56,10 @@ pub fn main() {
         .filter(|s| !s.is_empty())
         .collect();
 
-    match magic(list) {
+    match scout::start(list) {
         Ok(result) => println!("{}", result),
         Err(error) => fatal(&error),
     }
-}
-
-fn magic(list: Vec<&str>) -> Result<String, Error> {
-    let total = list.len();
-
-    let mut last_actions: Vec<Action> = vec![];
-    let mut terminal = Terminal::new()?;
-    let mut window = Window::new(&terminal, total);
-    let mut result = String::new();
-    let mut query: Vec<char> = vec![];
-    let mut query_string: String;
-    let mut history: HashMap<String, Vec<Choice>> = HashMap::new();
-    let scout = Scout::new(list);
-
-    'event: loop {
-        query_string = query.iter().cloned().collect();
-        let choices = history
-            .entry(query_string.to_owned())
-            .or_insert_with(|| scout.explore(&query));
-
-        window.outline(&last_actions, choices.len());
-        ui::render(&mut terminal, &query_string, choices, &window)?;
-
-        let actions = ui::interact(&terminal.input());
-        for action in actions.iter().cloned() {
-            match action {
-                Action::DeleteChar => {
-                    let _ = query.pop();
-                }
-                Action::Clear => {
-                    query.clear();
-                }
-                Action::Add(c) => {
-                    query.push(c);
-                }
-                Action::Done => {
-                    let choice = &choices[window.selection()];
-                    result = choice.to_string();
-
-                    break 'event;
-                }
-                Action::Exit => break 'event,
-                _ => {}
-            }
-        }
-
-        last_actions = actions;
-    }
-
-    Ok(result)
 }
 
 fn fatal(error: &Error) {

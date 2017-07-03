@@ -84,7 +84,7 @@ Supported keys:
    * ESC to quit without selecting a match
 
 Example:
-  $ ls | scout
+  $ find * -type f | scout
 ```
 
 ### NEOVIM integration

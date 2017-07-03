@@ -17,6 +17,7 @@ path = "src/scout/lib.rs"
 name = "scout"
 path = "src/bin.rs"
 doc = false
+test = false
 
 [dependencies]
 termios = "0.2"

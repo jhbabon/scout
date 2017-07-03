@@ -5,7 +5,7 @@ use futures_cpupool::CpuPool;
 
 use choice::Choice;
 use pattern::Pattern;
-use refine;
+use refine::refine;
 use errors::Error;
 
 pub struct Scout {
