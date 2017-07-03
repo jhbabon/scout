@@ -1,6 +1,9 @@
+//! Behold! All errors live here
+
 use std::{fmt, error, io};
 use regex;
 
+/// Main scout error struct
 pub struct Error {
     display: String,
     debug: String,
@@ -8,6 +11,7 @@ pub struct Error {
 }
 
 impl Error {
+    /// Create a new error from any other by importing its information.
     pub fn import<E: fmt::Display + fmt::Debug + error::Error>(error: E) -> Self {
         let display = format!("{}", error);
         let debug = format!("{:?}", error);

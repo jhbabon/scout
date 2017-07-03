@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 
 use score::Score;
 
+/// Wrapper around String so it orders strings by len and not bytes.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 struct OrderlyString(String);
 
@@ -30,6 +31,10 @@ impl From<String> for OrderlyString {
     }
 }
 
+/// A choice represents an element in the list that matches against the current user's query.
+///
+/// It has the original text, the score (how good is the match) and where the match starts and
+/// ends.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Choice {
     match_start: usize,
@@ -39,6 +44,7 @@ pub struct Choice {
 }
 
 impl Choice {
+    /// Build a new Choice.
     pub fn new(text: String, match_start: usize, match_end: usize) -> Choice {
         Choice {
             match_start,
@@ -48,10 +54,12 @@ impl Choice {
         }
     }
 
+    /// The character index where the matching starts
     pub fn start(&self) -> usize {
         self.match_start
     }
 
+    /// The character index where the matching ends
     pub fn end(&self) -> usize {
         self.match_end
     }

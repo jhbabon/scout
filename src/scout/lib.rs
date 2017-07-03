@@ -1,19 +1,17 @@
 #![warn(missing_docs)]
 
-/*!
-Scout is a small fuzzy finder for the command line.
-
-It allows you to select an item from a list of choices with as few characters as possible.
-
-Scout takes the list of choices from the standard input. Because of
-this, it opens a new pseudo terminal to allow the user to interact with the program. Once the
-user selects a choice (press Enter), scout closes the pseudo terminal, returns to the original
-terminal and prints out the choice to the standard output.
-
-The scout library is divided between the elements to control the [`UI`](ui/index.html), the
-[`Terminal`](struct.Terminal.html) change and [the engine](struct.Scout.html) to perform the fuzzy
-filtering.
-*/
+//! Scout is a small fuzzy finder for the command line.
+//!
+//! It allows you to select an item from a list of choices using as few characters as possible.
+//!
+//! Scout takes the list of choices from the standard input. Then it opens a new pseudo terminal
+//! to allow the user to interact with the list. Once the user selects a choice (presses Enter),
+//! scout closes the pseudo terminal, returns to the original terminal and prints out the choice
+//! to the standard output.
+//!
+//! The scout library is divided between the elements to control the [`UI`](ui/index.html), the
+//! [`Terminal`](struct.Terminal.html) change and [the engine](struct.Scout.html) to perform the
+//! fuzzy filtering.
 
 extern crate libc;
 extern crate termios;
@@ -22,8 +20,6 @@ extern crate regex;
 extern crate num_cpus;
 extern crate futures;
 extern crate futures_cpupool;
-
-use std::collections::HashMap;
 
 mod score;
 mod choice;
@@ -37,8 +33,26 @@ pub mod ui;
 pub mod errors;
 pub use choice::Choice;
 pub use terminal::Terminal;
+pub use pattern::Pattern;
 pub use scout::Scout;
+pub use refine::refine;
 
+use std::collections::HashMap;
+
+/// Run the main program.
+///
+/// The main program starts the pseudo terminal and runs an event loop that does the following:
+///
+/// * It prints the window with the list of choices and the prompt for the user so she can interact
+///   with it.
+/// * It highlights the current selected choice.
+/// * Once the user enters a new character to the prompt, it recalculates the list of available
+///   choices and it restarts the loop.
+/// * The loop ends when the user presses Enter or exits (Ctrl-C or ESC).
+///
+/// The interaction with the main `stdin` and `stdout` is done outside this method, in the `bin.rs`
+/// file since that is the actual binary that is going to be executed and all main IO parsing is
+/// done there for encapsulation.
 pub fn start(list: Vec<&str>) -> Result<String, errors::Error> {
     let total = list.len();
 

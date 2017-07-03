@@ -83,7 +83,7 @@ impl Scout {
     }
 
     fn regex<'b>(&self, query: &'b [char]) -> Result<Regex, Error> {
-        let pattern = Pattern::build(query);
+        let pattern: Pattern = query.into();
         let regex = Regex::new(&pattern.to_string())?;
 
         Ok(regex)
