@@ -3,11 +3,10 @@ use num_cpus;
 use futures::future::{Future, join_all};
 use futures_cpupool::CpuPool;
 
-// TODO: Review the use of super
-use super::choice::Choice;
-use super::pattern::Pattern;
-use super::refine;
-use super::errors::Error;
+use choice::Choice;
+use pattern::Pattern;
+use refine;
+use errors::Error;
 
 pub struct Scout {
     list: Vec<String>,

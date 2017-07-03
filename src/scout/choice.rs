@@ -1,7 +1,7 @@
 use std::fmt;
 use std::cmp::Ordering;
 
-use super::score::Score;
+use score::Score;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 struct OrderlyString(String);

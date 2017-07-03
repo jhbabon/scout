@@ -1,5 +1,5 @@
 use regex::Regex;
-use super::choice::Choice;
+use choice::Choice;
 
 pub fn refine(re: &Regex, text: &str) -> Option<Choice> {
     // let text = &text;
