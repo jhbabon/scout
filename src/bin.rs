@@ -1,5 +1,10 @@
 #![warn(missing_docs)]
 
+//! The command line entry point.
+//!
+//! It reads the STDIN and writes to STDOUT the choice selected. In
+//! case of error, it will print it to STDERR.
+
 extern crate scout;
 extern crate docopt;
 
@@ -33,6 +38,7 @@ Example:
   $ find * -type f | scout
 ";
 
+/// Start the CLI.
 pub fn main() {
     Docopt::new(USAGE)
         .and_then(|doc| {
@@ -62,6 +68,7 @@ pub fn main() {
     }
 }
 
+/// Print the error to STDERR and stop the program in a non zero exit status.
 fn fatal(error: &Error) {
     let stderr = io::stderr();
     writeln!(stderr.lock(), "ERROR: {}", error).expect("ERROR while writting to STDERR");
