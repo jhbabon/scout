@@ -53,14 +53,14 @@ use std::collections::HashMap;
 /// The interaction with the main `stdin` and `stdout` is done outside this method, in the `bin.rs`
 /// file since that is the actual binary that is going to be executed and all main IO parsing is
 /// done there for encapsulation.
-pub fn start(list: Vec<&str>) -> Result<String, errors::Error> {
+pub fn start(list: Vec<&str>, initial_query: Vec<char>) -> Result<String, errors::Error> {
     let total = list.len();
 
     let mut last_actions: Vec<ui::Action> = vec![];
     let mut terminal = Terminal::new()?;
     let mut window = ui::Window::new(&terminal, total);
     let mut result = String::new();
-    let mut query: Vec<char> = vec![];
+    let mut query: Vec<char> = initial_query;
     let mut query_string: String;
     let mut history: HashMap<String, Vec<Choice>> = HashMap::new();
     let scout = Scout::new(list);

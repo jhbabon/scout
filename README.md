@@ -67,18 +67,20 @@ want to filter and pass it to `scout`. Once you select the item you want,
 You can always check the `--help` option for more info:
 
 ```
-$ scout --help
 Scout: Small fuzzy finder
 
 This program expects a list of items in the standard input,
 so it is better to use it with pipes.
 
 Usage:
-  scout [options]
+  scout [--search=<query>]
+  scout -h | --help
+  scout -v | --version
 
 Options:
-  -h --help     Show this screen.
-  -v --version  Show version.
+  -s --search=<query>  Start the search with the given query
+  -h --help            Show this screen.
+  -v --version         Show version.
 
 Supported keys:
    * ^U to delete the entire line
@@ -88,6 +90,9 @@ Supported keys:
 
 Example:
   $ find * -type f | scout
+
+  # Pass an initial query to start filtering right away
+  $ find * -type f | scout --search=foo
 ```
 
 ### NEOVIM integration

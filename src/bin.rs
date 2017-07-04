@@ -5,6 +5,9 @@
 //! It reads the STDIN and writes to STDOUT the choice selected. In
 //! case of error, it will print it to STDERR.
 
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
 extern crate scout;
 extern crate docopt;
 
@@ -22,11 +25,14 @@ This program expects a list of items in the standard input,
 so it is better to use it with pipes.
 
 Usage:
-  scout [options]
+  scout [--search=<query>]
+  scout -h | --help
+  scout -v | --version
 
 Options:
-  -h --help     Show this screen.
-  -v --version  Show version.
+  -s --search=<query>  Start the search with the given query
+  -h --help            Show this screen.
+  -v --version         Show version.
 
 Supported keys:
    * ^U to delete the entire line
@@ -36,17 +42,30 @@ Supported keys:
 
 Example:
   $ find * -type f | scout
+
+  # Pass an initial query to start filtering right away
+  $ find * -type f | scout --search=foo
 ";
+
+#[derive(Deserialize)]
+struct Args {
+    flag_search: Option<String>,
+}
 
 /// Start the CLI.
 pub fn main() {
-    Docopt::new(USAGE)
+    let args: Args = Docopt::new(USAGE)
         .and_then(|doc| {
             doc.argv(env::args())
                 .version(Some(scout::version()))
-                .parse()
+                .deserialize()
         })
-        .unwrap_or_else(|e| e.exit());;
+        .unwrap_or_else(|e| e.exit());
+
+    let query = match args.flag_search {
+        Some(q) => q.chars().collect::<Vec<char>>(),
+        None => vec![],
+    };
 
     // Collect initial input
     let mut buffer = String::new();
@@ -62,7 +81,7 @@ pub fn main() {
         .filter(|s| !s.is_empty())
         .collect();
 
-    match scout::start(list) {
+    match scout::start(list, query) {
         Ok(result) => println!("{}", result),
         Err(error) => fatal(&error),
     }
