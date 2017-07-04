@@ -8,10 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - Tests for the UI module.
 - Custom Error type to control error cases.
+- Added docs to all modules.
 
 ### Changed
 - Refactored the UI module into several files.
 - Upgraded dependencies.
+- New demo in the README.
 
 ### Removed
 - No more `unwrap()` calls.
