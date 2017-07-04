@@ -11,7 +11,8 @@ impl Pattern {
     /// # Example
     ///
     /// ```rust
-    /// # use scout::Pattern;
+    /// use scout::Pattern;
+    ///
     /// let query = ['a', 'b', 'c'];
     /// let pattern = Pattern::new(&query);
     ///

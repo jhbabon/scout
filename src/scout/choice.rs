@@ -45,8 +45,8 @@ pub struct Choice {
 
 impl Choice {
     /// Build a new Choice.
-    pub fn new(text: String, match_start: usize, match_end: usize) -> Choice {
-        Choice {
+    pub fn new(text: String, match_start: usize, match_end: usize) -> Self {
+        Self {
             match_start,
             match_end,
             score: (match_start, match_end).into(),
@@ -55,11 +55,16 @@ impl Choice {
     }
 
     /// The character index where the matching starts
+    ///
+    /// The character under this index is included in the match.
     pub fn start(&self) -> usize {
         self.match_start
     }
 
     /// The character index where the matching ends
+    ///
+    /// The character under this index is NOT included in the match.
+    /// It's an open ending.
     pub fn end(&self) -> usize {
         self.match_end
     }
@@ -152,7 +157,7 @@ mod tests {
     #[test]
     fn on_equal_scores_it_orders_first_choices_with_shorter_text() {
         let better = Choice::new("bbb".to_string(), 0, 3);
-        let worse = Choice::new("abbb".to_string(), 0, 3);
+        let worse = Choice::new("bbba".to_string(), 0, 3);
 
         assert!(better < worse);
     }

@@ -1,3 +1,4 @@
+/// Points assigned to a Choice. The smaller the better.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Score {
     match_length: usize,
@@ -6,7 +7,7 @@ pub struct Score {
 
 impl Score {
     pub fn new(match_start: usize, match_end: usize) -> Self {
-        Score {
+        Self {
             index: match_start,
             match_length: match_end - match_start,
         }

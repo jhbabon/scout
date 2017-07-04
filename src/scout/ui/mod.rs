@@ -1,3 +1,5 @@
+//! Collection of functions and structs to build the User Interface
+
 mod action;
 mod window;
 mod line;
@@ -13,7 +15,18 @@ use self::line::Line;
 pub use self::action::Action;
 pub use self::window::Window;
 
-// Interact with what the user typed in and get the Actions
+/// Interact with what the raw user's input and get the corresponding Actions
+///
+/// # Example
+///
+/// ```
+/// use scout::ui;
+///
+/// let buffer = b"a\n";
+/// let expected = vec![ui::Action::Add('a'), ui::Action::Done];
+///
+/// assert_eq!(expected, ui::interact(buffer));
+/// ```
 pub fn interact(buffer: &[u8]) -> Vec<Action> {
     buffer
         .keys()
@@ -22,7 +35,23 @@ pub fn interact(buffer: &[u8]) -> Vec<Action> {
         .collect()
 }
 
-// Renders the whole UI
+/// Render the whole UI
+///
+/// Given the following elements:
+///
+/// * query: `['a', 'b', 'c']`
+/// * choices: `["a/b/c.rs", "a/a/b/c.rs"]`
+///
+/// And a screen with enough space, the UI would look like this (`|` represents the cursor):
+///
+/// ```text
+///  2 > abc|
+/// a/b/c.rs
+/// a/a/b/c.rs
+/// ```
+///
+/// It will have also colors for the matching areas in the choices and the current selection
+/// highlighted as well.
 pub fn render<W: Write>(
     screen: &mut W,
     query: &str,
@@ -38,14 +67,14 @@ pub fn render<W: Write>(
     Ok(())
 }
 
-// Clears the screen
+/// Clears the screen
 fn clear<W: Write>(screen: &mut W) -> Result<(), Error> {
     writeln!(screen, "{}{}", termion::clear::All, cursor::Goto(1, 1))?;
 
     Ok(())
 }
 
-// Renders each choice
+/// Renders each choice
 fn render_choices<W: Write>(
     screen: &mut W,
     choices: &[Choice],
@@ -59,15 +88,17 @@ fn render_choices<W: Write>(
     Ok(())
 }
 
-// Renders the prompt line
+/// Renders the prompt line
+///
+/// The prompt line is at the beginning, the first line. To draw it this method just moves the
+/// cursor to the first line and writes the prompt (num of choices and current query). Because is
+/// the last thing to write, the cursor will stay at the end of the prompt line.
 fn render_prompt<W: Write>(
     screen: &mut W,
     query: &str,
     matches: usize,
     window: &Window,
 ) -> Result<(), Error> {
-    // Go to the beginning again and redraw the prompt.
-    // This will put the cursor at the end of it
     let width = window.prompt_width();
     let prompt = format!("{:width$} > {}", matches, query, width = width);
 

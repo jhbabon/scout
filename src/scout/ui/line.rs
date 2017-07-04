@@ -4,6 +4,10 @@ use std::fmt;
 use choice::Choice;
 use super::Window;
 
+/// Represent a line in the list of choices.
+///
+/// A line highlights the matching section of a choice and is different in the case the choice is
+/// the current user's selection.
 pub struct Line {
     choice: Choice,
     width: usize,

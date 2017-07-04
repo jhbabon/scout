@@ -1,6 +1,13 @@
 use super::Action;
 use terminal::Measurable;
 
+/// The main UI window.
+///
+/// It has the following information:
+///
+/// * The width of the prompt indicator (where the users types the query).
+/// * The dimensions: width and height.
+/// * The current selected choice.
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Window {
     prompt_width: usize,
@@ -10,12 +17,13 @@ pub struct Window {
 }
 
 impl Window {
+    /// Create a new Window in a Terminal and knowing the len of the initial list of choices
     pub fn new<T: Measurable>(terminal: &T, input_len: usize) -> Self {
         let prompt_width = format!("{}", input_len).len();
         let (width, height) = terminal.size();
         let selection = 0;
 
-        Window {
+        Self {
             prompt_width,
             width,
             height,
@@ -23,6 +31,10 @@ impl Window {
         }
     }
 
+    /// Evaluate a set of actions and change the window properties based on them.
+    ///
+    /// Some `ui::Action` have the effect of changing the window items, like changing the current
+    /// selection.
     pub fn outline(&mut self, actions: &[Action], choices_len: usize) {
         let max_choices = if choices_len >= self.lines_len() {
             self.lines_len()
@@ -61,26 +73,32 @@ impl Window {
         self.set_selection(new_selection);
     }
 
+    /// Get the width of the prompt indicator of num of choices
     pub fn prompt_width(&self) -> usize {
         self.prompt_width
     }
 
+    /// What is the index of the current selected Choice
     pub fn selection(&self) -> usize {
         self.selection
     }
 
+    /// Set the current selected Choice
     fn set_selection(&mut self, new_selection: usize) {
         self.selection = new_selection;
     }
 
+    /// Get the window width
     pub fn width(&self) -> usize {
         self.width
     }
 
+    /// Get the window height
     pub fn height(&self) -> usize {
         self.height
     }
 
+    /// How many lines of choices can display the window
     pub fn lines_len(&self) -> usize {
         if self.height() > 1 {
             self.height() - 2

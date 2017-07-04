@@ -4,13 +4,16 @@
 
 Scout is a small fuzzy finder for you terminal made with `rust`.
 
-Yes, this is yet another tool inspired by [selecta]. The main difference with
+Yes, this is yet another tool inspired by [selecta][]. The main difference with
 [selecta][], apart of the language, is the matching and scoring algorithm.
 
 I decided to implement the matching algorithm with [regular expressions][]. Call me
 crazy, but life is too sort to iterate over endless strings keeping track of
 indexes of chars with variable sizes. Ok, maybe I'm just bad doing those kind of
 algorithms. Also, I like regexes, they are kind of a drug for me.
+
+Scout only works on UNIX systems because it opens a pseudo terminal using
+`/dev/tty`. This pseudo terminal is used to display the UI and get user's input.
 
 ## WARNING
 

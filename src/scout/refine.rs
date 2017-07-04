@@ -3,8 +3,8 @@ use choice::Choice;
 
 /// Given a `Regex` and a `&str`, determine if is a valid `Choice`.
 ///
-/// If `None` is returned it means that the text doesn't have match with the `Regex`, so it
-/// should be descarted.
+/// If `None` is returned it means that the text doesn't match with the `Regex`, so it
+/// is descarted.
 ///
 /// This is the main algorithm to detect if a text matches against a set of chars, so lets explain
 /// it a little bit:
@@ -12,7 +12,7 @@ use choice::Choice;
 /// Imagine that you have the Regex based on the pattern:
 ///
 /// ```rust,ignore
-/// extern crate regex;
+/// # extern crate regex;
 /// use regex::Regex;
 ///
 /// let re = Regex::new("(?i)a.*?b.*?c").unwrap();
@@ -27,20 +27,26 @@ use choice::Choice;
 /// let text = "a/a/b/c.rs"
 /// ```
 ///
-/// We need to note that when doing a fuzzy search, we want the shortest match possible so we can
+/// We need to note that when doing a fuzzy search, we want the shortest possible match so we can
 /// narrow to the best possible match.
 ///
-/// Now, returning to the example, if we run the regex agains the string, it will match, but not
-/// with the shortest match. It will match this section:
+/// Now, returning to the example, if we run the regex against the string, it will match with this
+/// section:
 ///
 /// ```rust,ignore
 /// let matching = "(a/a/b/c).rs"
+/// //              ^       ^
+/// //              |-------|
+/// //                match
 /// ```
 ///
 /// But the best possible match would be:
 ///
 /// ```rust,ignore
 /// let best_matching = "a/(a/b/c).rs"
+/// //                     ^     ^
+/// //                     |-----|
+/// //                      match
 /// ```
 ///
 /// How can we get the best match? By getting all the possible matches in a string.
@@ -62,7 +68,9 @@ use choice::Choice;
 /// * Now we have two matches, two possible choices. We select the shortest which is the one
 ///   matching `"a/(a/b/c).rs"`.
 ///
-/// The `refine` function does all of this for us:
+/// The `refine` function does all of this for us.
+///
+/// # Example
 ///
 /// ```rust,ignore
 /// extern crate regex;
@@ -140,6 +148,9 @@ mod tests {
         let pattern = Pattern::new(&query);
         let re = Regex::new(&pattern.to_string()).unwrap();
         let text = "axbyc";
+        //       i: 01234
+        //          ^   ^
+        //          |---| Best match
         let expected = Some(Choice::new(text.to_string(), 0, 5));
 
         assert_eq!(expected, refine(&re, text));
@@ -153,6 +164,9 @@ mod tests {
         // the second match, after the "/",
         // scores better because it's shorter
         let text = "axbyc/abyc";
+        //       i: 0123456789
+        //                ^  ^
+        //                |--| Best match
         let expected = Some(Choice::new(text.to_string(), 6, 10));
 
         assert_eq!(expected, refine(&re, text));
@@ -163,8 +177,11 @@ mod tests {
         let query = vec!['a', 'b', 'c'];
         let pattern = Pattern::new(&query);
         let re = Regex::new(&pattern.to_string()).unwrap();
-        let text = "axbyabzcc";
-        let expected = Some(Choice::new(text.to_string(), 4, 8));
+        let text = "a/a/b/c.rs";
+        //       i: 0123456789
+        //            ^   ^
+        //            |---| Best match
+        let expected = Some(Choice::new(text.to_string(), 2, 7));
 
         assert_eq!(expected, refine(&re, text));
     }
