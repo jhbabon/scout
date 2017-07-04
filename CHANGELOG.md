@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Tests for the UI module.
 - Custom Error type to control error cases.
 - Added docs to all modules.
+- Add new option, `--search`, to start `scout` filtering with a query right
+  away.
 
 ### Changed
 - Refactored the UI module into several files.
