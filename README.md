@@ -17,10 +17,6 @@ Scout only works on UNIX systems because it opens a pseudo terminal using
 
 ## WARNING
 
-I consider this a beta. There are a lot of tests missing and, to be
-honest, there are parts of `rust` that I don't understand and I basically copy
-and paste things from around, so there is a lot of room for improvement.
-
 Scout has been only tested agains linux. It probably works against macOS or
 any other UNIX as well, but it is not intended to work on Windows.
 
