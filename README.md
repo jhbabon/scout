@@ -62,7 +62,7 @@ The main idea is to use this tool with pipes. You get a list of items that you
 want to filter and pass it to `scout`. Once you select the item you want,
 `scout` will print it to the standard output (stdout).
 
-[![asciicast](https://asciinema.org/a/120469.png)](https://asciinema.org/a/120469)
+[![asciicast](https://asciinema.org/a/SFo1wYws2QC4cRy33Z4oOdamM.png)](https://asciinema.org/a/SFo1wYws2QC4cRy33Z4oOdamM)
 
 You can always check the `--help` option for more info:
 
