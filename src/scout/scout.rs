@@ -45,7 +45,7 @@ impl Scout {
             list.len() / size
         };
 
-        let list: Vec<String> = list.into_iter().map(|t| String::from(t)).collect();
+        let list: Vec<String> = list.into_iter().map(String::from).collect();
 
         let chunks = list.chunks(chunk_size).map(Vec::from).collect();
 
