@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [1.0.0] 2017-07-04
 ### Added
 - Tests for the UI module.
 - Custom Error type to control error cases.
@@ -59,7 +61,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/jhbabon/scout/compare/vv0.10.0...v1.0.0
 [0.10.0]: https://github.com/jhbabon/scout/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/jhbabon/scout/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/jhbabon/scout/compare/v0.9.0...v0.9.1
