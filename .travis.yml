@@ -3,6 +3,7 @@ cache: cargo
 dist: trusty
 os:
   - linux
+  - osx
 rust:
   - nightly
   - stable
