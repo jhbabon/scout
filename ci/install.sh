@@ -10,7 +10,11 @@ main() {
     sort=gsort  # for `sort --sort-version`, from brew's coreutils.
   fi
 
-    # This fetches latest stable release
+  if [ ! -z $ENABLED_CLIPPY ]; then
+    which rustfmt || cargo install rustfmt-nightly
+  fi
+
+  # This fetches latest stable release
   local tag=$(git ls-remote --tags --refs --exit-code https://github.com/japaric/cross \
                      | cut -d/ -f3 \
                      | grep -E '^v[0.1.0-9.]+$' \
