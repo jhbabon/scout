@@ -26,6 +26,14 @@ Scout is made with `rust`, so you will need the [latest stable version][rust-sta
 of it to compile and run the program. Check out [rustup][] for `rust`
 installations.
 
+### Install via release packages
+
+Each release, since version `v1.0.0` (not included), has a package with `scout`
+compiled for different architectures. You can try to donwload and install the
+package that match your architecture.
+
+You can find the releases in their [GitHub page][github-releases].
+
 ### Install via cargo
 
 Scout is in the main [crates][] repository, so you can install it just with `cargo`:
@@ -145,3 +153,4 @@ Now you can go through the list of warnings and fix them.
 [rustup]: https://www.rustup.rs/
 [scout.vim]: https://github.com/jhbabon/scout.vim
 [clippy]: https://github.com/Manishearth/rust-clippy
+[github-releases]: https://github.com/jhbabon/scout/releases
