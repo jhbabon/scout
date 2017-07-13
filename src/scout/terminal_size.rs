@@ -42,7 +42,7 @@ pub fn terminal_size(fileno: c_int) -> io::Result<(u16, u16)> {
     unsafe {
         let mut size: TermSize = mem::zeroed();
 
-        if ioctl(fileno, tiocgwinsz(), &mut size as *mut _) == 0 {
+        if ioctl(fileno, tiocgwinsz().into(), &mut size as *mut _) == 0 {
             Ok((size.col as u16, size.row as u16))
         } else {
             Err(io::Error::new(
