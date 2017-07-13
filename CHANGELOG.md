@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
-- Travis CI config now runs tests against OSX as well.
+- [trust](https://github.com/japaric/trust/) template to run `scout`
+  against different architectures and to generate release packages with
+  the binary already compiled for those architectures.
+
+### Fixed
+- Fix compilation in `musl` environments.
 
 ## [1.0.0] 2017-07-04
 ### Added
