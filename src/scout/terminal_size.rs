@@ -24,12 +24,7 @@ struct TermSize {
     _y: c_ushort,
 }
 
-#[cfg(all(target_env = "musl", target_pointer_width = "64"))]
-fn tiocgwinsz() -> i64 {
-    TIOCGWINSZ as i64
-}
-
-#[cfg(all(target_env = "musl", target_pointer_width = "32"))]
+#[cfg(target_env = "musl")]
 fn tiocgwinsz() -> i32 {
     TIOCGWINSZ as i32
 }
