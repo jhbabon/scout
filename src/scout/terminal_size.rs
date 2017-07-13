@@ -24,12 +24,22 @@ struct TermSize {
     _y: c_ushort,
 }
 
-#[cfg(target_pointer_width = "64")]
+#[cfg(all(target_env = "musl", target_pointer_width = "64"))]
+fn tiocgwinsz() -> i64 {
+    TIOCGWINSZ as i64
+}
+
+#[cfg(all(target_env = "musl", target_pointer_width = "32"))]
+fn tiocgwinsz() -> i32 {
+    TIOCGWINSZ as i32
+}
+
+#[cfg(all(not(target_env = "musl"), target_pointer_width = "64"))]
 fn tiocgwinsz() -> u64 {
     TIOCGWINSZ as u64
 }
 
-#[cfg(target_pointer_width = "32")]
+#[cfg(all(not(target_env = "musl"), target_pointer_width = "32"))]
 fn tiocgwinsz() -> u32 {
     TIOCGWINSZ as u32
 }
@@ -42,7 +52,7 @@ pub fn terminal_size(fileno: c_int) -> io::Result<(u16, u16)> {
     unsafe {
         let mut size: TermSize = mem::zeroed();
 
-        if ioctl(fileno, tiocgwinsz().into(), &mut size as *mut _) == 0 {
+        if ioctl(fileno, tiocgwinsz(), &mut size as *mut _) == 0 {
             Ok((size.col as u16, size.row as u16))
         } else {
             Err(io::Error::new(
