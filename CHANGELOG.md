@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- Now if there are more choices than visible lines when you go down
+  or up the list of choices, scout scrolls up or down showing choices out
+  of the visible lines.
 
 ## [v1.0.1] 2017-07-13
 ### Added
