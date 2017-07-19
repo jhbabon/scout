@@ -14,6 +14,7 @@ pub struct Window {
     width: usize,
     height: usize,
     selection: usize,
+    offset: usize,
 }
 
 impl Window {
@@ -22,12 +23,14 @@ impl Window {
         let prompt_width = format!("{}", input_len).len();
         let (width, height) = terminal.size();
         let selection = 0;
+        let offset = 0;
 
         Self {
             prompt_width,
             width,
             height,
             selection,
+            offset,
         }
     }
 
@@ -36,41 +39,56 @@ impl Window {
     /// Some `ui::Action` have the effect of changing the window items, like changing the current
     /// selection.
     pub fn outline(&mut self, actions: &[Action], choices_len: usize) {
-        let max_choices = if choices_len >= self.lines_len() {
-            self.lines_len()
-        } else {
-            choices_len
-        };
-
-        let max_index = if max_choices == 0 {
+        let max_position = if choices_len == 0 {
             0
         } else {
-            max_choices - 1
+            choices_len - 1
         };
 
-        let mut new_selection = self.selection();
-
         for action in actions {
-            new_selection = match *action {
-                Action::MoveUp => {
-                    if new_selection == 0 {
-                        max_index
-                    } else {
-                        new_selection - 1
-                    }
-                }
-                Action::MoveDown => {
-                    if new_selection == max_index {
-                        0
-                    } else {
-                        new_selection + 1
-                    }
-                }
-                _ => 0,
+            match *action {
+                Action::MoveUp => self.move_up(max_position),
+                Action::MoveDown => self.move_down(max_position),
+                _ => self.reset(),
             }
         }
 
-        self.set_selection(new_selection);
+        self.scroll();
+    }
+
+    /// Move the selection up
+    fn move_up(&mut self, max_position: usize) {
+        if self.selection == 0 {
+            self.selection = max_position;
+        } else {
+            self.selection = self.selection - 1;
+        }
+    }
+
+    /// Move the selection down
+    fn move_down(&mut self, max_position: usize) {
+        if self.selection == max_position {
+            self.selection = 0;
+        } else {
+            self.selection = self.selection + 1;
+        }
+    }
+
+    /// Move the window's offset based on the current selection
+    fn scroll(&mut self) {
+        let top_position = self.offset;
+        let last_position = (self.lines_len() + self.offset) - 1;
+
+        if self.selection > last_position {
+            self.offset = self.offset + (self.selection - last_position);
+        } else if self.selection < top_position {
+            self.offset = self.offset - (top_position - self.selection);
+        }
+    }
+
+    fn reset(&mut self) {
+        self.selection = 0;
+        self.offset = 0;
     }
 
     /// Get the width of the prompt indicator of num of choices
@@ -83,9 +101,9 @@ impl Window {
         self.selection
     }
 
-    /// Set the current selected Choice
-    fn set_selection(&mut self, new_selection: usize) {
-        self.selection = new_selection;
+    /// What is the offset of hidden choices in the current window
+    pub fn offset(&self) -> usize {
+        self.offset
     }
 
     /// Get the window width
@@ -214,12 +232,14 @@ mod tests {
         let actions = [Action::MoveDown, Action::MoveDown];
         window.outline(&actions, choices_len);
 
-        assert_eq!(0, window.selection());
+        assert_eq!(2, window.selection());
+        assert_eq!(1, window.offset());
 
         let actions = [Action::MoveUp];
         window.outline(&actions, choices_len);
 
         assert_eq!(1, window.selection());
+        assert_eq!(1, window.offset());
     }
 
     #[test]
@@ -237,10 +257,12 @@ mod tests {
         window.outline(&actions, choices_len);
 
         assert_eq!(0, window.selection());
+        assert_eq!(0, window.offset());
 
         let actions = [Action::MoveUp];
         window.outline(&actions, choices_len);
 
         assert_eq!(1, window.selection());
+        assert_eq!(0, window.offset());
     }
 }

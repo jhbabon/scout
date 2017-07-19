@@ -80,7 +80,16 @@ fn render_choices<W: Write>(
     choices: &[Choice],
     window: &Window,
 ) -> Result<(), Error> {
-    for (index, choice) in choices.iter().take(window.lines_len()).cloned().enumerate() {
+
+    let visible_choices = choices
+        .iter()
+        .cloned()
+        .enumerate()
+        .skip(window.offset())
+        .take(window.lines_len());
+
+    for (index, choice) in visible_choices {
+        // let idx = window.offset() + index;
         let line = Line::new(choice, index, window);
         writeln!(screen, "{}", line)?;
     }
