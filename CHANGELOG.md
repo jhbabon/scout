@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [v1.1.0] 2017-07-19
 ### Added
 - Now if there are more choices than visible lines when you go down
   or up the list of choices, scout scrolls up or down showing choices out
@@ -74,7 +76,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v1.1.0...HEAD
+[v1.1.0]: https://github.com/jhbabon/scout/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/jhbabon/scout/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/jhbabon/scout/compare/v0.10.0...v1.0.0
 [v0.10.0]: https://github.com/jhbabon/scout/compare/v0.9.2...v0.10.0

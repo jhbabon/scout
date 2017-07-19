@@ -89,7 +89,6 @@ fn render_choices<W: Write>(
         .take(window.lines_len());
 
     for (index, choice) in visible_choices {
-        // let idx = window.offset() + index;
         let line = Line::new(choice, index, window);
         writeln!(screen, "{}", line)?;
     }
