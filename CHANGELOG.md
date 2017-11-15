@@ -5,10 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [v1.2.0] 2017-11-15
 ### Changed
 - Internal: replaced custom made code to handle parallelization with `rayon`
   crate. Now the code is better, faster and nicer.
-- Updated cargo dependencies.
+- Updated dependencies.
 
 ## [v1.1.0] 2017-07-19
 ### Added
@@ -80,7 +82,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v1.2.0...HEAD
+[v1.2.0]: https://github.com/jhbabon/scout/compare/v1.1.0...v1.2.0
 [v1.1.0]: https://github.com/jhbabon/scout/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/jhbabon/scout/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/jhbabon/scout/compare/v0.10.0...v1.0.0
