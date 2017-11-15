@@ -26,7 +26,7 @@ matrix:
     - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
 
     # Nightly channel
-    - env: TARGET=x86_64-unknown-linux-gnu ENABLE_CLIPPY=1
+    - env: TARGET=x86_64-unknown-linux-gnu ENABLE_FMT=1
       rust: nightly
     - env: TARGET=x86_64-apple-darwin
       os: osx

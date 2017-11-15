@@ -10,7 +10,7 @@ main() {
     sort=gsort  # for `sort --sort-version`, from brew's coreutils.
   fi
 
-  if [ ! -z $ENABLE_CLIPPY ]; then
+  if [ ! -z $ENABLE_FMT ]; then
     which rustfmt || cargo install rustfmt-nightly
   fi
 

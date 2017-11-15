@@ -5,7 +5,7 @@ set -ex
 main() {
   cross build --target $TARGET
 
-  if [ ! -z $ENABLE_CLIPPY ]; then
+  if [ ! -z $ENABLE_FMT ]; then
     cargo fmt -- --write-mode=diff
   fi
 
