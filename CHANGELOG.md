@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Changed
+- Internal: replaced custom made code to handle parallelization with `rayon`
+  crate. Now the code is better, faster and nicer.
 
 ## [v1.1.0] 2017-07-19
 ### Added
