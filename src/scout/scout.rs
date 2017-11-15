@@ -1,7 +1,5 @@
 use regex::Regex;
-use num_cpus;
-use futures::future::{Future, join_all};
-use futures_cpupool::CpuPool;
+use rayon::prelude::*;
 
 use choice::Choice;
 use pattern::Pattern;
@@ -29,40 +27,24 @@ use errors::Error;
 ///
 /// assert_eq!(expected, actual);
 /// ```
-pub struct Scout {
-    list: Vec<String>,
-    chunks: Vec<Vec<String>>,
-    pool: CpuPool,
+pub struct Scout<'a> {
+    list: Vec<&'a str>,
 }
 
-impl Scout {
+impl<'a> Scout<'a> {
     /// Create a new Scout instance with a list of strings
-    pub fn new(list: Vec<&str>) -> Self {
-        let size = num_cpus::get();
-        let chunk_size = if list.len() < size {
-            list.len()
-        } else {
-            list.len() / size
-        };
-
-        let list: Vec<String> = list.into_iter().map(String::from).collect();
-
-        let chunks = list.chunks(chunk_size).map(Vec::from).collect();
-
-        let pool = CpuPool::new(size);
-
-        Self { list, chunks, pool }
+    pub fn new(list: Vec<&'a str>) -> Self {
+        Self { list }
     }
 
     /// Search for the choices that match a query, sorted by best match first.
     ///
     /// If the query is empty, it returns all the choices with the original order of the items.
-    pub fn explore<'a>(&self, query: &'a [char]) -> Vec<Choice> {
+    pub fn explore<'b>(&self, query: &'b [char]) -> Vec<Choice> {
         if query.is_empty() {
             return self.list
                 .iter()
-                .cloned()
-                .map(|text| text.into())
+                .map(|text| text.to_string().into())
                 .collect::<Vec<Choice>>();
         }
 
@@ -71,38 +53,12 @@ impl Scout {
             Err(e) => panic!("{:?}", e),
         };
 
-        // Let's parallelize the search in different threads, one per chunk of lines.
-        let futures = self.chunks
-            .iter()
-            .cloned()
-            .map(|lines| {
-                let reg = re.clone();
-
-                self.pool.spawn_fn(move || {
-                    let choices: Vec<Option<Choice>> =
-                        lines.into_iter().map(|line| refine(&reg, &line)).collect();
-                    let result: Result<Vec<Option<Choice>>, ()> = Ok(choices);
-
-                    result
-                })
-            })
-            .collect::<Vec<_>>();
-
-        let waiting = join_all(futures)
-            .map(|values| {
-                values
-                    .iter()
-                    .cloned()
-                    .flat_map(|choices| choices)
-                    .filter_map(|choice| choice)
-                    .collect::<Vec<Choice>>()
-            })
-            .wait();
-
-        let mut choices: Vec<Choice> = match waiting {
-            Ok(values) => values,
-            Err(_) => vec![],
-        };
+        let mut choices: Vec<Choice> = self.list
+            .par_iter()
+            .map(|line| refine(&re, &line))
+            .filter(|choice| choice.is_some())
+            .map(|choice| choice.unwrap())
+            .collect();
 
         choices.sort();
 
@@ -110,7 +66,7 @@ impl Scout {
     }
 
     /// Get a Regex from a list of chars.
-    fn regex<'a>(&self, query: &'a [char]) -> Result<Regex, Error> {
+    fn regex<'b>(&self, query: &'b [char]) -> Result<Regex, Error> {
         let pattern: Pattern = query.into();
         let regex = Regex::new(&pattern.to_string())?;
 

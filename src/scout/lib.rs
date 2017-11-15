@@ -14,12 +14,10 @@
 //! fuzzy filtering.
 
 extern crate libc;
-extern crate termios;
-extern crate termion;
+extern crate rayon;
 extern crate regex;
-extern crate num_cpus;
-extern crate futures;
-extern crate futures_cpupool;
+extern crate termion;
+extern crate termios;
 
 mod score;
 mod choice;

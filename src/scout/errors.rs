@@ -1,6 +1,6 @@
 //! Behold! All errors live here
 
-use std::{fmt, error, io};
+use std::{error, fmt, io};
 use regex;
 
 /// Main scout error struct

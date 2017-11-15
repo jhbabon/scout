@@ -8,7 +8,7 @@
 // "termion" any time soon, so fo the moment I adapt the original code
 // to my needs.
 use std::io;
-use libc::{c_ushort, c_int};
+use libc::{c_int, c_ushort};
 
 #[cfg(target_os = "linux")]
 pub const TIOCGWINSZ: usize = 0x00005413;

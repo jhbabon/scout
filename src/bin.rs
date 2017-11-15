@@ -5,11 +5,11 @@
 //! It reads the STDIN and writes to STDOUT the choice selected. In
 //! case of error, it will print it to STDERR.
 
+extern crate docopt;
+extern crate scout;
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
-extern crate scout;
-extern crate docopt;
 
 use std::env;
 use std::process;

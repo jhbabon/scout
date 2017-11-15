@@ -3,7 +3,7 @@ use termion;
 use termion::screen::AlternateScreen;
 use std::io::{self, Read, Write};
 use std::fs::File;
-use std::os::unix::io::{RawFd, AsRawFd};
+use std::os::unix::io::{AsRawFd, RawFd};
 
 use errors::Error;
 use terminal_size::terminal_size;

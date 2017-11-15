@@ -80,7 +80,6 @@ fn render_choices<W: Write>(
     choices: &[Choice],
     window: &Window,
 ) -> Result<(), Error> {
-
     let visible_choices = choices
         .iter()
         .cloned()
