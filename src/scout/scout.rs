@@ -55,7 +55,7 @@ impl<'a> Scout<'a> {
 
         let mut choices: Vec<Choice> = self.list
             .par_iter()
-            .map(|line| refine(&re, &line))
+            .map(|line| refine(&re, line))
             .filter(|choice| choice.is_some())
             .map(|choice| choice.unwrap())
             .collect();

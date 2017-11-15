@@ -61,7 +61,7 @@ impl Window {
         if self.selection == 0 {
             self.selection = max_position;
         } else {
-            self.selection = self.selection - 1;
+            self.selection -= 1;
         }
     }
 
@@ -70,7 +70,7 @@ impl Window {
         if self.selection == max_position {
             self.selection = 0;
         } else {
-            self.selection = self.selection + 1;
+            self.selection += 1;
         }
     }
 
@@ -80,9 +80,9 @@ impl Window {
         let last_position = (self.lines_len() + self.offset) - 1;
 
         if self.selection > last_position {
-            self.offset = self.offset + (self.selection - last_position);
+            self.offset += self.selection - last_position;
         } else if self.selection < top_position {
-            self.offset = self.offset - (top_position - self.selection);
+            self.offset -= top_position - self.selection;
         }
     }
 

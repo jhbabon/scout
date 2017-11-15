@@ -11,7 +11,7 @@ use std::io;
 use libc::{c_int, c_ushort};
 
 #[cfg(target_os = "linux")]
-pub const TIOCGWINSZ: usize = 0x00005413;
+pub const TIOCGWINSZ: usize = 0x0000_5413;
 
 #[cfg(not(target_os = "linux"))]
 pub const TIOCGWINSZ: usize = 0x40087468;

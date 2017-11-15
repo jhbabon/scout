@@ -12,7 +12,7 @@ pub struct Error {
 
 impl Error {
     /// Create a new error from any other by importing its information.
-    pub fn import<E: fmt::Display + fmt::Debug + error::Error>(error: E) -> Self {
+    pub fn import<E: fmt::Display + fmt::Debug + error::Error>(error: &E) -> Self {
         let display = format!("{}", error);
         let debug = format!("{:?}", error);
         let description = error.description().to_owned();
@@ -45,12 +45,12 @@ impl error::Error for Error {
 
 impl From<regex::Error> for Error {
     fn from(error: regex::Error) -> Self {
-        Error::import(error)
+        Error::import(&error)
     }
 }
 
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
-        Error::import(error)
+        Error::import(&error)
     }
 }

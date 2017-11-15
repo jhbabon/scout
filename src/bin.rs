@@ -18,7 +18,7 @@ use std::io::{self, Read, Write};
 use docopt::Docopt;
 use scout::errors::Error;
 
-const USAGE: &'static str = "
+const USAGE: &str = "
 Scout: Small fuzzy finder
 
 This program expects a list of items in the standard input,
