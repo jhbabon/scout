@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Internal: replaced custom made code to handle parallelization with `rayon`
   crate. Now the code is better, faster and nicer.
+- Updated cargo dependencies.
 
 ## [v1.1.0] 2017-07-19
 ### Added

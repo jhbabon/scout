@@ -21,10 +21,10 @@ test = false
 
 [dependencies]
 termios = "0.2"
-termion = "1.4"
+termion = "1.5"
 regex = "0.2"
 docopt = "0.8"
-libc  = "0.2.24"
+libc  = "0.2.33"
 serde_derive = "1.0"
 serde = "1.0"
 rayon = "0.9"
