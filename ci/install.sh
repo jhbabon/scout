@@ -11,7 +11,7 @@ main() {
   fi
 
   if [ ! -z $ENABLE_FMT ]; then
-    which rustfmt || cargo install rustfmt-nightly
+    cargo install --force rustfmt-nightly
   fi
 
   # This fetches latest stable release
