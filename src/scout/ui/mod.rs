@@ -50,7 +50,7 @@ pub fn interact(buffer: &[u8]) -> Vec<Action> {
 /// a/a/b/c.rs
 /// ```
 ///
-/// It will have also colors for the matching areas in the choices and the current selection
+/// It will have also an underline for the matching areas in the choices and the current selection
 /// highlighted as well.
 pub fn render<W: Write>(
     screen: &mut W,
@@ -116,7 +116,7 @@ fn render_prompt<W: Write>(
 
 #[cfg(test)]
 mod tests {
-    use termion::{color, style};
+    use termion::style;
     use super::*;
     use terminal::Measurable;
 
@@ -137,7 +137,7 @@ mod tests {
         // prompt using control sequences to change the
         // position of the cursor.
         //
-        // This would look like this (with colors):
+        // This would look like this:
         //
         //   2 > abc
         //   a/b/c.rs
@@ -149,9 +149,9 @@ mod tests {
             termion::clear::All,
             cursor::Goto(1, 1),
             style::Invert,
-            color::Fg(color::LightGreen),
-            color::Fg(color::Reset),
-            style::Reset,
+            style::Underline,
+            style::NoUnderline,
+            style::NoInvert,
             cursor::Goto(1, 1),
         );
 

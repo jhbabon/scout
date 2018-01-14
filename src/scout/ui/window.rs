@@ -39,11 +39,7 @@ impl Window {
     /// Some `ui::Action` have the effect of changing the window items, like changing the current
     /// selection.
     pub fn outline(&mut self, actions: &[Action], choices_len: usize) {
-        let max_position = if choices_len == 0 {
-            0
-        } else {
-            choices_len - 1
-        };
+        let max_position = if choices_len == 0 { 0 } else { choices_len - 1 };
 
         for action in actions {
             match *action {

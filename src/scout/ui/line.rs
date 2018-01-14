@@ -1,4 +1,4 @@
-use termion::{color, style};
+use termion::style;
 
 use std::fmt;
 use choice::Choice;
@@ -29,8 +29,8 @@ impl Line {
 
 impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let highlight_color = color::Fg(color::LightGreen);
-        let reset_color = color::Fg(color::Reset);
+        let highlight_match = style::Underline;
+        let reset_match = style::NoUnderline;
 
         // Split the choice string in different areas
         // to highlight the matching part
@@ -40,10 +40,10 @@ impl fmt::Display for Line {
         let mut line: String = chars
             .map(|(index, ch)| {
                 if index == self.choice.start() && index < self.choice.end() {
-                    format!("{}{}", highlight_color, ch)
+                    format!("{}{}", highlight_match, ch)
                 } else if index == self.choice.end() {
                     ended = Some(index);
-                    format!("{}{}", reset_color, ch)
+                    format!("{}{}", reset_match, ch)
                 } else {
                     format!("{}", ch)
                 }
@@ -52,11 +52,11 @@ impl fmt::Display for Line {
 
         // Ensure that we stop highlighting things
         if ended.is_none() {
-            line = format!("{}{}", line, reset_color);
+            line = format!("{}{}", line, reset_match);
         }
 
         if self.selected {
-            write!(f, "{}{}{}", style::Invert, line, style::Reset)
+            write!(f, "{}{}{}", style::Invert, line, style::NoInvert)
         } else {
             write!(f, "{}", line)
         }
@@ -94,11 +94,7 @@ mod tests {
 
         let line = Line::new(choice, position, &window);
 
-        let expected = format!(
-            "sa{}mple_f{}ile.rs",
-            color::Fg(color::LightGreen),
-            color::Fg(color::Reset)
-        );
+        let expected = format!("sa{}mple_f{}ile.rs", style::Underline, style::NoUnderline);
         let mut actual = String::new();
 
         write!(&mut actual, "{}", line).unwrap();
@@ -120,11 +116,7 @@ mod tests {
 
         let line = Line::new(choice, position, &window);
 
-        let expected = format!(
-            "sa{}mple{}",
-            color::Fg(color::LightGreen),
-            color::Fg(color::Reset)
-        );
+        let expected = format!("sa{}mple{}", style::Underline, style::NoUnderline);
         let mut actual = String::new();
 
         write!(&mut actual, "{}", line).unwrap();
@@ -149,9 +141,9 @@ mod tests {
         let expected = format!(
             "{}sa{}mple_f{}ile.rs{}",
             style::Invert,
-            color::Fg(color::LightGreen),
-            color::Fg(color::Reset),
-            style::Reset
+            style::Underline,
+            style::NoUnderline,
+            style::NoInvert
         );
         let mut actual = String::new();
 
