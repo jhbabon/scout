@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Changed
+- Replaced the green color used to show the matching area in a choice for an
+  underline. The color depends on the terminal colorscheme and it could be hard
+  to read.
 
 ## [v1.2.0] 2017-11-15
 ### Changed
