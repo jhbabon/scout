@@ -60,6 +60,16 @@ $ cargo install
 
 You can also run `cargo build --release` if you just want to play with it.
 
+### Install via homebrew (macOS only)
+
+You can use my custom tap repository to install `scout` with
+[homebrew](https://brew.sh):
+
+```
+brew tap jhbabon/tap
+brew install scout
+```
+
 ## Usage
 
 The main idea is to use this tool with pipes. You get a list of items that you

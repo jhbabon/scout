@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- You can install `scout` using [homebrew](https://brew.sh) with a custom tap
+  repository.
 
 ## [v1.3.0] 2018-01-14
 ### Changed
