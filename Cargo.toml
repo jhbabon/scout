@@ -1,6 +1,6 @@
 [package]
 name = "scout"
-version = "1.3.0"
+version = "2.0.0-alpha"
 authors = ["Juan Hernández <juan.hernandez.babon@gmail.com>"]
 description = "Small fuzzy finder for the command line"
 homepage = "https://github.com/jhbabon/scout"
@@ -8,23 +8,9 @@ repository = "https://github.com/jhbabon/scout"
 readme = "README.md"
 keywords = ["scout", "fuzzy", "fuzzyfinder", "cli"]
 license = "MIT"
-
-[lib]
-name = "scout"
-path = "src/scout/lib.rs"
-
-[[bin]]
-name = "scout"
-path = "src/bin.rs"
-doc = false
-test = false
+edition = "2018"
 
 [dependencies]
-termios = "0.2"
-termion = "1.5"
-regex = "0.2"
-docopt = "0.8"
-libc  = "0.2.33"
-serde_derive = "1.0"
-serde = "1.0"
-rayon = "0.9"
+futures-preview = { version = "0.3.0-alpha.19", features = [ "async-await" ] }
+async-std = "0.99"
+termios = "0.3.1"
