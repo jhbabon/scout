@@ -1,5 +1,3 @@
-#![recursion_limit="256"]
-
 use async_std::io;
 use async_std::prelude::*;
 use async_std::task;
@@ -12,17 +10,8 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>
 
 enum Packet {
     Inbound(String),
-    Byte(u8),
-}
-
-async fn get_tty() -> Result<fs::File> {
-    let tty = fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/tty")
-        .await?;
-
-    Ok(tty)
+    Char(char), // TODO: Create Key enum
+    Ignore,
 }
 
 fn main() -> Result<()> {
@@ -54,70 +43,51 @@ fn main() -> Result<()> {
         let std_reader = io::BufReader::new(stdin);
         let tty_reader = io::BufReader::new(tty_in);
 
-        let std_lines = std_reader.lines().map(|l| {
-            if let Ok(line) = l {
-                Some(Packet::Inbound(line))
-            } else {
-                None
-            }
-        });
+        let std_lines = std_reader.lines()
+            .map(|res| {
+                let line = res.expect("Error reading from STDIN");
 
-        // FIXME: Probably is better if the tty stream does the byte to chars conversion
-        // let tty_lines = tty_reader.bytes().scan(Vec::new(), |state, b| {
-        //     if let Ok(byte) = b {
-        //         state.push(byte);
-        //         Some(Some(Packet::Byte(byte)))
-        //     } else {
-        //         None
-        //     }
-        // });
+                Packet::Inbound(line)
+            });
 
-        let tty_lines = tty_reader.bytes().map(|b| {
-            if let Ok(byte) = b {
-                Some(Packet::Byte(byte))
-            } else {
-                None
-            }
-        });
+        // TODO: Transform sequence of bytes into Keys (arrow keys, Ctrl, chars, etc)
+        let tty_lines = tty_reader.bytes()
+            .map(|res| res.expect("Error reading from PTTY"))
+            .scan(Vec::new(), |state, byte| {
+                state.push(byte);
+
+                let packet = match String::from_utf8(state.clone()) {
+                    Ok(s) => {
+                        state.clear();
+                        if let Some(ch) = s.chars().next() {
+                            Some(Packet::Char(ch))
+                        } else {
+                            Some(Packet::Ignore)
+                        }
+                    },
+                    Err(_) => {
+                        // probably the program needs the next byte to make sense of it
+                        Some(Packet::Ignore)
+                    }
+                };
+
+                packet
+            });
 
         // This select works in a round robin fashion
         let mut all = futures::stream::select(tty_lines, std_lines);
 
-        let mut buf = Vec::with_capacity(10);
-
         while let Some(packet) = all.next().await {
             let line = match packet {
-                Some(Packet::Inbound(s)) => {
+                Packet::Inbound(s) => {
                     let l = format!("STDIN: {}", s);
                     Some(l)
                 },
-                Some(Packet::Byte(byte)) => {
-                    // FIXME: some keys have more than one byte, i.e: Up, Down, etc
-                    //   these start with escape sequences, the char: \u{1b}
-                    //   In order to intepret them correctly the progam has to
-                    //   wait until the next squence of bytes based on the first one
-                    buf.push(byte);
-                    let chars = match String::from_utf8(buf.clone()) {
-                        Ok(s) => {
-                            buf.clear();
-                            Some(s)
-                        },
-                        Err(_) => {
-                            // probably the program needs the next byte to make sense of it
-                            None
-                        }
-                    };
-
-                    if let Some(chrs) = chars {
-                        let ch = chrs.chars()
-                            .fold("".to_string(), |acc, key| format!("{}{:?}", acc, key));
-                        Some(ch)
-                    } else {
-                        None
-                    }
-
-                },
-                None => None,
+                Packet::Char(ch) => {
+                    let l = format!("TTYIN: {:?}", ch);
+                    Some(l)
+                }
+                Packet::Ignore => None,
             };
 
             if let Some(l) = line {
@@ -129,4 +99,14 @@ fn main() -> Result<()> {
 
         Ok(())
     })
+}
+
+async fn get_tty() -> Result<fs::File> {
+    let tty = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")
+        .await?;
+
+    Ok(tty)
 }
