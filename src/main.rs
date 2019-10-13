@@ -4,14 +4,19 @@ use async_std::task;
 use async_std::fs;
 use async_std::os::unix::io::AsRawFd;
 
+use futures::{channel, FutureExt, SinkExt};
+
 use termios::{self, Termios};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+type Sender<T> = channel::mpsc::UnboundedSender<T>;
+type Receiver<T> = channel::mpsc::UnboundedReceiver<T>;
 
 enum Packet {
     Inbound(String),
     Char(char), // TODO: Create Key enum
     Ignore,
+    Done,
 }
 
 fn main() -> Result<()> {
@@ -74,8 +79,12 @@ fn main() -> Result<()> {
                 packet
             });
 
+        // Let's add a shutdown channel so we can move logic to other futures/tasks later
+        let (mut shutdown_sender, shutdown_receiver) = channel::mpsc::channel::<Packet>(1);
+
         // This select works in a round robin fashion
-        let mut all = futures::stream::select(tty_lines, std_lines);
+        let ins = futures::stream::select(tty_lines, std_lines);
+        let mut all = futures::stream::select(shutdown_receiver, ins);
 
         while let Some(packet) = all.next().await {
             let line = match packet {
@@ -84,10 +93,22 @@ fn main() -> Result<()> {
                     Some(l)
                 },
                 Packet::Char(ch) => {
-                    let l = format!("TTYIN: {:?}", ch);
-                    Some(l)
-                }
+                    match ch {
+                        '\n' | '\u{1b}' => {
+                            shutdown_sender
+                                .try_send(Packet::Done)
+                                .expect("Error shutting down");
+
+                            None
+                        },
+                        _  => {
+                            let l = format!("TTYIN: {:?}", ch);
+                            Some(l)
+                        }
+                    }
+                },
                 Packet::Ignore => None,
+                Packet::Done => break,
             };
 
             if let Some(l) = line {
@@ -96,6 +117,9 @@ fn main() -> Result<()> {
                 tty_out.flush().await?;
             }
         }
+
+        drop(shutdown_sender);
+        println!("All done!");
 
         Ok(())
     })
