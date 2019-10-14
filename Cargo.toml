@@ -14,3 +14,5 @@ edition = "2018"
 futures-preview = { version = "0.3.0-alpha.19", features = [ "async-await" ] }
 async-std = "0.99"
 termios = "0.3.1"
+log = "0.4.8"
+env_logger = "0.7.0"

@@ -1,12 +1,14 @@
+#[macro_use]
+extern crate log;
+
 use async_std::future::join;
 use async_std::io;
 use async_std::prelude::*;
-use async_std::stream;
 use async_std::task;
 use async_std::fs;
 use async_std::os::unix::io::AsRawFd;
 
-use futures::{channel, FutureExt, SinkExt};
+use futures::{channel, SinkExt};
 
 use termios::{self, Termios};
 
@@ -14,9 +16,6 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>
 
 type Sender<T> = channel::mpsc::UnboundedSender<T>;
 type Receiver<T> = channel::mpsc::UnboundedReceiver<T>;
-
-type BSender<T> = channel::mpsc::Sender<T>;
-type BReceiver<T> = channel::mpsc::Receiver<T>;
 
 #[derive(Debug)]
 enum Packet {
@@ -26,7 +25,7 @@ enum Packet {
     Done,
 }
 
-async fn input_loop(shutdown: BReceiver<Packet>, mut wire: Sender<Packet>) -> Result<()> {
+async fn input_loop(mut wire: Sender<Packet>) -> Result<()> {
     // Get all inputs
     let stdin = io::stdin();
     let tty_in = get_tty().await?;
@@ -48,7 +47,6 @@ async fn input_loop(shutdown: BReceiver<Packet>, mut wire: Sender<Packet>) -> Re
 
     let std_lines = std_reader.lines()
         .map(|res| {
-            // eprintln!("[input_loop.std_lines] New line: {:?}", res);
             let line = res.expect("Error reading from STDIN");
 
             Packet::Inbound(line)
@@ -59,7 +57,6 @@ async fn input_loop(shutdown: BReceiver<Packet>, mut wire: Sender<Packet>) -> Re
     let tty_chars = tty_reader.bytes()
         .map(|res| res.expect("Error reading from PTTY"))
         .scan(Vec::new(), |state, byte| {
-            eprintln!("[input_loop.std_chars] New byte: {:?} {:?}", state, byte);
             state.push(byte);
 
             let packet = match String::from_utf8(state.clone()) {
@@ -84,30 +81,26 @@ async fn input_loop(shutdown: BReceiver<Packet>, mut wire: Sender<Packet>) -> Re
     let mut all = futures::stream::select(tty_chars, std_lines);
 
     while let Some(packet) = all.next().await {
-        eprintln!("[input_loop.while] got packet: {:?}", packet);
-
         match packet {
             // Shutting down from here works!
             // I think the problem was the back and forth between the broker
             // task and this one with the shutdown channel
             // I'll try to keep the direction of comms one way only
-            Packet::Char('\n') => break,
+            Packet::Char('\n') => {
+                wire.send(Packet::Done).await?;
+                break
+            },
             _ => wire.send(packet).await?,
         }
     }
 
-    eprintln!("[input_loop] drop(wire)");
     drop(wire);
-
-    eprintln!("[input_loop] drop(all)");
     drop(all);
-
-    eprintln!("[input_loop] out");
 
     Ok(())
 }
 
-async fn broker_loop(mut packets: Receiver<Packet>, mut shutdown: BSender<Packet>) -> Result<()> {
+async fn broker_loop(mut packets: Receiver<Packet>) -> Result<()> {
     // Get all outputs
     let mut tty_out = get_tty().await?;
 
@@ -120,8 +113,6 @@ async fn broker_loop(mut packets: Receiver<Packet>, mut shutdown: BSender<Packet
     // END:   RAW MODE
 
     while let Some(packet) = packets.next().await {
-        eprintln!("[broker] got packet: {:?}", packet);
-
         let line = match packet {
             Packet::Inbound(s) => {
                 let l = format!("STDIN: {}", s);
@@ -130,12 +121,7 @@ async fn broker_loop(mut packets: Receiver<Packet>, mut shutdown: BSender<Packet
             Packet::Char(ch) => {
                 match ch {
                     '\n' | '\u{1b}' => {
-                        // eprintln!("[broker] sending shutdown");
-
-                        // shutdown
-                        //     .try_send(Packet::Done)
-                        //     .expect("Error shutting down");
-
+                        // FIXME: This will handled before
                         None
                     },
                     _  => {
@@ -148,8 +134,6 @@ async fn broker_loop(mut packets: Receiver<Packet>, mut shutdown: BSender<Packet
             Packet::Done => break,
         };
 
-        eprintln!("[broker] got line: {:?}", line);
-
         if let Some(l) = line {
             let l = format!("{}\n", l);
             tty_out.write_all(l.as_bytes()).await?;
@@ -157,27 +141,20 @@ async fn broker_loop(mut packets: Receiver<Packet>, mut shutdown: BSender<Packet
         }
     };
 
-    // eprintln!("[broker] restore tty_out");
-    // termios::tcsetattr(fd, termios::TCSANOW, &tty)
-    //     .expect("Error restoring the original tty configuration");
-
-    eprintln!("[broker] drop(shutdown)");
-    drop(shutdown);
-
-    eprintln!("[broker] out");
-
     Ok(())
 }
 
 fn main() -> Result<()> {
+    env_logger::init();
+
+    debug!("[main] start");
+
     let res = task::block_on(async {
-        // Let's add a shutdown channel so we can move logic to other futures/tasks later
-        let (shutdown_sender, shutdown_receiver) = channel::mpsc::channel::<Packet>(1);
         // let (mut output_sender, output_receiver) = channel::mpsc::unbounded::<Packet>();
         let (broker_sender, broker_receiver) = channel::mpsc::unbounded::<Packet>();
 
-        let broker = spawn_and_log_error(broker_loop(broker_receiver, shutdown_sender));
-        let input = spawn_and_log_error(input_loop(shutdown_receiver, broker_sender));
+        let broker = spawn_and_log_error(broker_loop(broker_receiver));
+        let input = spawn_and_log_error(input_loop(broker_sender));
 
         join!(broker, input).await;
 
@@ -186,7 +163,7 @@ fn main() -> Result<()> {
         Ok(())
     });
 
-    eprintln!("[main] after executor");
+    debug!("[main] end: {:?}", res);
 
     res
 }
@@ -209,7 +186,5 @@ where
         if let Err(e) = fut.await {
             eprintln!("{}", e)
         }
-
-        eprintln!("[spawn_and_log_error] future done");
     })
 }
