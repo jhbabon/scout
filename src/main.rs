@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate log;
 
+use rayon::prelude::*;
+
 use async_std::future::join;
 use async_std::io;
 use async_std::prelude::*;
@@ -25,7 +27,42 @@ enum Packet {
     Done,
 }
 
+#[derive(Debug,Clone, Default)]
+struct State {
+    pub query: Vec<char>,
+    pub pool: Vec<String>,
+    pub matches: Vec<String>,
+}
+
+impl State {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add_char(&mut self, ch: char) {
+        self.query.push(ch);
+    }
+
+    pub fn add_string(&mut self, string: String) {
+        self.pool.push(string);
+    }
+
+    // NOTE: This is just temporary, the search should
+    // be outside the state
+    pub fn search(&mut self) {
+        let q = self.query.iter().collect::<String>();
+
+        self.matches = self.pool
+            .par_iter()
+            .filter(|s| s.contains(q.as_str()))
+            .map(|s| s.clone())
+            .collect();
+    }
+}
+
 async fn input_loop(mut wire: Sender<Packet>) -> Result<()> {
+    debug!("[input_loop] start");
+
     // Get all inputs
     let stdin = io::stdin();
     let tty_in = get_tty().await?;
@@ -54,6 +91,7 @@ async fn input_loop(mut wire: Sender<Packet>) -> Result<()> {
         // .chain(stream::once(Packet::Done));
 
     // TODO: Transform sequence of bytes into Keys (arrow keys, Ctrl, chars, etc)
+    // TODO: Probably is a good idea to add some debouncing
     let tty_chars = tty_reader.bytes()
         .map(|res| res.expect("Error reading from PTTY"))
         .scan(Vec::new(), |state, byte| {
@@ -97,11 +135,18 @@ async fn input_loop(mut wire: Sender<Packet>) -> Result<()> {
     drop(wire);
     drop(all);
 
+    debug!("[input_loop] end");
+
     Ok(())
 }
 
 async fn broker_loop(mut packets: Receiver<Packet>) -> Result<()> {
+    debug!("[broker_loop] start");
+
     // Get all outputs
+    // NOTE: If we want to move the output to another task
+    //   the State needs to implement Copy and that might be too much
+    //   for this scenario (or not)
     let mut tty_out = get_tty().await?;
 
     // BEGIN: RAW MODE
@@ -112,34 +157,29 @@ async fn broker_loop(mut packets: Receiver<Packet>) -> Result<()> {
     termios::tcsetattr(fd, termios::TCSANOW, &raw_tty)?;
     // END:   RAW MODE
 
+    let mut state = State::new();
+
     while let Some(packet) = packets.next().await {
-        let line = match packet {
+        match packet {
             Packet::Inbound(s) => {
-                let l = format!("STDIN: {}", s);
-                Some(l)
+                state.add_string(s);
             },
             Packet::Char(ch) => {
-                match ch {
-                    '\n' | '\u{1b}' => {
-                        // FIXME: This will handled before
-                        None
-                    },
-                    _  => {
-                        let l = format!("TTYIN: {:?}", ch);
-                        Some(l)
-                    }
-                }
+                state.add_char(ch);
+                debug!("[broker_loop] start fuzzy search");
+                state.search();
+                debug!("[broker_loop] end fuzzy search");
             },
-            Packet::Ignore => None,
+            Packet::Ignore => (),
             Packet::Done => break,
         };
 
-        if let Some(l) = line {
-            let l = format!("{}\n", l);
-            tty_out.write_all(l.as_bytes()).await?;
-            tty_out.flush().await?;
-        }
+        let l = format!("query: {:?}\nmatches: {:?}\n", state.query, state.matches);
+        tty_out.write_all(l.as_bytes()).await?;
+        tty_out.flush().await?;
     };
+
+    debug!("[broker_loop] end");
 
     Ok(())
 }
