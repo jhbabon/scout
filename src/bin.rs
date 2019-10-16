@@ -3,6 +3,8 @@ extern crate log;
 
 use rayon::prelude::*;
 
+use std::convert::TryFrom;
+
 use std::process;
 
 use async_std::prelude::*;
@@ -13,7 +15,7 @@ use async_std::os::unix::io::AsRawFd;
 use futures::channel;
 
 use scout::result::Result;
-use scout::tty;
+use scout::tty::{TTY, get_tty};
 use scout::events::Event;
 use scout::input;
 
@@ -60,9 +62,10 @@ async fn broker_loop(mut events: Receiver<Event>) -> Result<Option<String>> {
     // NOTE: If we want to move the output to another task
     //   the State needs to implement Copy and that might be too much
     //   for this scenario (or not)
-    let mut tty_out = tty::get_tty().await?;
+    let mut tty_out = get_tty().await?;
 
-    tty::into_raw_output(tty_out.as_raw_fd())?;
+    // let raw_tty = TTY::try_from(tty_out.as_raw_fd())?;
+    // raw_tty.into_raw()?;
 
     let mut exit_event: Event = Event::Ignore;
     let mut state = State::new();
@@ -104,6 +107,11 @@ fn main() {
     debug!("[main] start");
 
     let res = task::block_on(async {
+        // We only need to set up the tty into raw mode once
+        let tty = get_tty().await?;
+        let raw_tty = TTY::try_from(tty.as_raw_fd())?;
+        raw_tty.into_raw()?;
+
         let (broker_sender, broker_receiver) = channel::mpsc::unbounded::<Event>();
 
         let broker = task::spawn(broker_loop(broker_receiver));

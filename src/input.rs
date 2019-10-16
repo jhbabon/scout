@@ -1,5 +1,7 @@
 use log::debug;
 
+use std::convert::TryFrom;
+
 use std::pin::Pin;
 use std::collections::VecDeque;
 
@@ -15,7 +17,7 @@ use termion::input::TermRead;
 use termion::event::Key;
 
 use crate::result::Result;
-use crate::tty::{get_tty, into_raw_input};
+use crate::tty::{TTY, get_tty};
 use crate::events::Event;
 
 type Sender<T> = channel::mpsc::UnboundedSender<T>;
@@ -91,8 +93,6 @@ pub async fn task(mut wire: Sender<Event>) -> Result<()> {
     let stdin = io::stdin();
     let tty_in = get_tty().await?;
 
-    into_raw_input(tty_in.as_raw_fd())?;
-
     let std_reader = io::BufReader::new(stdin);
     let std_stream = std_reader.lines()
         .map(|res| {
@@ -118,7 +118,6 @@ pub async fn task(mut wire: Sender<Event>) -> Result<()> {
     }
 
     drop(wire);
-    drop(all);
 
     debug!("[task] end");
 
