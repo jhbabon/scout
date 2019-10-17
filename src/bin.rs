@@ -2,20 +2,15 @@
 extern crate log;
 
 use rayon::prelude::*;
-
 use std::convert::TryFrom;
-
 use std::process;
-
 use async_std::prelude::*;
 use async_std::future::join;
 use async_std::task;
 use async_std::os::unix::io::AsRawFd;
-
 use futures::channel;
-
 use scout::result::Result;
-use scout::tty::{TTY, get_tty};
+use scout::ptty::{PTTY, get_ptty};
 use scout::events::Event;
 use scout::input;
 
@@ -62,10 +57,7 @@ async fn broker_loop(mut events: Receiver<Event>) -> Result<Option<String>> {
     // NOTE: If we want to move the output to another task
     //   the State needs to implement Copy and that might be too much
     //   for this scenario (or not)
-    let mut tty_out = get_tty().await?;
-
-    // let raw_tty = TTY::try_from(tty_out.as_raw_fd())?;
-    // raw_tty.into_raw()?;
+    let mut ptty_out = get_ptty().await?;
 
     let mut exit_event: Event = Event::Ignore;
     let mut state = State::new();
@@ -89,8 +81,8 @@ async fn broker_loop(mut events: Receiver<Event>) -> Result<Option<String>> {
         };
 
         let l = format!("query: {:?}\nmatches: {:?}\n", state.query, state.matches);
-        tty_out.write_all(l.as_bytes()).await?;
-        tty_out.flush().await?;
+        ptty_out.write_all(l.as_bytes()).await?;
+        ptty_out.flush().await?;
     };
 
     debug!("[broker_loop] end");
@@ -107,10 +99,10 @@ fn main() {
     debug!("[main] start");
 
     let res = task::block_on(async {
-        // We only need to set up the tty into raw mode once
-        let tty = get_tty().await?;
-        let raw_tty = TTY::try_from(tty.as_raw_fd())?;
-        raw_tty.into_raw()?;
+        // We only need to set up the ptty into noncanonical mode once
+        let tty = get_ptty().await?;
+        let ptty = PTTY::try_from(tty.as_raw_fd())?;
+        ptty.noncanonical_mode()?;
 
         let (broker_sender, broker_receiver) = channel::mpsc::unbounded::<Event>();
 

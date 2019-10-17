@@ -1,23 +1,15 @@
 use log::debug;
-
-use std::convert::TryFrom;
-
 use std::pin::Pin;
 use std::collections::VecDeque;
-
 use async_std::prelude::*;
 use async_std::io;
 use async_std::stream;
 use async_std::task::{Context, Poll};
-use async_std::os::unix::io::AsRawFd;
-
 use futures::{channel, SinkExt};
-
 use termion::input::TermRead;
 use termion::event::Key;
-
 use crate::result::Result;
-use crate::tty::{TTY, get_tty};
+use crate::ptty::get_ptty;
 use crate::events::Event;
 
 type Sender<T> = channel::mpsc::UnboundedSender<T>;
@@ -91,7 +83,7 @@ pub async fn task(mut wire: Sender<Event>) -> Result<()> {
     debug!("[task] start");
 
     let stdin = io::stdin();
-    let tty_in = get_tty().await?;
+    let ptty_in = get_ptty().await?;
 
     let std_reader = io::BufReader::new(stdin);
     let std_stream = std_reader.lines()
@@ -102,10 +94,10 @@ pub async fn task(mut wire: Sender<Event>) -> Result<()> {
         })
         .chain(stream::once(Event::EOF));
 
-    let tty_stream = interactions(tty_in);
+    let ptty_stream = interactions(ptty_in);
 
     // This select works in a round robin fashion
-    let mut all = futures::stream::select(tty_stream, std_stream);
+    let mut all = futures::stream::select(ptty_stream, std_stream);
 
     while let Some(event) = all.next().await {
         match event {
