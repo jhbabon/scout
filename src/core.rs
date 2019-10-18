@@ -5,6 +5,7 @@ use futures::channel;
 use crate::result::Result;
 use crate::ptty::get_ptty;
 use crate::events::Event;
+use crate::fuzzy::Candidate;
 
 type Receiver<T> = channel::mpsc::UnboundedReceiver<T>;
 
@@ -12,7 +13,7 @@ type Receiver<T> = channel::mpsc::UnboundedReceiver<T>;
 struct State {
     pub query: Vec<char>,
     pub pool: Vec<String>,
-    pub matches: Vec<String>,
+    pub matches: Vec<Candidate>,
 }
 
 impl State {
@@ -35,9 +36,13 @@ impl State {
 
         self.matches = self.pool
             .par_iter()
-            .filter(|s| s.contains(q.as_str()))
-            .map(|s| s.clone())
+            .map(|s| Candidate::best_match(&q, &s))
+            .filter(|c| c.is_some())
+            .map(|c| c.unwrap())
+            .inspect(|c| debug!("[State#search] Candidate: {:?}", c))
             .collect();
+
+        self.matches.par_sort_unstable_by(|a, b| b.cmp(a));
     }
 }
 
@@ -79,7 +84,12 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     debug!("[task] end");
 
     match exit_event {
-        Event::Done => Ok(state.matches.pop()),
+        Event::Done => {
+            match state.matches.first() {
+                Some(candidate) => Ok(Some(candidate.string.clone())),
+                None => Ok(None)
+            }
+        },
         _ => Ok(None),
     }
 }
