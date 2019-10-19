@@ -6,15 +6,23 @@ use std::cmp::Ordering;
 #[derive(Debug,Clone)]
 pub struct Candidate {
     pub string: String,
-    pub score_match: Match,
+    pub score_match: Option<Match>,
 }
 
 impl Candidate {
     pub fn best_match(query: &str, target: &str) -> Option<Self> {
+        if query.is_empty() {
+            let candidate = Self { string: target.to_string(), score_match: None };
+            return Some(candidate);
+        }
+
         match best_match(query, target) {
             None => None,
             Some(score_match) => {
-                let candidate = Self { string: target.to_string(), score_match };
+                let candidate = Self {
+                    string: target.to_string(),
+                    score_match: Some(score_match),
+                };
                 Some(candidate)
             },
         }

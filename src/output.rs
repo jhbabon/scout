@@ -25,7 +25,13 @@ impl Layout {
         let list: Vec<(usize, String)> = state.matches
             .iter()
             .cloned()
-            .map(|c| format_simple(&c.score_match, &c.string, "", ""))
+            .map(|c| {
+                if let Some(score_match) = c.score_match {
+                    format_simple(&score_match, &c.string, "", "")
+                } else {
+                    c.string
+                }
+            })
             .enumerate()
             .collect();
 
