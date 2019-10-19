@@ -27,18 +27,28 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     while let Some(event) = events.next().await {
         match event {
             Event::Packet(s) => {
-                state.add_string(s);
+                state.add_candidate(s);
+            },
+            Event::EOF => {
+                state.candidates_done();
+            },
+            Event::Clear => {
+                state.clear_query();
+            },
+            Event::Backspace => {
+                state.del_input();
             },
             Event::Input(ch) => {
-                state.add_char(ch);
-                debug!("[task] start fuzzy search");
-                state.search();
-                debug!("[task] end fuzzy search");
+                state.add_input(ch);
+            },
+            Event::Up => {
+                state.select_up();
+            },
+            Event::Down => {
+                state.select_down();
             },
             Event::Done => {
-                if let Some(candidate) = state.matches.first() {
-                    selection = Some(candidate.string.clone());
-                };
+                selection = state.selection();
 
                 break
             },
@@ -47,6 +57,9 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
             },
             _ => (),
         };
+
+        // TODO: do it only some times
+        state.search();
 
         layout.update(&state)?;
         renderer.render(&layout).await?;

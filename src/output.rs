@@ -22,14 +22,19 @@ impl Layout {
         let mut display = String::new();
 
         // list
-        let list: Vec<String> = state.matches
+        let list: Vec<(usize, String)> = state.matches
             .iter()
             .cloned()
             .map(|c| format_simple(&c.score_match, &c.string, "", ""))
+            .enumerate()
             .collect();
 
-        for l in list {
-            writeln!(&mut display, "  {}", l)?;
+        for (index, candidate) in list {
+            let mut selected = " ";
+            if index == state.selection_idx() {
+                selected = ">";
+            }
+            writeln!(&mut display, "{} {}", selected, candidate)?;
         }
 
         // prompt
