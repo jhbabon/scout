@@ -1,50 +1,14 @@
 use log::debug;
-use rayon::prelude::*;
 use async_std::prelude::*;
 use futures::channel;
 use crate::result::Result;
 use crate::ptty::get_ptty;
 use crate::events::Event;
-use crate::fuzzy::Candidate;
+// use crate::fuzzy::Candidate;
+use crate::state::State;
+use crate::output::Output;
 
 type Receiver<T> = channel::mpsc::UnboundedReceiver<T>;
-
-#[derive(Debug,Clone, Default)]
-struct State {
-    pub query: Vec<char>,
-    pub pool: Vec<String>,
-    pub matches: Vec<Candidate>,
-}
-
-impl State {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn add_char(&mut self, ch: char) {
-        self.query.push(ch);
-    }
-
-    pub fn add_string(&mut self, string: String) {
-        self.pool.push(string);
-    }
-
-    // NOTE: This is just temporary, the search should
-    // be outside the state
-    pub fn search(&mut self) {
-        let q = self.query.iter().collect::<String>();
-
-        self.matches = self.pool
-            .par_iter()
-            .map(|s| Candidate::best_match(&q, &s))
-            .filter(|c| c.is_some())
-            .map(|c| c.unwrap())
-            .inspect(|c| debug!("[State#search] Candidate: {:?}", c))
-            .collect();
-
-        self.matches.par_sort_unstable_by(|a, b| b.cmp(a));
-    }
-}
 
 pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     debug!("[task] start");
@@ -53,7 +17,9 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     // NOTE: If we want to move the output to another task
     //   the State needs to implement Copy and that might be too much
     //   for this scenario (or not)
-    let mut ptty_out = get_ptty().await?;
+    let ptty_out = get_ptty().await?;
+    let mut output = Output::new(ptty_out);
+    output.setup().await?;
 
     let mut exit_event: Event = Event::Ignore;
     let mut state = State::new();
@@ -77,9 +43,10 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
         };
 
         let l = format!("query: {:?}\nmatches: {:?}\n", state.query, state.matches);
-        ptty_out.write_all(l.as_bytes()).await?;
-        ptty_out.flush().await?;
+        output.render(l).await?;
     };
+
+    output.teardown().await?;
 
     debug!("[task] end");
 
