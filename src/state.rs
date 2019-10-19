@@ -14,6 +14,10 @@ impl State {
         Self::default()
     }
 
+    pub fn query_string(&self) -> String {
+        self.query.iter().collect()
+    }
+
     pub fn add_char(&mut self, ch: char) {
         self.query.push(ch);
     }

@@ -6,23 +6,23 @@ use crate::ptty::get_ptty;
 use crate::events::Event;
 // use crate::fuzzy::Candidate;
 use crate::state::State;
-use crate::output::Output;
+use crate::output::{Renderer, Layout};
 
 type Receiver<T> = channel::mpsc::UnboundedReceiver<T>;
 
 pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     debug!("[task] start");
 
-    // Get all outputs
-    // NOTE: If we want to move the output to another task
-    //   the State needs to implement Copy and that might be too much
-    //   for this scenario (or not)
-    let ptty_out = get_ptty().await?;
-    let mut output = Output::new(ptty_out);
-    output.setup().await?;
-
-    let mut exit_event: Event = Event::Ignore;
+    let mut selection: Option<String> = None;
     let mut state = State::new();
+
+    let ptty_out = get_ptty().await?;
+    let mut renderer = Renderer::new(ptty_out);
+    renderer.setup().await?;
+
+    let mut layout = Layout::new();
+    layout.update(&state)?;
+    renderer.render(&layout).await?;
 
     while let Some(event) = events.next().await {
         match event {
@@ -35,28 +35,26 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
                 state.search();
                 debug!("[task] end fuzzy search");
             },
-            Event::Done | Event::Exit => {
-                exit_event = event;
+            Event::Done => {
+                if let Some(candidate) = state.matches.first() {
+                    selection = Some(candidate.string.clone());
+                };
+
+                break
+            },
+            Event::Exit => {
                 break
             },
             _ => (),
         };
 
-        let l = format!("query: {:?}\nmatches: {:?}\n", state.query, state.matches);
-        output.render(l).await?;
+        layout.update(&state)?;
+        renderer.render(&layout).await?;
     };
 
-    output.teardown().await?;
+    renderer.teardown().await?;
 
     debug!("[task] end");
 
-    match exit_event {
-        Event::Done => {
-            match state.matches.first() {
-                Some(candidate) => Ok(Some(candidate.string.clone())),
-                None => Ok(None)
-            }
-        },
-        _ => Ok(None),
-    }
+    Ok(selection)
 }

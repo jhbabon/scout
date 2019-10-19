@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 #[derive(Debug,Clone)]
 pub struct Candidate {
     pub string: String,
-    score_match: Match,
+    pub score_match: Match,
 }
 
 impl Candidate {
