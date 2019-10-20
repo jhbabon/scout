@@ -15,6 +15,11 @@ pub struct Layout {
     offset: usize,
 }
 
+// FIXME: Make layout rendering more efficient
+//  * Maybe use a buffwriter in the renderer?
+//  * No writeln! macros
+//  * Only redraw lines that need change?
+//  * Use ansi_term for colors, etc
 impl Layout {
     pub fn new() -> Self {
         // TODO: Pass width and height as args or in a Config

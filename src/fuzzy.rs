@@ -10,22 +10,16 @@ pub struct Candidate {
 }
 
 impl Candidate {
-    pub fn best_match(query: &str, target: &str) -> Option<Self> {
+    pub fn new(string: String) -> Self {
+        Self { string, score_match: None }
+    }
+
+    pub fn best_match(&mut self, query: &str) {
         if query.is_empty() {
-            let candidate = Self { string: target.to_string(), score_match: None };
-            return Some(candidate);
+            self.score_match = None;
         }
 
-        match best_match(query, target) {
-            None => None,
-            Some(score_match) => {
-                let candidate = Self {
-                    string: target.to_string(),
-                    score_match: Some(score_match),
-                };
-                Some(candidate)
-            },
-        }
+        self.score_match = best_match(query, &self.string);
     }
 }
 

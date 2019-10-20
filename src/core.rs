@@ -8,7 +8,7 @@ use crate::events::Event;
 use crate::state::State;
 use crate::output::{Renderer, Layout};
 
-type Receiver<T> = channel::mpsc::UnboundedReceiver<T>;
+type Receiver<T> = channel::mpsc::Receiver<T>;
 
 pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     debug!("[task] start");

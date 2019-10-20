@@ -23,7 +23,9 @@ fn main() {
         let ptty = PTTY::try_from(tty.as_raw_fd())?;
         ptty.noncanonical_mode()?;
 
-        let (sender, receiver) = channel::mpsc::unbounded::<Event>();
+        // NOTE: Using a bounded channel helps when there
+        // are too many incoming messages
+        let (sender, receiver) = channel::mpsc::channel::<Event>(255);
 
         let core = task::spawn(core::task(receiver));
         let input = task::spawn(input::task(sender));

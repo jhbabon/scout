@@ -1,11 +1,14 @@
-use log::debug;
+// use log::trace;
 use rayon::prelude::*;
+use std::collections::VecDeque;
 use crate::fuzzy::Candidate;
+
+const LIMIT: usize = 1000000;
 
 #[derive(Debug,Clone, Default)]
 pub struct State {
     pub query: Vec<char>,
-    pub pool: Vec<String>,
+    pub pool: VecDeque<Candidate>,
     pub matches: Vec<Candidate>,
     selection_idx: usize,
 }
@@ -23,7 +26,11 @@ impl State {
     }
 
     pub fn add_candidate(&mut self, string: String) {
-        self.pool.push(string);
+        self.pool.push_back(Candidate::new(string));
+        // Drop elements if the pool is too big
+        if self.pool.len() > LIMIT {
+            let _f = self.pool.pop_front();
+        }
     }
 
     pub fn candidates_done(&mut self) {
@@ -89,14 +96,22 @@ impl State {
     // NOTE: This is just temporary, the search should
     // be outside the state
     pub fn search(&mut self) {
-        let q = self.query.iter().collect::<String>();
+        if self.query.is_empty() {
+            self.matches = self.pool.iter().cloned().collect();
+            return;
+        }
+
+        let q = self.query_string();
 
         self.matches = self.pool
             .par_iter()
-            .map(|s| Candidate::best_match(&q, &s))
-            .filter(|c| c.is_some())
-            .map(|c| c.unwrap())
-            .inspect(|c| debug!("[State#search] Candidate: {:?}", c))
+            .map(|s| {
+                let mut c = Candidate::new(s.string.clone());
+                c.best_match(&q);
+                c
+            })
+            .filter(|c| c.score_match.is_some())
+            // .inspect(|c| trace!("[State#search] Candidate: {:?}", c))
             .collect();
 
         self.matches.par_sort_unstable_by(|a, b| b.cmp(a));

@@ -12,7 +12,7 @@ use crate::result::Result;
 use crate::ptty::get_ptty;
 use crate::events::Event;
 
-type Sender<T> = channel::mpsc::UnboundedSender<T>;
+type Sender<T> = channel::mpsc::Sender<T>;
 
 struct Interactions<R> {
     reader: R,
