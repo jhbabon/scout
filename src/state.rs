@@ -10,18 +10,6 @@ pub struct State {
     selection_idx: usize,
 }
 
-// Interactions
-//
-// Packet(s) => state.add_candidate(s)
-// EOF => state.candidates_done()
-// Input(ch) => state.add_input(ch)
-// Up => state.up()
-// Down => state.down()
-// Clear => state.clear_query()
-// Backspace => state.del_input()
-
-// state.selection() => selected candidate
-
 // Rendering
 // state.candidates() => Current list of candidates
 // state.query_string() => String
