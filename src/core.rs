@@ -13,6 +13,9 @@ type Receiver<T> = channel::mpsc::Receiver<T>;
 pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     debug!("[task] start");
 
+    let mut should_render: bool;
+    let mut count = 0;
+
     let mut selection: Option<String> = None;
     let mut state = State::new();
 
@@ -25,27 +28,48 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     renderer.render(&layout).await?;
 
     while let Some(event) = events.next().await {
+        should_render = false;
+
         match event {
             Event::Packet(s) => {
                 state.add_candidate(s);
+                count += 1;
+
+                if count > 5000 {
+                    count = 0;
+                    should_render = true;
+                    state.search();
+                }
             },
             Event::EOF => {
                 state.candidates_done();
+                should_render = true;
+                state.search();
             },
             Event::Clear => {
                 state.clear_query();
+                should_render = true;
+                state.search();
             },
             Event::Backspace => {
                 state.del_input();
+                should_render = true;
+                state.search();
             },
             Event::Input(ch) => {
                 state.add_input(ch);
+                should_render = true;
+                state.search();
             },
             Event::Up => {
                 state.select_up();
+                should_render = true;
+                state.search();
             },
             Event::Down => {
                 state.select_down();
+                should_render = true;
+                state.search();
             },
             Event::Done => {
                 selection = state.selection();
@@ -58,11 +82,10 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
             _ => (),
         };
 
-        // TODO: do it only some times
-        state.search();
-
-        layout.update(&state)?;
-        renderer.render(&layout).await?;
+        if should_render {
+            layout.update(&state)?;
+            renderer.render(&layout).await?;
+        }
     };
 
     renderer.teardown().await?;

@@ -1,4 +1,4 @@
-// use log::debug;
+use log::debug;
 use std::fmt::{self, Write};
 use async_std::prelude::*;
 use async_std::io;
@@ -33,40 +33,42 @@ impl Layout {
     }
 
     pub fn update(&mut self, state: &State) -> Result<()> {
-        let mut display = String::new();
+        instrument!("Layout#update", {
+            let mut display = String::new();
 
-        // list
-        let (offset, lines) = self.scroll(&state);
-        let list: Vec<String> = state.matches
-            .iter()
-            .cloned()
-            .enumerate()
-            .skip(offset)
-            .take(lines)
-            .map(|(idx, c)| {
-                if let Some(score_match) = c.score_match {
-                    (idx, format_simple(&score_match, &c.string, "", ""))
-                } else {
-                    (idx, c.string)
-                }
-            })
-            .map(|(index, candidate)| {
-                let mut selected = " ";
-                if index == state.selection_idx() {
-                    selected = ">";
-                }
+            // list
+            let (offset, lines) = self.scroll(&state);
+            let list: Vec<String> = state.matches
+                .iter()
+                .cloned()
+                .enumerate()
+                .skip(offset)
+                .take(lines)
+                .map(|(idx, c)| {
+                    if let Some(score_match) = c.score_match {
+                        (idx, format_simple(&score_match, &c.string, "", ""))
+                    } else {
+                        (idx, c.string)
+                    }
+                })
+                .map(|(index, candidate)| {
+                    let mut selected = " ";
+                    if index == state.selection_idx() {
+                        selected = ">";
+                    }
 
-                format!("{} {}", selected, candidate)
-            })
-            .collect();
+                    format!("{} {}", selected, candidate)
+                })
+                .collect();
 
-        write!(&mut display, "\n{}", list.join("\n"))?;
+            write!(&mut display, "\n{}", list.join("\n"))?;
 
-        // prompt
-        let prompt = format!("{:width$} > {}", state.matches.len(), state.query_string(), width = 3);
-        write!(&mut display, "{}{}", termion::cursor::Goto(1, 1), prompt)?;
+            // prompt
+            let prompt = format!("{:width$} > {}", state.matches.len(), state.query_string(), width = 3);
+            write!(&mut display, "{}{}", termion::cursor::Goto(1, 1), prompt)?;
 
-        self.display = Some(display);
+            self.display = Some(display);
+        });
 
         Ok(())
     }
@@ -125,11 +127,13 @@ impl<W: io::Write + Unpin> Renderer<W> {
     }
 
     pub async fn render<L: std::fmt::Display>(&mut self, layout: &L) -> Result<()> {
-        let mut screen = String::new();
-        write!(&mut screen, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1))?;
-        write!(&mut screen, "{}", layout)?;
+        instrument!("Renderer#render", {
+            let mut screen = String::new();
+            write!(&mut screen, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1))?;
+            write!(&mut screen, "{}", layout)?;
 
-        self.write(&screen).await?;
+            self.write(&screen).await?;
+        });
 
         Ok(())
     }

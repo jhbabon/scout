@@ -1,5 +1,7 @@
 extern crate log;
 
+#[macro_use]
+mod macros;
 pub mod result;
 pub mod fuzzy;
 pub mod ptty;

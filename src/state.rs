@@ -1,4 +1,3 @@
-// use log::trace;
 use rayon::prelude::*;
 use std::collections::VecDeque;
 use crate::fuzzy::Candidate;
@@ -96,24 +95,27 @@ impl State {
     // NOTE: This is just temporary, the search should
     // be outside the state
     pub fn search(&mut self) {
-        if self.query.is_empty() {
-            self.matches = self.pool.iter().cloned().collect();
-            return;
-        }
+        instrument!("State#search", {
+            if self.query.is_empty() {
+                self.matches = self.pool.iter().cloned().collect();
+                return;
+            }
 
-        let q = self.query_string();
+            let q = self.query_string();
 
-        self.matches = self.pool
-            .par_iter()
-            .map(|s| {
-                let mut c = Candidate::new(s.string.clone());
-                c.best_match(&q);
-                c
-            })
-            .filter(|c| c.score_match.is_some())
-            // .inspect(|c| trace!("[State#search] Candidate: {:?}", c))
-            .collect();
+            // NOTE: In dev mode this search is very slow.
+            self.matches = self.pool
+                .par_iter()
+                .map(|s| {
+                    let mut c = Candidate::new(s.string.clone());
+                    c.best_match(&q);
+                    c
+                })
+                .filter(|c| c.score_match.is_some())
+                // .inspect(|c| trace!("[State#search] Candidate: {:?}", c))
+                .collect();
 
-        self.matches.par_sort_unstable_by(|a, b| b.cmp(a));
+            self.matches.par_sort_unstable_by(|a, b| b.cmp(a));
+        });
     }
 }
