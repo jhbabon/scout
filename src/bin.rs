@@ -9,6 +9,7 @@ use async_std::os::unix::io::AsRawFd;
 use futures::channel;
 use scout::ptty::{PTTY, get_ptty};
 use scout::events::Event;
+use scout::interactions;
 use scout::input;
 use scout::core;
 
@@ -25,13 +26,16 @@ fn main() {
 
         // NOTE: Using a bounded channel helps when there
         // are too many incoming messages
-        let (sender, receiver) = channel::mpsc::channel::<Event>(255);
+        let (input_sender, input_receiver) = channel::mpsc::channel::<Event>(2046);
+        let (int_sender, int_receiver) = channel::mpsc::channel::<Event>(25);
 
-        let core = task::spawn(core::task(receiver));
-        let input = task::spawn(input::task(sender));
+        let core = task::spawn(core::task(int_receiver, input_receiver));
+        let interactions = task::spawn(interactions::task(int_sender));
+        let input = task::spawn(input::task(input_sender));
 
-        let (core_result, input_result) = join!(core, input).await;
+        let (core_result, input_result, interactions_result) = join!(core, input, interactions).await;
         let _i = input_result?;
+        let _i = interactions_result?;
 
         core_result
     });

@@ -4,13 +4,12 @@ use futures::channel;
 use crate::result::Result;
 use crate::ptty::get_ptty;
 use crate::events::Event;
-// use crate::fuzzy::Candidate;
 use crate::state::State;
 use crate::output::{Renderer, Layout};
 
 type Receiver<T> = channel::mpsc::Receiver<T>;
 
-pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
+pub async fn task(interactions: Receiver<Event>, input: Receiver<Event>) -> Result<Option<String>> {
     debug!("[task] start");
 
     let mut should_render: bool;
@@ -27,7 +26,9 @@ pub async fn task(mut events: Receiver<Event>) -> Result<Option<String>> {
     layout.update(&state)?;
     renderer.render(&layout).await?;
 
-    while let Some(event) = events.next().await {
+    let mut all = futures::stream::select(interactions, input);
+
+    while let Some(event) = all.next().await {
         should_render = false;
 
         match event {
