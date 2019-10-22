@@ -6,7 +6,7 @@ const LIMIT: usize = 1000000;
 
 #[derive(Debug,Clone, Default)]
 pub struct State {
-    pub query: Vec<char>,
+    pub query_string: String,
     pub pool: VecDeque<Candidate>,
     pub matches: Vec<Candidate>,
     selection_idx: usize,
@@ -36,20 +36,20 @@ impl State {
         // NOOP
     }
 
-    pub fn add_input(&mut self, ch: char) {
-        self.selection_idx = 0;
-        self.query.push(ch);
-    }
+//     pub fn add_input(&mut self, ch: char) {
+//         self.selection_idx = 0;
+//         self.query.push(ch);
+//     }
 
-    pub fn del_input(&mut self) {
-        self.selection_idx = 0;
-        let _ch = self.query.pop();
-    }
+//     pub fn del_input(&mut self) {
+//         self.selection_idx = 0;
+//         let _ch = self.query.pop();
+//     }
 
-    pub fn clear_query(&mut self) {
-        self.selection_idx = 0;
-        self.query = vec![];
-    }
+//     pub fn clear_query(&mut self) {
+//         self.selection_idx = 0;
+//         self.query = vec![];
+//     }
 
     pub fn select_up(&mut self) {
         if self.selection_idx == 0 {
@@ -67,8 +67,12 @@ impl State {
         }
     }
 
+    pub fn update_query_string(&mut self, q: String) {
+        self.query_string = q;
+    }
+
     pub fn query_string(&self) -> String {
-        self.query.iter().collect()
+        self.query_string.clone()
     }
 
     pub fn selection_idx(&self) -> usize {
@@ -96,7 +100,7 @@ impl State {
     // be outside the state
     pub fn search(&mut self) {
         instrument!("State#search", {
-            if self.query.is_empty() {
+            if self.query_string.is_empty() {
                 self.matches = self.pool.iter().cloned().collect();
                 return;
             }

@@ -1,4 +1,5 @@
 use termion::event::Key;
+use crate::state::State;
 
 #[derive(Clone, Debug)]
 pub enum Event {
@@ -12,6 +13,9 @@ pub enum Event {
     Exit,           // Exit without selecting anything
     Done,           // Exit with selection
     Ignore,         // NO-OP
+    Query(String),
+    // FIXME: Remove state struct
+    State(State),
 }
 
 impl From<Key> for Event {

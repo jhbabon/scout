@@ -16,7 +16,7 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "scout"
-path = "src/bin.rs"
+path = "src/main.rs"
 doc = false
 test = false
 
