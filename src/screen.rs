@@ -4,11 +4,12 @@ use async_std::prelude::*;
 use futures::channel::mpsc::Receiver;
 use crate::result::Result;
 use crate::events::Event;
+use crate::fuzzy::Text;
 use crate::state::State;
 // FIXME: rename these
 use crate::output::{Renderer, Layout};
 
-pub async fn task<W>(outbound: W, mut wire: Receiver<Event>) -> Result<Option<String>>
+pub async fn task<W>(outbound: W, mut wire: Receiver<Event>) -> Result<Option<Text>>
 where
     W: io::Write + Send + Unpin + 'static,
 {

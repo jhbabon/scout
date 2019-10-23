@@ -1,4 +1,4 @@
-use log::debug;
+use std::sync::Arc;
 use std::fmt::{self, Write};
 use async_std::prelude::*;
 use async_std::io;
@@ -46,7 +46,7 @@ impl Layout {
                 .take(lines)
                 .map(|(idx, c)| {
                     if let Some(score_match) = c.score_match {
-                        (idx, format_simple(&score_match, &c.string, "", ""))
+                        (idx, Arc::new(format_simple(&score_match, &c.string, "", "")))
                     } else {
                         (idx, c.string)
                     }

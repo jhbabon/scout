@@ -7,7 +7,7 @@ use futures::SinkExt;
 use futures::channel::mpsc::{Receiver,Sender};
 use crate::result::Result;
 use crate::events::Event;
-use crate::fuzzy::Candidate;
+use crate::fuzzy::{self,Candidate};
 
 const BUFFER_LIMIT: usize = 5000;
 const POOL_LIMIT: usize = 100000;
@@ -63,7 +63,7 @@ pub async fn task(pipe: Receiver<Event>, input: Receiver<Event>, mut screen: Sen
                 } else {
                     matches = pool
                         .par_iter()
-                        .map(|c| Candidate::best_match(&query, &c.string))
+                        .map(|c| fuzzy::finder(&query, c.string.clone()))
                         .filter(|c| c.is_some())
                         .map(|c| c.unwrap())
                         .collect();

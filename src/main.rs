@@ -3,18 +3,12 @@ extern crate log;
 
 use std::convert::TryFrom;
 use std::process;
-// use async_std::future::join;
 use async_std::io;
 use async_std::task;
 use async_std::os::unix::io::AsRawFd;
-// use futures::channel;
-// use scout::ptty::{PTTY, get_ptty};
-// use scout::events::Event;
-// use scout::interactions;
-// use scout::input;
-// use scout::core;
 
 use scout::result::Result;
+use scout::fuzzy::Text;
 use scout::ptty::{get_ptty, PTTY};
 use scout::supervisor;
 
@@ -23,7 +17,7 @@ fn main() {
 
     debug!("[main] start");
 
-    let res: Result<Option<String>> = task::block_on(async {
+    let res: Result<Option<Text>> = task::block_on(async {
         // We only need to set up the ptty into noncanonical mode once
         let tty = get_ptty().await?;
         let ptty = PTTY::try_from(tty.as_raw_fd())?;

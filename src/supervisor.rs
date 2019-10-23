@@ -4,6 +4,7 @@ use async_std::future::join;
 use futures::channel::mpsc::{self,Sender,Receiver};
 use crate::result::Result;
 use crate::events::Event;
+use crate::fuzzy::Text;
 use crate::pipe;
 use crate::input;
 use crate::engine;
@@ -19,7 +20,7 @@ const CHANNEL_SIZE: usize = 1024;
 // * screen: How to print the screen
 // * engine: Search engine
 //*********************************************************************
-pub async fn run<R,I,W>(pipein: R, inbound: I, outbound: W) -> Result<Option<String>>
+pub async fn run<R,I,W>(pipein: R, inbound: I, outbound: W) -> Result<Option<Text>>
 where
     R: io::Read + Send + Unpin + 'static,
     I: io::Read + Send + Unpin + 'static,

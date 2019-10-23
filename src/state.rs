@@ -1,6 +1,4 @@
-use rayon::prelude::*;
-use std::collections::VecDeque;
-use crate::fuzzy::Candidate;
+use crate::fuzzy::{Text,Candidate};
 
 #[derive(Debug,Clone,Default)]
 pub struct State {
@@ -49,7 +47,7 @@ impl State {
         self.selection_idx
     }
 
-    pub fn selection(&self) -> Option<String> {
+    pub fn selection(&self) -> Option<Text> {
         match self.matches.iter().nth(self.selection_idx) {
             Some(candidate) => Some(candidate.string.clone()),
             None => None,
