@@ -33,8 +33,8 @@ where
                 state.update_query_string(query);
                 should_render = true;
             },
-            Event::State(st) => {
-                state.matches = st.matches;
+            Event::Matches(matches) => {
+                state.matches = matches;
                 should_render = true;
             },
             Event::Up => {

@@ -2,12 +2,9 @@ use rayon::prelude::*;
 use std::collections::VecDeque;
 use crate::fuzzy::Candidate;
 
-const LIMIT: usize = 1000000;
-
-#[derive(Debug,Clone, Default)]
+#[derive(Debug,Clone,Default)]
 pub struct State {
     pub query_string: String,
-    pub pool: VecDeque<Candidate>,
     pub matches: Vec<Candidate>,
     selection_idx: usize,
 }
@@ -23,33 +20,6 @@ impl State {
     pub fn new() -> Self {
         Self::default()
     }
-
-    pub fn add_candidate(&mut self, string: String) {
-        self.pool.push_back(Candidate::new(string));
-        // Drop elements if the pool is too big
-        if self.pool.len() > LIMIT {
-            let _f = self.pool.pop_front();
-        }
-    }
-
-    pub fn candidates_done(&mut self) {
-        // NOOP
-    }
-
-//     pub fn add_input(&mut self, ch: char) {
-//         self.selection_idx = 0;
-//         self.query.push(ch);
-//     }
-
-//     pub fn del_input(&mut self) {
-//         self.selection_idx = 0;
-//         let _ch = self.query.pop();
-//     }
-
-//     pub fn clear_query(&mut self) {
-//         self.selection_idx = 0;
-//         self.query = vec![];
-//     }
 
     pub fn select_up(&mut self) {
         if self.selection_idx == 0 {
@@ -94,32 +64,5 @@ impl State {
         } else {
             len - 1
         }
-    }
-
-    // NOTE: This is just temporary, the search should
-    // be outside the state
-    pub fn search(&mut self) {
-        instrument!("State#search", {
-            if self.query_string.is_empty() {
-                self.matches = self.pool.iter().cloned().collect();
-                return;
-            }
-
-            let q = self.query_string();
-
-            // NOTE: In dev mode this search is very slow.
-            self.matches = self.pool
-                .par_iter()
-                .map(|s| {
-                    let mut c = Candidate::new(s.string.clone());
-                    c.best_match(&q);
-                    c
-                })
-                .filter(|c| c.score_match.is_some())
-                // .inspect(|c| trace!("[State#search] Candidate: {:?}", c))
-                .collect();
-
-            self.matches.par_sort_unstable_by(|a, b| b.cmp(a));
-        });
     }
 }

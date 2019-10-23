@@ -14,12 +14,22 @@ impl Candidate {
         Self { string, score_match: None }
     }
 
-    pub fn best_match(&mut self, query: &str) {
+    pub fn best_match(query: &str, target: &str) -> Option<Self> {
         if query.is_empty() {
-            self.score_match = None;
+            let candidate = Self { string: target.to_string(), score_match: None };
+            return Some(candidate);
         }
 
-        self.score_match = best_match(query, &self.string);
+        match best_match(query, target) {
+            None => None,
+            Some(score_match) => {
+                let candidate = Self {
+                    string: target.to_string(),
+                    score_match: Some(score_match),
+                };
+                Some(candidate)
+            },
+        }
     }
 }
 

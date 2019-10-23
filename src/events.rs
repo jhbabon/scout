@@ -1,4 +1,4 @@
-use crate::state::State;
+use crate::fuzzy::Candidate;
 
 #[derive(Clone, Debug)]
 pub enum Event {
@@ -10,6 +10,5 @@ pub enum Event {
     Done,           // Exit with selection
     Ignore,         // NO-OP
     Query(String),
-    // FIXME: Remove state struct
-    State(State),
+    Matches(Vec<Candidate>),
 }
