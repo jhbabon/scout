@@ -20,6 +20,7 @@ impl PTTY {
             termios::ECHONL |
             termios::IEXTEN
         );
+
         termios::tcsetattr(self.fd, termios::TCSANOW, &raw_tty)?;
 
         Ok(())
