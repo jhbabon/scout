@@ -5,7 +5,7 @@ use futures::SinkExt;
 use futures::channel::mpsc::Sender;
 use termion::input::TermRead;
 use termion::event::Key;
-use crate::result::Result;
+use crate::common::Result;
 use crate::events::Event;
 
 pub async fn task<R>(mut inbound: R, mut engine_wire: Sender<Event>, mut screen_wire: Sender<Event>) -> Result<()>

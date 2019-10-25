@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use async_std::fs;
 use async_std::os::unix::io::RawFd;
 use termios::{self, Termios};
-use crate::result::Result;
+use crate::common::Result;
 
 #[derive(Debug,Clone)]
 pub struct PTTY {

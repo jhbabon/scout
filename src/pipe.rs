@@ -4,7 +4,7 @@ use async_std::io;
 use async_std::stream;
 use futures::SinkExt;
 use futures::channel::mpsc::Sender;
-use crate::result::Result;
+use crate::common::Result;
 use crate::events::Event;
 
 pub async fn task<R>(pipein: R, mut wire: Sender<Event>) -> Result<()>

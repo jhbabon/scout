@@ -5,7 +5,7 @@ use async_std::prelude::*;
 use futures::stream::select;
 use futures::SinkExt;
 use futures::channel::mpsc::{Receiver,Sender};
-use crate::result::Result;
+use crate::common::Result;
 use crate::events::Event;
 use crate::fuzzy::{self,Candidate};
 

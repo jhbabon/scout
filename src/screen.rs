@@ -1,71 +1,78 @@
-use log::debug;
+// use log::debug;
 use async_std::io;
+use async_std::task;
 use async_std::prelude::*;
-use futures::channel::mpsc::Receiver;
-use crate::result::Result;
-use crate::events::Event;
-use crate::fuzzy::Text;
-use crate::state::State;
-// FIXME: rename these
-use crate::output::{Renderer, Layout};
+use termion::{cursor,clear};
+use crate::common::Result;
 
-pub async fn task<W>(outbound: W, mut wire: Receiver<Event>) -> Result<Option<Text>>
-where
-    W: io::Write + Send + Unpin + 'static,
-{
-    debug!("[task] start");
+enum ScreenKind {
+    Full,
+    Inline,
+}
 
-    let mut selection = None;
-    let mut should_render: bool;
-
-    let mut state = State::new();
-    let mut renderer = Renderer::new(outbound);
-    renderer.setup().await?;
-
-    let mut layout = Layout::new();
-    layout.update(&state)?;
-    renderer.render(&layout).await?;
-
-    while let Some(event) = wire.next().await {
-        should_render = false;
-
-        match event {
-            Event::Query(query) => {
-                state.update_query_string(query);
-                should_render = true;
-            },
-            Event::Matches(matches) => {
-                state.matches = matches;
-                should_render = true;
-            },
-            Event::Up => {
-                state.select_up();
-                should_render = true;
-            },
-            Event::Down => {
-                state.select_down();
-                should_render = true;
-            },
-            // NOTE: We don't need to break the loop since
-            // the engine and input will drop the sender
-            // and the loop will stop
-            Event::Done => {
-                selection = state.selection();
-            },
-            _ => (),
+impl ScreenKind {
+    pub fn setup(&self) -> Option<String> {
+        let setup = match self {
+            Self::Full => format!("{}{}", csi!("?1049h"), cursor::Goto(1,1)),
+            Self::Inline => "\r".to_string(),
         };
 
-        if should_render {
-            layout.update(&state)?;
-            renderer.render(&layout).await?;
+        Some(setup)
+    }
+
+    pub fn teardown(&self) -> Option<String> {
+        let teardown = match self {
+            Self::Full => csi!("?1049l").to_string(),
+            Self::Inline => format!(
+                "{}{}{}",
+                clear::CurrentLine,
+                clear::AfterCursor,
+                "\r\n"
+            ),
+        };
+
+        Some(teardown)
+    }
+}
+
+pub struct Screen<W: io::Write + Send + Unpin + 'static> {
+    writer: W,
+    kind: ScreenKind,
+}
+
+// TODO: Make configurable
+impl<W: io::Write + Send + Unpin + 'static> Screen<W> {
+    pub async fn new(writer: W) -> Result<Self> {
+        let mut screen = Self { writer, kind: ScreenKind::Inline };
+
+        if let Some(setup) = screen.kind.setup() {
+            screen.render(&setup).await?;
         }
-    };
 
-    renderer.teardown().await?;
+        Ok(screen)
+    }
 
-    drop(wire);
+    pub async fn render<L: std::fmt::Display>(&mut self, layout: &L) -> Result<()> {
+        let rendered = format!(
+            "{}{}{}",
+            termion::cursor::Hide,
+            layout,
+            termion::cursor::Show,
+        );
+        self.writer.write_all(rendered.as_bytes()).await?;
+        self.writer.flush().await?;
 
-    debug!("[task] end");
+        Ok(())
+    }
+}
 
-    Ok(selection)
+impl<W: io::Write + Send + Unpin + 'static> Drop for Screen<W> {
+    fn drop(&mut self) {
+        task::block_on(async {
+            if let Some(teardown) = self.kind.teardown() {
+                self.render(&teardown).await
+                    .expect("Error writing to output");
+            }
+        });
+    }
 }

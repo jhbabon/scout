@@ -7,8 +7,7 @@ use async_std::io;
 use async_std::task;
 use async_std::os::unix::io::AsRawFd;
 
-use scout::result::Result;
-use scout::fuzzy::Text;
+use scout::common::{Result,Text};
 use scout::ptty::{get_ptty, PTTY};
 use scout::supervisor;
 

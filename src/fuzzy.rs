@@ -3,9 +3,7 @@
 use sublime_fuzzy::{best_match, Match};
 use std::sync::Arc;
 use std::cmp::Ordering;
-
-// NOTE: I'm still not sure if using Arc is a good idea or not
-pub type Text = Arc<String>;
+use crate::common::Text;
 
 #[derive(Debug,Clone)]
 pub struct Candidate {

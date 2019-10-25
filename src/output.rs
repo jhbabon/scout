@@ -5,7 +5,7 @@ use async_std::io;
 use termion::terminal_size;
 use sublime_fuzzy::format_simple;
 use termion;
-use crate::result::Result;
+use crate::common::Result;
 use crate::state::State;
 
 #[derive(Debug,Clone)]
@@ -26,7 +26,7 @@ impl Layout {
         let (width, height) = terminal_size().expect("Error getting terminal size");
         // debug!("Size is {:?}", size);
         let display = None;
-        let size = (width as usize, height as usize);
+        let size = (width as usize, 5);
         let offset = 0;
 
         Self { display, size, offset }
@@ -65,7 +65,7 @@ impl Layout {
 
             // prompt
             let prompt = format!("{:width$} > {}", state.matches.len(), state.query_string(), width = 3);
-            write!(&mut display, "{}{}", termion::cursor::Goto(1, 1), prompt)?;
+            write!(&mut display, "{}{}{}{}", termion::cursor::Up(list.len() as u16), termion::clear::CurrentLine, "\r", prompt)?;
 
             self.display = Some(display);
         });
@@ -96,7 +96,7 @@ impl fmt::Display for Layout {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.display {
             None => write!(f, ""),
-            Some(display) => write!(f, "{}", display),
+            Some(display) => write!(f, "{}{}{}{}", termion::clear::AfterCursor, termion::clear::CurrentLine, "\r", display),
         }
     }
 }
