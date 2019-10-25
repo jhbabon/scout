@@ -20,7 +20,7 @@ pub struct State {
     pub query: String,
     pub matches: Vec<Candidate>,
     selection_idx: usize,
-    last_update: StateUpdate,
+    pub last_update: StateUpdate,
 }
 
 impl State {

@@ -43,7 +43,7 @@ pub struct Screen<W: io::Write + Send + Unpin + 'static> {
 // TODO: Make configurable
 impl<W: io::Write + Send + Unpin + 'static> Screen<W> {
     pub async fn new(writer: W) -> Result<Self> {
-        let mut screen = Self { writer, kind: ScreenKind::Inline };
+        let mut screen = Self { writer, kind: ScreenKind::Full };
 
         if let Some(setup) = screen.kind.setup() {
             screen.render(&setup).await?;

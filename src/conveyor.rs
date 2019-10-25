@@ -26,7 +26,7 @@ where
     let mut layout = Layout::new();
     // TODO: Rendering only parts is too hard, let's rerender everything
     //   as before
-    layout.update(&state)?;
+    layout.draw(&state)?;
     screen.render(&layout).await?;
 
     while let Some(event) = wire.next().await {
@@ -59,7 +59,7 @@ where
         };
 
         if render {
-            layout.update(&state)?;
+            layout.draw(&state)?;
             screen.render(&layout).await?;
         }
     };

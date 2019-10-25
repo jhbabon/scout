@@ -24,23 +24,26 @@ impl Layout {
         let (width, height) = terminal_size().expect("Error getting terminal size");
         // debug!("Size is {:?}", size);
         let display = None;
-        let size = (width as usize, 5);
+        let size = (width as usize, height as usize);
         let offset = 0;
 
         Self { display, size, offset }
     }
 
-    pub fn update(&mut self, state: &State) -> Result<()> {
+    fn draw_prompt(&mut self, state: &State) -> Result<String> {
+        let prompt = format!(
+            "{}\r> {}",
+            termion::clear::CurrentLine,
+            state.query()
+        );
+
+        Ok(prompt)
+    }
+
+    fn draw_list(&mut self, state: &State) -> Result<String> {
         let mut display = String::new();
-        // match state.last_update {
-        //     StateUpdate::Query => self.update_query(&state)?,
-        //     StateUpdate::Matches => self.update_matches(&state)?,
-        //     StateUpdate::Selection => self.update_matches(&state)?,
-        //     StateUpdate::All => {
-        //         self.update_query(&state)?;
-        //         self.update_matches(&state)?;
-        //     },
-        // }
+
+        write!(&mut display, "{}", termion::clear::AfterCursor)?;
         write!(&mut display, "{}", termion::cursor::Save)?;
 
         // list
@@ -68,13 +71,32 @@ impl Layout {
             })
             .collect();
 
-        write!(&mut display, "{}{}", termion::cursor::Down(1), list.join("\n"))?;
+        write!(&mut display, "\r{}{}", termion::cursor::Down(1), list.join("\n"))?;
 
-        // prompt
-        // let prompt = format!("{:width$} > {}", state.matches.len(), state.query_string(), width = 3);
-        // write!(&mut display, "{}{}{}", termion::cursor::Up(list.len() as u16), termion::clear::CurrentLine, prompt)?;
         write!(&mut display, "{}", termion::cursor::Up(list.len() as u16))?;
         write!(&mut display, "{}", termion::cursor::Restore)?;
+
+        Ok(display)
+    }
+
+    pub fn draw(&mut self, state: &State) -> Result<()> {
+        let mut display = String::new();
+
+        match state.last_update {
+            StateUpdate::Query => {
+                let prompt = self.draw_prompt(&state)?;
+                write!(&mut display, "{}", prompt)?;
+            },
+            StateUpdate::Matches | StateUpdate::Selection => {
+                let list = self.draw_list(&state)?;
+                write!(&mut display, "{}", list)?;
+            },
+            StateUpdate::All => {
+                let list = self.draw_list(&state)?;
+                let prompt = self.draw_prompt(&state)?;
+                write!(&mut display, "{}{}", list, prompt)?;
+            },
+        }
 
         self.display = Some(display);
 
@@ -104,7 +126,7 @@ impl fmt::Display for Layout {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.display {
             None => write!(f, ""),
-            Some(display) => write!(f, "{}{}\r{}", termion::clear::AfterCursor, termion::clear::CurrentLine, display),
+            Some(display) => write!(f, "{}", display),
         }
     }
 }
