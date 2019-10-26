@@ -15,6 +15,7 @@ impl ScreenKind {
     pub fn setup(&self) -> Option<String> {
         let setup = match self {
             Self::Full => format!("{}{}", csi!("?1049h"), cursor::Goto(1,1)),
+            // FIXME: This doesn't work if the screen is full
             Self::Inline => "\r".to_string(),
         };
 

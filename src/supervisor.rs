@@ -31,10 +31,10 @@ where
     let (input_sender, input_recv) = wires();
     let (conveyor_sender, conveyor_recv) = wires();
 
-    let pipe_task = task::spawn(pipe::task(config, pipein, pipe_sender));
-    let input_task = task::spawn(input::task(config, inbound, input_sender, conveyor_sender.clone()));
-    let engine_task = task::spawn(engine::task(config, pipe_recv, input_recv, conveyor_sender));
-    let conveyor_task = task::spawn(conveyor::task(config, outbound, conveyor_recv));
+    let pipe_task = task::spawn(pipe::task(config.clone(), pipein, pipe_sender));
+    let input_task = task::spawn(input::task(config.clone(), inbound, input_sender, conveyor_sender.clone()));
+    let engine_task = task::spawn(engine::task(config.clone(), pipe_recv, input_recv, conveyor_sender));
+    let conveyor_task = task::spawn(conveyor::task(config.clone(), outbound, conveyor_recv));
 
     let (p_res, in_res, en_res, con_res) = join!(
         pipe_task,

@@ -9,7 +9,7 @@ use crate::config::Config;
 use crate::common::Result;
 use crate::events::Event;
 
-pub async fn task<R>(_config: Config, mut inbound: R, mut engine_wire: Sender<Event>, mut screen_wire: Sender<Event>) -> Result<()>
+pub async fn task<R>(config: Config, mut inbound: R, mut engine_wire: Sender<Event>, mut screen_wire: Sender<Event>) -> Result<()>
 where
     R: io::Read + Unpin + Send + 'static
 {
@@ -18,6 +18,12 @@ where
     let mut buffer;
     let mut query: Vec<char> = vec![];
     let mut query_updated: bool;
+
+    if let Some(q) = config.initial_query {
+        let q = q.to_string();
+        screen_wire.send(Event::Query(q.clone())).await?;
+        engine_wire.send(Event::Query(q)).await?;
+    }
 
     'event: loop {
         debug!("[task|event loop] iteration");

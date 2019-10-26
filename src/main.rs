@@ -1,11 +1,14 @@
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate clap;
 
 use std::convert::TryFrom;
 use std::process;
 use async_std::io;
 use async_std::task;
 use async_std::os::unix::io::AsRawFd;
+use clap::{App, Arg};
 
 use scout::common::{Result,Text};
 use scout::config::Configurator;
@@ -17,13 +20,33 @@ fn main() {
 
     debug!("[main] start");
 
+    let args = App::new("scout")
+        .version(crate_version!())
+        .arg(Arg::with_name("inline")
+            .short("i")
+            .long("inline")
+            .help("show finder under the current line"))
+        .arg(Arg::with_name("lines")
+            .short("l")
+            .long("lines")
+            .takes_value(true)
+            .help("Number of lines to display in inline mode, including prompt"))
+        .arg(Arg::with_name("search")
+            .short("s")
+            .long("search")
+            .takes_value(true)
+            .help("Initial search"))
+        .get_matches();
+
+    debug!("args: {:?}", args);
+
     let res: Result<Option<Text>> = task::block_on(async {
         // We only need to set up the ptty into noncanonical mode once
         let tty = get_ptty().await?;
 
         let config = Configurator::new()
             .from_ptty(&tty)
-            .from_args(false)
+            .from_args(&args)
             .build();
 
         debug!("Config {:?}", config);

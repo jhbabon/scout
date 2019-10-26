@@ -32,4 +32,5 @@ sublime_fuzzy = "0.6.0"
 unicode-width = "0.1.6"
 unicode-truncate = "0.1.1"
 libc = "0.2.65"
+clap = "2.33.0"
 serde = { version = "1.0.101", features = ["derive"] }
