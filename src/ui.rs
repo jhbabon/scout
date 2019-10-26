@@ -1,9 +1,10 @@
 use log::debug;
 use std::sync::Arc;
 use std::fmt::{self, Write};
-use termion::terminal_size;
 use sublime_fuzzy::format_simple;
 use termion;
+use unicode_truncate::UnicodeTruncateStr;
+use unicode_truncate::Alignment;
 use crate::common::Result;
 use crate::state::{State,StateUpdate};
 
@@ -22,8 +23,7 @@ pub struct Layout {
 impl Layout {
     pub fn new() -> Self {
         // TODO: Pass width and height as args or in a Config
-        let (width, height) = terminal_size().expect("Error getting terminal size");
-        // debug!("Size is {:?}", size);
+        let (width, height) = (120, 40);
         let display = None;
         let size = (width as usize, height as usize);
         let offset = 0;
@@ -68,9 +68,11 @@ impl Layout {
     fn draw_list(&mut self, state: &State) -> Result<String> {
         let mut display = String::new();
 
-        write!(&mut display, "{}", termion::clear::AfterCursor)?;
+        // write!(&mut display, "{}", termion::clear::AfterCursor)?;
         write!(&mut display, "{}", termion::cursor::Save)?;
 
+        let (width, _) = self.size;
+        let line_len = width - 2;
         let (offset, lines) = self.scroll(&state);
         let list: Vec<String> = state.matches
             .iter()
@@ -91,15 +93,16 @@ impl Layout {
                     selected = ">";
                 }
 
-                format!("{} {}", selected, candidate)
+                format!("{} {}", selected, candidate.unicode_pad(line_len, Alignment::Left, true))
             })
             .collect();
 
         write!(
             &mut display,
-            "{}\r{}{}",
+            "{}\r{}{}{}",
             termion::cursor::Down(1),
             list.join("\n"),
+            termion::clear::AfterCursor,
             termion::cursor::Restore,
         )?;
 
