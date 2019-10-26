@@ -5,6 +5,7 @@ use sublime_fuzzy::format_simple;
 use termion;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_truncate::Alignment;
+use crate::config::Config;
 use crate::common::Result;
 use crate::state::{State,StateUpdate};
 
@@ -21,11 +22,9 @@ pub struct Layout {
 //  * Only redraw lines that need change?
 //  * Use ansi_term for colors, etc
 impl Layout {
-    pub fn new() -> Self {
-        // TODO: Pass width and height as args or in a Config
-        let (width, height) = (120, 40);
+    pub fn new(config: &Config) -> Self {
         let display = None;
-        let size = (width as usize, height as usize);
+        let size = config.screen.size;
         let offset = 0;
 
         Self { display, size, offset }

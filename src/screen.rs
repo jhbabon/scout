@@ -3,6 +3,7 @@ use async_std::io;
 use async_std::task;
 use async_std::prelude::*;
 use termion::{cursor,clear};
+use crate::config::Config;
 use crate::common::Result;
 
 enum ScreenKind {
@@ -42,8 +43,14 @@ pub struct Screen<W: io::Write + Send + Unpin + 'static> {
 
 // TODO: Make configurable
 impl<W: io::Write + Send + Unpin + 'static> Screen<W> {
-    pub async fn new(writer: W) -> Result<Self> {
-        let mut screen = Self { writer, kind: ScreenKind::Full };
+    pub async fn new(config: &Config, writer: W) -> Result<Self> {
+        let kind = if config.screen.full {
+            ScreenKind::Full
+        } else {
+            ScreenKind::Inline
+        };
+
+        let mut screen = Self { writer, kind };
 
         if let Some(setup) = screen.kind.setup() {
             screen.render(&setup).await?;

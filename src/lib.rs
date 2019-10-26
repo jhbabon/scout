@@ -2,6 +2,7 @@ extern crate log;
 
 #[macro_use]
 mod macros;
+pub mod config;
 pub mod terminal_size;
 pub mod common;
 pub mod fuzzy;

@@ -3,6 +3,7 @@ use async_std::task;
 use async_std::future::join;
 use futures::channel::mpsc::{self,Sender,Receiver};
 use crate::common::{Result, Text};
+use crate::config::Config;
 use crate::events::Event;
 use crate::pipe;
 use crate::input;
@@ -19,7 +20,7 @@ const CHANNEL_SIZE: usize = 1024;
 // * conveyor: How to print the conveyor
 // * engine: Search engine
 //*********************************************************************
-pub async fn run<R,I,W>(pipein: R, inbound: I, outbound: W) -> Result<Option<Text>>
+pub async fn run<R,I,W>(config: Config, pipein: R, inbound: I, outbound: W) -> Result<Option<Text>>
 where
     R: io::Read + Send + Unpin + 'static,
     I: io::Read + Send + Unpin + 'static,
@@ -30,10 +31,10 @@ where
     let (input_sender, input_recv) = wires();
     let (conveyor_sender, conveyor_recv) = wires();
 
-    let pipe_task = task::spawn(pipe::task(pipein, pipe_sender));
-    let input_task = task::spawn(input::task(inbound, input_sender, conveyor_sender.clone()));
-    let engine_task = task::spawn(engine::task(pipe_recv, input_recv, conveyor_sender));
-    let conveyor_task = task::spawn(conveyor::task(outbound, conveyor_recv));
+    let pipe_task = task::spawn(pipe::task(config, pipein, pipe_sender));
+    let input_task = task::spawn(input::task(config, inbound, input_sender, conveyor_sender.clone()));
+    let engine_task = task::spawn(engine::task(config, pipe_recv, input_recv, conveyor_sender));
+    let conveyor_task = task::spawn(conveyor::task(config, outbound, conveyor_recv));
 
     let (p_res, in_res, en_res, con_res) = join!(
         pipe_task,

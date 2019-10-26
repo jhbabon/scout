@@ -5,10 +5,11 @@ use futures::SinkExt;
 use futures::channel::mpsc::Sender;
 use termion::input::TermRead;
 use termion::event::Key;
+use crate::config::Config;
 use crate::common::Result;
 use crate::events::Event;
 
-pub async fn task<R>(mut inbound: R, mut engine_wire: Sender<Event>, mut screen_wire: Sender<Event>) -> Result<()>
+pub async fn task<R>(_config: Config, mut inbound: R, mut engine_wire: Sender<Event>, mut screen_wire: Sender<Event>) -> Result<()>
 where
     R: io::Read + Unpin + Send + 'static
 {

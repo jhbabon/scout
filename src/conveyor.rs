@@ -2,6 +2,7 @@ use log::debug;
 use async_std::io;
 use async_std::prelude::*;
 use futures::channel::mpsc::Receiver;
+use crate::config::Config;
 use crate::common::{Result,Text};
 use crate::events::Event;
 
@@ -12,18 +13,18 @@ use crate::screen::Screen;
 // TODO: Move changes in output::Layout to ui::Layout
 use crate::ui::Layout;
 
-pub async fn task<W>(outbound: W, mut wire: Receiver<Event>) -> Result<Option<Text>>
+pub async fn task<W>(config: Config, outbound: W, mut wire: Receiver<Event>) -> Result<Option<Text>>
 where
     W: io::Write + Send + Unpin + 'static,
 {
     debug!("[task] start");
 
     let mut render: bool;
-    let mut screen = Screen::new(outbound).await?;
+    let mut screen = Screen::new(&config, outbound).await?;
     let mut selection = None;
 
     let mut state = State::new();
-    let mut layout = Layout::new();
+    let mut layout = Layout::new(&config);
     // TODO: Rendering only parts is too hard, let's rerender everything
     //   as before
     layout.draw(&state)?;
