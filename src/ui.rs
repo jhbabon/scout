@@ -1,3 +1,4 @@
+use log::debug;
 use std::sync::Arc;
 use std::fmt::{self, Write};
 use termion::terminal_size;
@@ -30,6 +31,30 @@ impl Layout {
         Self { display, size, offset }
     }
 
+    pub fn draw(&mut self, state: &State) -> Result<()> {
+        let mut display = String::new();
+
+        match state.last_update {
+            StateUpdate::Query => {
+                let prompt = self.draw_prompt(&state)?;
+                write!(&mut display, "{}", prompt)?;
+            },
+            StateUpdate::Matches | StateUpdate::Selection => {
+                let list = self.draw_list(&state)?;
+                write!(&mut display, "{}", list)?;
+            },
+            StateUpdate::All => {
+                let list = self.draw_list(&state)?;
+                let prompt = self.draw_prompt(&state)?;
+                write!(&mut display, "{}{}", list, prompt)?;
+            },
+        }
+
+        self.display = Some(display);
+
+        Ok(())
+    }
+
     fn draw_prompt(&mut self, state: &State) -> Result<String> {
         let prompt = format!(
             "{}\r> {}",
@@ -46,7 +71,6 @@ impl Layout {
         write!(&mut display, "{}", termion::clear::AfterCursor)?;
         write!(&mut display, "{}", termion::cursor::Save)?;
 
-        // list
         let (offset, lines) = self.scroll(&state);
         let list: Vec<String> = state.matches
             .iter()
@@ -71,36 +95,15 @@ impl Layout {
             })
             .collect();
 
-        write!(&mut display, "\r{}{}", termion::cursor::Down(1), list.join("\n"))?;
-
-        write!(&mut display, "{}", termion::cursor::Up(list.len() as u16))?;
-        write!(&mut display, "{}", termion::cursor::Restore)?;
+        write!(
+            &mut display,
+            "{}\r{}{}",
+            termion::cursor::Down(1),
+            list.join("\n"),
+            termion::cursor::Restore,
+        )?;
 
         Ok(display)
-    }
-
-    pub fn draw(&mut self, state: &State) -> Result<()> {
-        let mut display = String::new();
-
-        match state.last_update {
-            StateUpdate::Query => {
-                let prompt = self.draw_prompt(&state)?;
-                write!(&mut display, "{}", prompt)?;
-            },
-            StateUpdate::Matches | StateUpdate::Selection => {
-                let list = self.draw_list(&state)?;
-                write!(&mut display, "{}", list)?;
-            },
-            StateUpdate::All => {
-                let list = self.draw_list(&state)?;
-                let prompt = self.draw_prompt(&state)?;
-                write!(&mut display, "{}{}", list, prompt)?;
-            },
-        }
-
-        self.display = Some(display);
-
-        Ok(())
     }
 
     fn scroll(&mut self, state: &State) -> (usize, usize) {
