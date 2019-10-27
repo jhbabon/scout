@@ -2,7 +2,7 @@
 use async_std::sync::Arc;
 use std::fmt::{self, Write};
 use sublime_fuzzy::format_simple;
-use termion::{clear,cursor};
+use termion::{clear,cursor,style};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_truncate::Alignment;
 use crate::config::Config;
@@ -16,11 +16,7 @@ pub struct Layout {
     offset: usize,
 }
 
-// FIXME: Make layout rendering more efficient
-//  * Maybe use a buffwriter in the renderer?
-//  * No writeln! macros
-//  * Only redraw lines that need change?
-//  * Use ansi_term for colors, etc
+// FIXME: The rendering system does not work inside neovim
 impl Layout {
     pub fn new(config: &Config) -> Self {
         let display = None;
@@ -71,6 +67,9 @@ impl Layout {
 
         let counter = format!("  {}/{}", state.matches().len(), state.pool_len());
 
+        let invert = format!("{}", style::Invert);
+        let no_invert = format!("{}", style::NoInvert);
+
         let (width, _) = self.size;
         let line_len = width - 2;
         let (offset, lines) = self.scroll(&state);
@@ -88,12 +87,13 @@ impl Layout {
                 }
             })
             .map(|(index, candidate)| {
-                let mut selected = " ";
+                let truncated = candidate.unicode_pad(line_len, Alignment::Left, true);
                 if index == state.selection_idx() {
-                    selected = ">";
+                    format!("{}> {}{}", invert, truncated, no_invert)
+                } else {
+                    format!("  {}", truncated)
                 }
 
-                format!("{} {}", selected, candidate.unicode_pad(line_len, Alignment::Left, true))
             })
             .collect();
 
