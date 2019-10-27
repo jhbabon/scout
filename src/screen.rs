@@ -8,15 +8,23 @@ use crate::common::Result;
 
 enum ScreenKind {
     Full,
-    Inline,
+    Inline(usize),
 }
 
 impl ScreenKind {
     pub fn setup(&self) -> Option<String> {
         let setup = match self {
             Self::Full => format!("{}{}", csi!("?1049h"), cursor::Goto(1,1)),
-            // FIXME: This doesn't work if the screen is full
-            Self::Inline => "\r".to_string(),
+            Self::Inline(height) => {
+                let room = std::iter::repeat("\n")
+                    .take(*height)
+                    .collect::<Vec<&str>>()
+                    .join("");
+
+                let up = *height as u16;
+
+                format!("{}{}\r", room, cursor::Up(up))
+            },
         };
 
         Some(setup)
@@ -25,7 +33,7 @@ impl ScreenKind {
     pub fn teardown(&self) -> Option<String> {
         let teardown = match self {
             Self::Full => csi!("?1049l").to_string(),
-            Self::Inline => format!(
+            Self::Inline(_) => format!(
                 "{}{}{}",
                 clear::CurrentLine,
                 clear::AfterCursor,
@@ -42,13 +50,13 @@ pub struct Screen<W: io::Write + Send + Unpin + 'static> {
     kind: ScreenKind,
 }
 
-// TODO: Make configurable
 impl<W: io::Write + Send + Unpin + 'static> Screen<W> {
     pub async fn new(config: &Config, writer: W) -> Result<Self> {
         let kind = if config.screen.full {
             ScreenKind::Full
         } else {
-            ScreenKind::Inline
+            let (_, height) = config.screen.size;
+            ScreenKind::Inline(height)
         };
 
         let mut screen = Self { writer, kind };
