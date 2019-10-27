@@ -5,12 +5,8 @@ use futures::channel::mpsc::Receiver;
 use crate::config::Config;
 use crate::common::{Result,Text};
 use crate::events::Event;
-
-// TODO: Keep using state, but simplify it?
 use crate::state::State;
 use crate::screen::Screen;
-
-// TODO: Move changes in output::Layout to ui::Layout
 use crate::ui::Layout;
 
 pub async fn task<W>(config: Config, outbound: W, mut wire: Receiver<Event>) -> Result<Option<Text>>
@@ -20,25 +16,25 @@ where
     debug!("[task] start");
 
     let mut render: bool;
-    let mut screen = Screen::new(&config, outbound).await?;
     let mut selection = None;
 
     let mut state = State::new();
+    let mut screen = Screen::new(&config, outbound).await?;
     let mut layout = Layout::new(&config);
-    // TODO: Rendering only parts is too hard, let's rerender everything
-    //   as before
+
     layout.draw(&state)?;
     screen.render(&layout).await?;
 
     while let Some(event) = wire.next().await {
         render = false;
+
         match event {
             Event::Query(query) => {
-                state.update_query(query);
+                state.set_query(query);
                 render = true;
             },
             Event::Matches(matches) => {
-                state.update_matches(matches);
+                state.set_matches(matches);
                 render = true;
             },
             Event::Up => {

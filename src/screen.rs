@@ -6,6 +6,9 @@ use termion::{cursor,clear};
 use crate::config::Config;
 use crate::common::Result;
 
+const ALTERNATE_SCREEN: &'static str = csi!("?1049h");
+const MAIN_SCREEN: &'static str = csi!("?1049l");
+
 enum ScreenKind {
     Full,
     Inline(usize),
@@ -14,7 +17,7 @@ enum ScreenKind {
 impl ScreenKind {
     pub fn setup(&self) -> Option<String> {
         let setup = match self {
-            Self::Full => format!("{}{}", csi!("?1049h"), cursor::Goto(1,1)),
+            Self::Full => format!("{}{}", ALTERNATE_SCREEN, cursor::Goto(1,1)),
             Self::Inline(height) => {
                 let room = std::iter::repeat("\n")
                     .take(*height)
@@ -32,7 +35,7 @@ impl ScreenKind {
 
     pub fn teardown(&self) -> Option<String> {
         let teardown = match self {
-            Self::Full => csi!("?1049l").to_string(),
+            Self::Full => MAIN_SCREEN.to_string(),
             Self::Inline(_) => format!(
                 "{}{}{}",
                 clear::CurrentLine,

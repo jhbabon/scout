@@ -17,10 +17,10 @@ impl Default for StateUpdate {
 
 #[derive(Debug,Clone,Default)]
 pub struct State {
-    pub query: String,
-    pub matches: Vec<Candidate>,
+    query: String,
+    matches: Vec<Candidate>,
     selection_idx: usize,
-    pub last_update: StateUpdate,
+    last_update: StateUpdate,
 }
 
 impl State {
@@ -28,7 +28,7 @@ impl State {
         Self::default()
     }
 
-    pub fn update_query(&mut self, q: String) {
+    pub fn set_query(&mut self, q: String) {
         self.query = q;
         self.last_update = StateUpdate::Query;
     }
@@ -37,9 +37,17 @@ impl State {
         self.query.clone()
     }
 
-    pub fn update_matches(&mut self, matches: Vec<Candidate>) {
+    pub fn set_matches(&mut self, matches: Vec<Candidate>) {
         self.matches = matches;
         self.last_update = StateUpdate::Matches;
+    }
+
+    pub fn matches(&self) -> &Vec<Candidate> {
+        &self.matches
+    }
+
+    pub fn last_update(&self) -> &StateUpdate {
+        &self.last_update
     }
 
     pub fn select_up(&mut self) {

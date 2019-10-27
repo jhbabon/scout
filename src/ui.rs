@@ -1,8 +1,8 @@
-use log::debug;
+// use log::debug;
 use async_std::sync::Arc;
 use std::fmt::{self, Write};
 use sublime_fuzzy::format_simple;
-use termion;
+use termion::{clear,cursor};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_truncate::Alignment;
 use crate::config::Config;
@@ -33,7 +33,7 @@ impl Layout {
     pub fn draw(&mut self, state: &State) -> Result<()> {
         let mut display = String::new();
 
-        match state.last_update {
+        match state.last_update() {
             StateUpdate::Query => {
                 let prompt = self.draw_prompt(&state)?;
                 write!(&mut display, "{}", prompt)?;
@@ -57,7 +57,7 @@ impl Layout {
     fn draw_prompt(&mut self, state: &State) -> Result<String> {
         let prompt = format!(
             "{}\r> {}",
-            termion::clear::CurrentLine,
+            clear::CurrentLine,
             state.query()
         );
 
@@ -67,13 +67,13 @@ impl Layout {
     fn draw_list(&mut self, state: &State) -> Result<String> {
         let mut display = String::new();
 
-        // write!(&mut display, "{}", termion::clear::AfterCursor)?;
-        write!(&mut display, "{}", termion::cursor::Save)?;
+        // write!(&mut display, "{}", clear::AfterCursor)?;
+        write!(&mut display, "{}", cursor::Save)?;
 
         let (width, _) = self.size;
         let line_len = width - 2;
         let (offset, lines) = self.scroll(&state);
-        let list: Vec<String> = state.matches
+        let list: Vec<String> = state.matches()
             .iter()
             .cloned()
             .enumerate()
@@ -99,10 +99,10 @@ impl Layout {
         write!(
             &mut display,
             "{}\r{}{}{}",
-            termion::cursor::Down(1),
+            cursor::Down(1),
             list.join("\n"),
-            termion::clear::AfterCursor,
-            termion::cursor::Restore,
+            clear::AfterCursor,
+            cursor::Restore,
         )?;
 
         Ok(display)
