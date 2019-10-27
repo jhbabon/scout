@@ -1,7 +1,7 @@
 // I don't feel like I can build a good fuzzy search algorithm
 // so let's use a library, at least for the moment
 use sublime_fuzzy::{best_match, Match};
-use std::sync::Arc;
+use async_std::sync::Arc;
 use std::cmp::Ordering;
 use crate::common::Text;
 

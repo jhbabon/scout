@@ -1,5 +1,5 @@
 use log::debug;
-use std::sync::Arc;
+use async_std::sync::Arc;
 use std::fmt::{self, Write};
 use sublime_fuzzy::format_simple;
 use termion;
