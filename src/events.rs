@@ -10,5 +10,5 @@ pub enum Event {
     Done,           // Exit with selection
     Ignore,         // NO-OP
     Query(String),
-    Matches(Vec<Candidate>),
+    Matches((Vec<Candidate>, usize)),
 }

@@ -67,8 +67,9 @@ impl Layout {
     fn draw_list(&mut self, state: &State) -> Result<String> {
         let mut display = String::new();
 
-        // write!(&mut display, "{}", clear::AfterCursor)?;
         write!(&mut display, "{}", cursor::Save)?;
+
+        let counter = format!("  {}/{}", state.matches().len(), state.pool_len());
 
         let (width, _) = self.size;
         let line_len = width - 2;
@@ -98,8 +99,9 @@ impl Layout {
 
         write!(
             &mut display,
-            "{}\r{}{}{}",
+            "{}\r{}\n{}{}{}",
             cursor::Down(1),
+            counter,
             list.join("\n"),
             clear::AfterCursor,
             cursor::Restore,
@@ -110,7 +112,7 @@ impl Layout {
 
     fn scroll(&mut self, state: &State) -> (usize, usize) {
         let (_, height) = self.size;
-        let lines_len = height - 1;
+        let lines_len = height - 2;
 
         let selection = state.selection_idx();
 

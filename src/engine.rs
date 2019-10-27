@@ -73,7 +73,7 @@ pub async fn task(_config: Config, pipe: Receiver<Event>, input: Receiver<Event>
                 }
             });
 
-            screen.send(Event::Matches(matches)).await?;
+            screen.send(Event::Matches((matches, pool.len()))).await?;
         }
     };
 
