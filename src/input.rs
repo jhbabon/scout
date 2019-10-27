@@ -20,7 +20,8 @@ where
     let mut query_updated: bool;
 
     if let Some(q) = config.initial_query {
-        let q = q.to_string();
+        query = q.chars().collect();
+
         screen_wire.send(Event::Query(q.clone())).await?;
         engine_wire.send(Event::Query(q)).await?;
     }
