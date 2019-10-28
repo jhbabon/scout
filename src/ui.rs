@@ -1,7 +1,6 @@
 use std::fmt::{self, Write};
 use termion::{clear,cursor,style};
 use unicode_truncate::UnicodeTruncateStr;
-use unicode_truncate::Alignment;
 use crate::config::Config;
 use crate::common::Result;
 use crate::state::{State,StateUpdate};
@@ -71,8 +70,7 @@ impl Layout {
             .take(lines)
             .map(|(idx, c)| (idx, c.text))
             .map(|(index, candidate)| {
-                // FIXME: Do not pad, only truncate
-                let truncated = candidate.unicode_pad(line_len, Alignment::Left, true);
+                let (truncated, _) = candidate.unicode_truncate(line_len);
                 if index == state.selection_idx() {
                     format!("{}{}> {}{}", clear::CurrentLine, invert, truncated, no_invert)
                 } else {
