@@ -1,3 +1,4 @@
+use std::time::Instant;
 use crate::fuzzy::Candidate;
 
 #[derive(Clone, Debug)]
@@ -9,6 +10,8 @@ pub enum Event {
     Exit,           // Exit without selecting anything
     Done,           // Exit with selection
     Ignore,         // NO-OP
-    Query(String),
-    Matches((Vec<Candidate>, usize)),
+
+    Query((String, Instant)),
+    Search((Vec<Candidate>, usize, Instant)),
+    FlushSearch((Vec<Candidate>, usize)),
 }

@@ -41,6 +41,7 @@ impl State {
     pub fn set_matches(&mut self, matches: (Vec<Candidate>, usize)) {
         self.matches = matches.0;
         self.pool_len = matches.1;
+        self.selection_idx = 0;
         self.last_update = StateUpdate::Matches;
     }
 
@@ -80,7 +81,7 @@ impl State {
 
     pub fn selection(&self) -> Option<Text> {
         match self.matches.iter().nth(self.selection_idx) {
-            Some(candidate) => Some(candidate.string.clone()),
+            Some(candidate) => Some(candidate.text.clone()),
             None => None,
         }
     }

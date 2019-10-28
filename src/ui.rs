@@ -1,7 +1,4 @@
-// use log::debug;
-use async_std::sync::Arc;
 use std::fmt::{self, Write};
-use sublime_fuzzy::format_simple;
 use termion::{clear,cursor,style};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_truncate::Alignment;
@@ -16,7 +13,6 @@ pub struct Layout {
     offset: usize,
 }
 
-// FIXME: The rendering system does not work inside neovim
 impl Layout {
     pub fn new(config: &Config) -> Self {
         let display = None;
@@ -34,11 +30,7 @@ impl Layout {
                 let prompt = self.draw_prompt(&state)?;
                 write!(&mut display, "{}", prompt)?;
             },
-            StateUpdate::Matches | StateUpdate::Selection => {
-                let list = self.draw_list(&state)?;
-                write!(&mut display, "{}", list)?;
-            },
-            StateUpdate::All => {
+            _ => {
                 let list = self.draw_list(&state)?;
                 let prompt = self.draw_prompt(&state)?;
                 write!(&mut display, "{}{}", list, prompt)?;
@@ -52,7 +44,7 @@ impl Layout {
 
     fn draw_prompt(&mut self, state: &State) -> Result<String> {
         let prompt = format!(
-            "{}\r> {}",
+            "{}\r$ {}",
             clear::CurrentLine,
             state.query()
         );
@@ -63,9 +55,7 @@ impl Layout {
     fn draw_list(&mut self, state: &State) -> Result<String> {
         let mut display = String::new();
 
-        write!(&mut display, "{}", cursor::Save)?;
-
-        let counter = format!("  {}/{}", state.matches().len(), state.pool_len());
+        let counter = format!("{}  {}/{}", clear::CurrentLine, state.matches().len(), state.pool_len());
 
         let invert = format!("{}", style::Invert);
         let no_invert = format!("{}", style::NoInvert);
@@ -73,38 +63,38 @@ impl Layout {
         let (width, _) = self.size;
         let line_len = width - 2;
         let (offset, lines) = self.scroll(&state);
-        let list: Vec<String> = state.matches()
+        let mut list: Vec<String> = state.matches()
             .iter()
             .cloned()
             .enumerate()
             .skip(offset)
             .take(lines)
-            .map(|(idx, c)| {
-                if let Some(score_match) = c.score_match {
-                    (idx, Arc::new(format_simple(&score_match, &c.string, "", "")))
-                } else {
-                    (idx, c.string)
-                }
-            })
+            .map(|(idx, c)| (idx, c.text))
             .map(|(index, candidate)| {
+                // FIXME: Do not pad, only truncate
                 let truncated = candidate.unicode_pad(line_len, Alignment::Left, true);
                 if index == state.selection_idx() {
-                    format!("{}> {}{}", invert, truncated, no_invert)
+                    format!("{}{}> {}{}", clear::CurrentLine, invert, truncated, no_invert)
                 } else {
-                    format!("  {}", truncated)
+                    format!("{}  {}", clear::CurrentLine, truncated)
                 }
 
             })
             .collect();
 
+        // The counter is another element of the list
+        list.insert(0, counter);
+
         write!(
             &mut display,
-            "{}\r{}\n{}{}{}",
+            "{}\r{}{}{}",
             cursor::Down(1),
-            counter,
             list.join("\n"),
             clear::AfterCursor,
-            cursor::Restore,
+            // We always need to reprint the prompt after
+            // going up to set the cursor in the last
+            // position
+            cursor::Up(list.len() as u16),
         )?;
 
         Ok(display)

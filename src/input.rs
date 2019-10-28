@@ -1,4 +1,5 @@
 use log::debug;
+use std::time::Instant;
 use async_std::prelude::*;
 use async_std::io;
 use futures::SinkExt;
@@ -9,7 +10,7 @@ use crate::config::Config;
 use crate::common::Result;
 use crate::events::Event;
 
-pub async fn task<R>(config: Config, mut inbound: R, mut engine_wire: Sender<Event>, mut screen_wire: Sender<Event>) -> Result<()>
+pub async fn task<R>(config: Config, mut inbound: R, mut engine_wire: Sender<Event>, mut conveyor_wire: Sender<Event>) -> Result<()>
 where
     R: io::Read + Unpin + Send + 'static
 {
@@ -20,10 +21,11 @@ where
     let mut query_updated: bool;
 
     if let Some(q) = config.initial_query {
+        let now = Instant::now();
         query = q.chars().collect();
 
-        screen_wire.send(Event::Query(q.clone())).await?;
-        engine_wire.send(Event::Query(q)).await?;
+        conveyor_wire.send(Event::Query((q.clone(), now))).await?;
+        engine_wire.send(Event::Query((q, now))).await?;
     }
 
     'event: loop {
@@ -40,20 +42,20 @@ where
         while let Some(key) = keys.next() {
             match key {
                 Key::Ctrl('p') | Key::Up => {
-                    screen_wire.send(Event::Up).await?;
+                    conveyor_wire.send(Event::Up).await?;
                 },
                 Key::Ctrl('n') | Key::Down => {
-                    screen_wire.send(Event::Down).await?;
+                    conveyor_wire.send(Event::Down).await?;
                 },
 
                 Key::Esc | Key::Alt('\u{0}') => {
                     engine_wire.send(Event::Exit).await?;
-                    screen_wire.send(Event::Exit).await?;
+                    conveyor_wire.send(Event::Exit).await?;
 
                     break 'event;
                 },
                 Key::Char('\n') => {
-                    screen_wire.send(Event::Done).await?;
+                    conveyor_wire.send(Event::Done).await?;
                     engine_wire.send(Event::Done).await?;
 
                     break 'event;
@@ -77,17 +79,18 @@ where
         }
 
         if query_updated {
+            let now = Instant::now();
             let q: String = query.iter().collect();
 
             debug!("[task|event loop] sending query {:?}", q);
 
-            screen_wire.send(Event::Query(q.clone())).await?;
-            engine_wire.send(Event::Query(q)).await?;
+            conveyor_wire.send(Event::Query((q.clone(), now))).await?;
+            engine_wire.send(Event::Query((q, now))).await?;
         }
     }
 
     drop(engine_wire);
-    drop(screen_wire);
+    drop(conveyor_wire);
 
     debug!("[task] end");
 

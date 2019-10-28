@@ -1,4 +1,5 @@
 use log::debug;
+use std::time::Instant;
 use async_std::io;
 use async_std::prelude::*;
 use futures::channel::mpsc::Receiver;
@@ -15,6 +16,7 @@ where
 {
     debug!("[task] start");
 
+    let mut last_timestamp = Instant::now();
     let mut render: bool;
     let mut selection = None;
 
@@ -29,14 +31,30 @@ where
         render = false;
 
         match event {
-            Event::Query(query) => {
+            Event::Query((query, timestamp)) => {
+                last_timestamp = timestamp;
                 state.set_query(query);
                 render = true;
             },
-            Event::Matches(matches) => {
-                state.set_matches(matches);
+
+            Event::FlushSearch((matches, len)) => {
+                // Flush happens when the pool size
+                // changes or the pool is complete
+                state.set_matches((matches, len));
                 render = true;
             },
+            Event::Search((matches, len, timestamp)) => {
+                // Only if the search timestamp is
+                // the same as the last query timestamp
+                // we will update the state. This way
+                // we will drop any intermediate search
+                // and reduce the number of renders
+                if timestamp >= last_timestamp {
+                    state.set_matches((matches, len));
+                    render = true;
+                }
+            },
+
             Event::Up => {
                 state.select_up();
                 render = true;

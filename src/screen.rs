@@ -40,7 +40,7 @@ impl ScreenKind {
                 "{}{}{}",
                 clear::CurrentLine,
                 clear::AfterCursor,
-                "\r\n"
+                "\r"
             ),
         };
 

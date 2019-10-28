@@ -7,13 +7,13 @@ use crate::common::Text;
 
 #[derive(Debug,Clone)]
 pub struct Candidate {
-    pub string: Text,
+    pub text: Text,
     pub score_match: Option<Match>,
 }
 
 impl Candidate {
-    pub fn new(string: String) -> Self {
-        Self { string: Arc::new(string), score_match: None }
+    pub fn new(text: String) -> Self {
+        Self { text: Arc::new(text), score_match: None }
     }
 }
 
@@ -40,7 +40,7 @@ impl PartialEq for Candidate {
 pub fn finder(query: &str, target: Text) -> Option<Candidate> {
     if query.is_empty() {
         let candidate = Candidate {
-            string: target,
+            text: target,
             score_match: None,
         };
         return Some(candidate);
@@ -50,7 +50,7 @@ pub fn finder(query: &str, target: Text) -> Option<Candidate> {
         None => None,
         Some(score_match) => {
             let candidate = Candidate {
-                string: target,
+                text: target,
                 score_match: Some(score_match),
             };
             Some(candidate)
