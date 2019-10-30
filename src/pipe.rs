@@ -23,16 +23,7 @@ where
         .chain(stream::once(Event::EOF));
 
     while let Some(event) = stream.next().await {
-        debug!("Got event {:?}", event);
-
-        match event {
-            Event::Packet(_) => pipe_sender.send(event).await,
-            Event::EOF => {
-                pipe_sender.send(event).await;
-                break;
-            },
-            _ => (),
-        }
+        pipe_sender.send(event).await;
     }
 
     drop(pipe_sender);
