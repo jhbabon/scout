@@ -2,7 +2,7 @@ use log::debug;
 use std::time::Instant;
 use async_std::io;
 use async_std::prelude::*;
-use futures::channel::mpsc::Receiver;
+use async_std::sync::Receiver;
 use crate::config::Config;
 use crate::common::{Result,Text};
 use crate::events::Event;
@@ -10,7 +10,7 @@ use crate::state::State;
 use crate::screen::Screen;
 use crate::ui::Layout;
 
-pub async fn task<W>(config: Config, outbound: W, mut wire: Receiver<Event>) -> Result<Option<Text>>
+pub async fn task<W>(config: Config, outbound: W, mut conveyor_recv: Receiver<Event>) -> Result<Option<Text>>
 where
     W: io::Write + Send + Unpin + 'static,
 {
@@ -27,7 +27,9 @@ where
     layout.draw(&state)?;
     screen.render(&layout).await?;
 
-    while let Some(event) = wire.next().await {
+    while let Some(event) = conveyor_recv.next().await {
+        debug!("Got event {:?}", event);
+
         render = false;
 
         match event {
@@ -79,7 +81,7 @@ where
         }
     };
 
-    drop(wire);
+    drop(conveyor_recv);
 
     debug!("[task] end");
 

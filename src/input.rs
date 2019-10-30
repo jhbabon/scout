@@ -2,15 +2,14 @@ use log::debug;
 use std::time::Instant;
 use async_std::prelude::*;
 use async_std::io;
-use futures::SinkExt;
-use futures::channel::mpsc::Sender;
+use async_std::sync::Sender;
 use termion::input::TermRead;
 use termion::event::Key;
 use crate::config::Config;
 use crate::common::Result;
 use crate::events::Event;
 
-pub async fn task<R>(config: Config, mut inbound: R, mut engine_wire: Sender<Event>, mut conveyor_wire: Sender<Event>) -> Result<()>
+pub async fn task<R>(config: Config, mut inbound: R, input_sender: Sender<Event>, conveyor_sender: Sender<Event>) -> Result<()>
 where
     R: io::Read + Unpin + Send + 'static
 {
@@ -24,8 +23,8 @@ where
         let now = Instant::now();
         query = q.chars().collect();
 
-        conveyor_wire.send(Event::Query((q.clone(), now))).await?;
-        engine_wire.send(Event::Query((q, now))).await?;
+        conveyor_sender.send(Event::Query((q.clone(), now))).await;
+        input_sender.send(Event::Query((q, now))).await;
     }
 
     'event: loop {
@@ -42,21 +41,21 @@ where
         while let Some(key) = keys.next() {
             match key {
                 Key::Ctrl('p') | Key::Up => {
-                    conveyor_wire.send(Event::Up).await?;
+                    conveyor_sender.send(Event::Up).await;
                 },
                 Key::Ctrl('n') | Key::Down => {
-                    conveyor_wire.send(Event::Down).await?;
+                    conveyor_sender.send(Event::Down).await;
                 },
 
                 Key::Esc | Key::Alt('\u{0}') => {
-                    engine_wire.send(Event::Exit).await?;
-                    conveyor_wire.send(Event::Exit).await?;
+                    input_sender.send(Event::Exit).await;
+                    conveyor_sender.send(Event::Exit).await;
 
                     break 'event;
                 },
                 Key::Char('\n') => {
-                    conveyor_wire.send(Event::Done).await?;
-                    engine_wire.send(Event::Done).await?;
+                    input_sender.send(Event::Done).await;
+                    conveyor_sender.send(Event::Done).await;
 
                     break 'event;
                 },
@@ -84,13 +83,13 @@ where
 
             debug!("[task|event loop] sending query {:?}", q);
 
-            conveyor_wire.send(Event::Query((q.clone(), now))).await?;
-            engine_wire.send(Event::Query((q, now))).await?;
+            conveyor_sender.send(Event::Query((q.clone(), now))).await;
+            input_sender.send(Event::Query((q, now))).await;
         }
     }
 
-    drop(engine_wire);
-    drop(conveyor_wire);
+    drop(input_sender);
+    drop(conveyor_sender);
 
     debug!("[task] end");
 

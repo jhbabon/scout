@@ -1,7 +1,6 @@
 use async_std::io;
 use async_std::task;
-use async_std::future::join;
-use futures::channel::mpsc::{self,Sender,Receiver};
+use async_std::sync::{channel,Sender,Receiver};
 use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::events::Event;
@@ -36,20 +35,15 @@ where
     let engine_task = task::spawn(engine::task(config.clone(), pipe_recv, input_recv, conveyor_sender));
     let conveyor_task = task::spawn(conveyor::task(config.clone(), outbound, conveyor_recv));
 
-    let (p_res, in_res, en_res, con_res) = join!(
-        pipe_task,
-        input_task,
-        engine_task,
-        conveyor_task,
-    ).await;
+    let result = conveyor_task.await;
 
-    let _ = p_res?;
-    let _ = in_res?;
-    let _ = en_res?;
+    drop(pipe_task);
+    drop(input_task);
+    drop(engine_task);
 
-    con_res
+    result
 }
 
 fn wires() -> (Sender<Event>, Receiver<Event>) {
-    mpsc::channel::<Event>(CHANNEL_SIZE)
+    channel::<Event>(CHANNEL_SIZE)
 }
