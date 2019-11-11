@@ -1,18 +1,23 @@
-use log::debug;
-use std::collections::VecDeque;
-use rayon::prelude::*;
-use async_std::prelude::*;
-use async_std::sync::{Receiver,Sender};
-use futures::stream::select;
-use crate::config::Config;
 use crate::common::Result;
+use crate::config::Config;
 use crate::events::Event;
-use crate::fuzzy::{self,Candidate};
+use crate::fuzzy::{self, Candidate};
+use async_std::prelude::*;
+use async_std::sync::{Receiver, Sender};
+use futures::stream::select;
+use log::debug;
+use rayon::prelude::*;
+use std::collections::VecDeque;
 
 const BUFFER_LIMIT: usize = 5000;
 const POOL_LIMIT: usize = 500000;
 
-pub async fn task(_config: Config, pipe_recv: Receiver<Event>, input_recv: Receiver<Event>, conveyor_sender: Sender<Event>) -> Result<()> {
+pub async fn task(
+    _config: Config,
+    pipe_recv: Receiver<Event>,
+    input_recv: Receiver<Event>,
+    conveyor_sender: Sender<Event>,
+) -> Result<()> {
     debug!("[task] start");
 
     let mut pool: VecDeque<Candidate> = VecDeque::new();
@@ -40,28 +45,26 @@ pub async fn task(_config: Config, pipe_recv: Receiver<Event>, input_recv: Recei
                 } else {
                     None
                 }
-            },
+            }
             Event::EOF => {
                 let matches = search(&query, &pool);
 
                 Some(Event::FlushSearch((matches, pool.len())))
-            },
+            }
             Event::Query((q, ts)) => {
                 query = q;
                 let matches = search(&query, &pool);
 
                 Some(Event::Search((matches, pool.len(), ts)))
-            },
-            Event::Done | Event::Exit => {
-                break
-            },
+            }
+            Event::Done | Event::Exit => break,
             _ => None,
         };
 
         if let Some(forward) = next {
             conveyor_sender.send(forward).await
         }
-    };
+    }
 
     drop(conveyor_sender);
     drop(incoming);

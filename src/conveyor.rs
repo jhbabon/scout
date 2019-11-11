@@ -1,16 +1,20 @@
-use log::debug;
-use std::time::Instant;
+use crate::common::{Result, Text};
+use crate::config::Config;
+use crate::events::Event;
+use crate::screen::Screen;
+use crate::state::State;
+use crate::ui::Layout;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::sync::Receiver;
-use crate::config::Config;
-use crate::common::{Result,Text};
-use crate::events::Event;
-use crate::state::State;
-use crate::screen::Screen;
-use crate::ui::Layout;
+use log::debug;
+use std::time::Instant;
 
-pub async fn task<W>(config: Config, outbound: W, mut conveyor_recv: Receiver<Event>) -> Result<Option<Text>>
+pub async fn task<W>(
+    config: Config,
+    outbound: W,
+    mut conveyor_recv: Receiver<Event>,
+) -> Result<Option<Text>>
 where
     W: io::Write + Send + Unpin + 'static,
 {
@@ -37,14 +41,14 @@ where
                 last_timestamp = timestamp;
                 state.set_query(query);
                 render = true;
-            },
+            }
 
             Event::FlushSearch((matches, len)) => {
                 // Flush happens when the pool size
                 // changes or the pool is complete
                 state.set_matches((matches, len));
                 render = true;
-            },
+            }
             Event::Search((matches, len, timestamp)) => {
                 // Only if the search timestamp is
                 // the same as the last query timestamp
@@ -55,23 +59,23 @@ where
                     state.set_matches((matches, len));
                     render = true;
                 }
-            },
+            }
 
             Event::Up => {
                 state.select_up();
                 render = true;
-            },
+            }
             Event::Down => {
                 state.select_down();
                 render = true;
-            },
+            }
 
             // NOTE: We don't need to break the loop since
             // the engine and input will drop the sender
             // and the loop will stop
             Event::Done => {
                 selection = state.selection();
-            },
+            }
             _ => (),
         };
 
@@ -79,7 +83,7 @@ where
             layout.draw(&state)?;
             screen.render(&layout).await?;
         }
-    };
+    }
 
     drop(conveyor_recv);
 

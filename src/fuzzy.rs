@@ -1,11 +1,11 @@
 // I don't feel like I can build a good fuzzy search algorithm
 // so let's use a library, at least for the moment
-use sublime_fuzzy::{best_match, Match};
+use crate::common::Text;
 use async_std::sync::Arc;
 use std::cmp::Ordering;
-use crate::common::Text;
+use sublime_fuzzy::{best_match, Match};
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Candidate {
     pub text: Text,
     pub score_match: Option<Match>,
@@ -13,7 +13,10 @@ pub struct Candidate {
 
 impl Candidate {
     pub fn new(text: String) -> Self {
-        Self { text: Arc::new(text), score_match: None }
+        Self {
+            text: Arc::new(text),
+            score_match: None,
+        }
     }
 }
 
@@ -54,6 +57,6 @@ pub fn finder(query: &str, target: Text) -> Option<Candidate> {
                 score_match: Some(score_match),
             };
             Some(candidate)
-        },
+        }
     }
 }

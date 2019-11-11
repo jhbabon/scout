@@ -8,8 +8,12 @@ macro_rules! instrument {
 
         $block;
 
-        trace!("[{}] done. elapsed time {}", $name, now.elapsed().as_secs_f64());
-    }
+        trace!(
+            "[{}] done. elapsed time {}",
+            $name,
+            now.elapsed().as_secs_f64()
+        );
+    };
 }
 
 // Copy from termion:

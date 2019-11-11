@@ -1,7 +1,7 @@
 use crate::common::Text;
 use crate::fuzzy::Candidate;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum StateUpdate {
     Query,
     Matches,
@@ -15,7 +15,7 @@ impl Default for StateUpdate {
     }
 }
 
-#[derive(Debug,Clone,Default)]
+#[derive(Debug, Clone, Default)]
 pub struct State {
     query: String,
     matches: Vec<Candidate>,

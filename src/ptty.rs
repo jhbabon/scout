@@ -1,25 +1,20 @@
-use log::trace;
-use std::convert::TryFrom;
+use crate::common::Result;
 use async_std::fs;
 use async_std::os::unix::io::RawFd;
+use log::trace;
+use std::convert::TryFrom;
 use termios::{self, Termios};
-use crate::common::Result;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct PTTY {
     fd: RawFd,
     termios: Termios,
 }
 
 impl PTTY {
-    pub fn noncanonical_mode(& self) -> Result<()> {
+    pub fn noncanonical_mode(&self) -> Result<()> {
         let mut raw_tty = self.termios.clone();
-        raw_tty.c_lflag &= !(
-            termios::ICANON |
-            termios::ECHO |
-            termios::ECHONL |
-            termios::IEXTEN
-        );
+        raw_tty.c_lflag &= !(termios::ICANON | termios::ECHO | termios::ECHONL | termios::IEXTEN);
 
         termios::tcsetattr(self.fd, termios::TCSANOW, &raw_tty)?;
 

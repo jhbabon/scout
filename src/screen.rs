@@ -1,10 +1,10 @@
 // use log::debug;
-use async_std::io;
-use async_std::task;
-use async_std::prelude::*;
-use termion::{cursor,clear};
-use crate::config::Config;
 use crate::common::Result;
+use crate::config::Config;
+use async_std::io;
+use async_std::prelude::*;
+use async_std::task;
+use termion::{clear, cursor};
 
 const ALTERNATE_SCREEN: &'static str = csi!("?1049h");
 const MAIN_SCREEN: &'static str = csi!("?1049l");
@@ -17,7 +17,7 @@ enum ScreenKind {
 impl ScreenKind {
     pub fn setup(&self) -> Option<String> {
         let setup = match self {
-            Self::Full => format!("{}{}", ALTERNATE_SCREEN, cursor::Goto(1,1)),
+            Self::Full => format!("{}{}", ALTERNATE_SCREEN, cursor::Goto(1, 1)),
             Self::Inline(height) => {
                 let room = std::iter::repeat("\n")
                     .take(*height)
@@ -27,7 +27,7 @@ impl ScreenKind {
                 let up = *height as u16;
 
                 format!("{}{}\r", room, cursor::Up(up))
-            },
+            }
         };
 
         Some(setup)
@@ -36,12 +36,7 @@ impl ScreenKind {
     pub fn teardown(&self) -> Option<String> {
         let teardown = match self {
             Self::Full => MAIN_SCREEN.to_string(),
-            Self::Inline(_) => format!(
-                "{}{}{}",
-                clear::CurrentLine,
-                clear::AfterCursor,
-                "\r"
-            ),
+            Self::Inline(_) => format!("{}{}{}", clear::CurrentLine, clear::AfterCursor, "\r"),
         };
 
         Some(teardown)
@@ -89,7 +84,8 @@ impl<W: io::Write + Send + Unpin + 'static> Drop for Screen<W> {
     fn drop(&mut self) {
         task::block_on(async {
             if let Some(teardown) = self.kind.teardown() {
-                self.render(&teardown).await
+                self.render(&teardown)
+                    .await
                     .expect("Error writing to output");
             }
         });

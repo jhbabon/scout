@@ -7,8 +7,8 @@
 // descriptor. I don't know if this "feature" will be available in
 // "termion" any time soon, so fo the moment I adapt the original code
 // to my needs.
-use std::io;
 use libc::{c_int, c_ushort};
+use std::io;
 
 #[cfg(target_os = "linux")]
 pub const TIOCGWINSZ: usize = 0x0000_5413;

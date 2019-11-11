@@ -1,9 +1,9 @@
 use async_std::fs;
 use async_std::os::unix::io::AsRawFd;
-use serde::{Serialize, Deserialize};
-use clap::{ArgMatches,value_t};
+use clap::{value_t, ArgMatches};
+use serde::{Deserialize, Serialize};
 // TODO: Better crate imports
-use crate::terminal_size::{terminal_size};
+use crate::terminal_size::terminal_size;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ScreenConfig {
@@ -25,7 +25,9 @@ pub struct Configurator {
 
 impl Configurator {
     pub fn new() -> Self {
-        Self { config: Config::default() }
+        Self {
+            config: Config::default(),
+        }
     }
 
     // Set screen size

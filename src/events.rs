@@ -1,5 +1,5 @@
-use std::time::Instant;
 use crate::fuzzy::Candidate;
+use std::time::Instant;
 
 #[derive(Clone, Debug)]
 pub enum Event {

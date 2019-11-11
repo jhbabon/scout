@@ -3,14 +3,14 @@ extern crate log;
 #[macro_use]
 extern crate clap;
 
+use async_std::io;
+use async_std::os::unix::io::AsRawFd;
+use async_std::task;
+use clap::{App, Arg};
 use std::convert::TryFrom;
 use std::process;
-use async_std::io;
-use async_std::task;
-use async_std::os::unix::io::AsRawFd;
-use clap::{App, Arg};
 
-use scout::common::{Result,Text};
+use scout::common::{Result, Text};
 use scout::config::Configurator;
 use scout::ptty::{get_ptty, PTTY};
 use scout::supervisor;
@@ -22,20 +22,26 @@ fn main() {
 
     let args = App::new("scout")
         .version(crate_version!())
-        .arg(Arg::with_name("inline")
-            .short("i")
-            .long("inline")
-            .help("show finder under the current line"))
-        .arg(Arg::with_name("lines")
-            .short("l")
-            .long("lines")
-            .takes_value(true)
-            .help("Number of lines to display in inline mode, including prompt"))
-        .arg(Arg::with_name("search")
-            .short("s")
-            .long("search")
-            .takes_value(true)
-            .help("Initial search"))
+        .arg(
+            Arg::with_name("inline")
+                .short("i")
+                .long("inline")
+                .help("show finder under the current line"),
+        )
+        .arg(
+            Arg::with_name("lines")
+                .short("l")
+                .long("lines")
+                .takes_value(true)
+                .help("Number of lines to display in inline mode, including prompt"),
+        )
+        .arg(
+            Arg::with_name("search")
+                .short("s")
+                .long("search")
+                .takes_value(true)
+                .help("Initial search"),
+        )
         .get_matches();
 
     debug!("args: {:?}", args);
@@ -44,10 +50,7 @@ fn main() {
         // We only need to set up the ptty into noncanonical mode once
         let tty = get_ptty().await?;
 
-        let config = Configurator::new()
-            .from_ptty(&tty)
-            .from_args(&args)
-            .build();
+        let config = Configurator::new().from_ptty(&tty).from_args(&args).build();
 
         debug!("Config {:?}", config);
 
@@ -67,7 +70,7 @@ fn main() {
         Ok(Some(selection)) => println!("{}", selection),
         Ok(None) => {
             process::exit(130);
-        },
+        }
         Err(e) => {
             eprintln!("ERROR: {}", e);
             process::exit(1);

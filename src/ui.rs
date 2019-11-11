@@ -1,11 +1,11 @@
-use std::fmt::{self, Write};
-use termion::{clear,cursor,style};
-use unicode_truncate::UnicodeTruncateStr;
-use crate::config::Config;
 use crate::common::Result;
-use crate::state::{State,StateUpdate};
+use crate::config::Config;
+use crate::state::{State, StateUpdate};
+use std::fmt::{self, Write};
+use termion::{clear, cursor, style};
+use unicode_truncate::UnicodeTruncateStr;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Layout {
     display: Option<String>,
     size: (usize, usize),
@@ -18,7 +18,11 @@ impl Layout {
         let size = config.screen.size;
         let offset = 0;
 
-        Self { display, size, offset }
+        Self {
+            display,
+            size,
+            offset,
+        }
     }
 
     pub fn draw(&mut self, state: &State) -> Result<()> {
@@ -28,12 +32,12 @@ impl Layout {
             StateUpdate::Query => {
                 let prompt = self.draw_prompt(&state)?;
                 write!(&mut display, "{}", prompt)?;
-            },
+            }
             _ => {
                 let list = self.draw_list(&state)?;
                 let prompt = self.draw_prompt(&state)?;
                 write!(&mut display, "{}{}", list, prompt)?;
-            },
+            }
         }
 
         self.display = Some(display);
@@ -42,11 +46,7 @@ impl Layout {
     }
 
     fn draw_prompt(&mut self, state: &State) -> Result<String> {
-        let prompt = format!(
-            "{}\r$ {}",
-            clear::CurrentLine,
-            state.query()
-        );
+        let prompt = format!("{}\r$ {}", clear::CurrentLine, state.query());
 
         Ok(prompt)
     }
@@ -54,7 +54,12 @@ impl Layout {
     fn draw_list(&mut self, state: &State) -> Result<String> {
         let mut display = String::new();
 
-        let counter = format!("{}  {}/{}", clear::CurrentLine, state.matches().len(), state.pool_len());
+        let counter = format!(
+            "{}  {}/{}",
+            clear::CurrentLine,
+            state.matches().len(),
+            state.pool_len()
+        );
 
         let invert = format!("{}", style::Invert);
         let no_invert = format!("{}", style::NoInvert);
@@ -62,7 +67,8 @@ impl Layout {
         let (width, _) = self.size;
         let line_len = width - 2;
         let (offset, lines) = self.scroll(&state);
-        let mut list: Vec<String> = state.matches()
+        let mut list: Vec<String> = state
+            .matches()
             .iter()
             .cloned()
             .enumerate()
@@ -72,11 +78,16 @@ impl Layout {
             .map(|(index, candidate)| {
                 let (truncated, _) = candidate.unicode_truncate(line_len);
                 if index == state.selection_idx() {
-                    format!("{}{}> {}{}", clear::CurrentLine, invert, truncated, no_invert)
+                    format!(
+                        "{}{}> {}{}",
+                        clear::CurrentLine,
+                        invert,
+                        truncated,
+                        no_invert
+                    )
                 } else {
                     format!("{}  {}", clear::CurrentLine, truncated)
                 }
-
             })
             .collect();
 
