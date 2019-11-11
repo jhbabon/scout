@@ -21,8 +21,8 @@ doc = false
 test = false
 
 [dependencies]
-futures-preview = { version = "0.3.0-alpha.19", features = [ "async-await" ] }
-async-std = { version = "0.99", features = ["unstable"] }
+futures = { version = "0.3", features = [ "async-await" ] }
+async-std = { version = "1.0", features = ["unstable"] }
 termios = "0.3.1"
 termion = "1.5.3"
 log = "0.4.8"
