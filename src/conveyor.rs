@@ -1,7 +1,6 @@
 use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::events::Event;
-use crate::screen::Screen;
 use crate::state::State;
 use crate::ui::Layout;
 use async_std::io;
@@ -25,11 +24,9 @@ where
     let mut selection = None;
 
     let mut state = State::new();
-    let mut screen = Screen::new(&config, outbound).await?;
-    let mut layout = Layout::new(&config);
+    let mut layout = Layout::new(&config, outbound).await?;
 
-    layout.draw(&state)?;
-    screen.render(&layout).await?;
+    layout.render(&state).await?;
 
     while let Some(event) = conveyor_recv.next().await {
         debug!("Got event {:?}", event);
@@ -80,8 +77,7 @@ where
         };
 
         if render {
-            layout.draw(&state)?;
-            screen.render(&layout).await?;
+            layout.render(&state).await?;
         }
     }
 

@@ -1,31 +1,101 @@
 use crate::common::Result;
 use crate::config::Config;
 use crate::state::{State, StateUpdate};
-use std::fmt::{self, Write};
+use async_std::io;
+use async_std::prelude::*;
+use async_std::task;
+use std::fmt::Write;
 use termion::{clear, cursor, style};
 use unicode_truncate::UnicodeTruncateStr;
 
+const ALTERNATE_SCREEN: &'static str = csi!("?1049h");
+const MAIN_SCREEN: &'static str = csi!("?1049l");
+
 #[derive(Debug, Clone)]
-pub struct Layout {
-    display: Option<String>,
-    size: (usize, usize),
-    offset: usize,
+enum Screen {
+    Full,
+    Inline(usize),
 }
 
-impl Layout {
-    pub fn new(config: &Config) -> Self {
-        let display = None;
-        let size = config.screen.size;
-        let offset = 0;
+impl Screen {
+    pub fn setup(&self) -> Option<String> {
+        let setup = match self {
+            Self::Full => format!("{}{}", ALTERNATE_SCREEN, cursor::Goto(1, 1)),
+            Self::Inline(height) => {
+                let room = std::iter::repeat("\n")
+                    .take(*height)
+                    .collect::<Vec<&str>>()
+                    .join("");
 
-        Self {
-            display,
-            size,
-            offset,
-        }
+                let up = *height as u16;
+
+                format!("{}{}\r", room, cursor::Up(up))
+            }
+        };
+
+        Some(setup)
     }
 
-    pub fn draw(&mut self, state: &State) -> Result<()> {
+    pub fn teardown(&self) -> Option<String> {
+        let teardown = match self {
+            Self::Full => MAIN_SCREEN.to_string(),
+            Self::Inline(_) => format!("{}{}{}", clear::CurrentLine, clear::AfterCursor, "\r"),
+        };
+
+        Some(teardown)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Layout<W: io::Write + Send + Unpin + 'static> {
+    size: (usize, usize),
+    offset: usize,
+    screen: Screen,
+    writer: W,
+}
+
+impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
+    pub async fn new(config: &Config, writer: W) -> Result<Self> {
+        let size = config.screen.size;
+        let offset = 0;
+        let screen = if config.screen.full {
+            Screen::Full
+        } else {
+            let (_, height) = size;
+            Screen::Inline(height)
+        };
+
+        let mut layout = Self {
+            size,
+            offset,
+            screen,
+            writer,
+        };
+
+        if let Some(setup) = layout.screen.setup() {
+            layout.write(&setup).await?;
+        }
+
+        Ok(layout)
+    }
+
+    pub async fn write<D: std::fmt::Display>(&mut self, display: &D) -> Result<()> {
+        let rendered = format!("{}", display,);
+        self.writer.write_all(rendered.as_bytes()).await?;
+        self.writer.flush().await?;
+
+        Ok(())
+    }
+
+    pub async fn render(&mut self, state: &State) -> Result<()> {
+        let d = self.draw(state)?;
+
+        self.write(&d).await?;
+
+        Ok(())
+    }
+
+    pub fn draw(&mut self, state: &State) -> Result<String> {
         let mut display = String::new();
 
         match state.last_update() {
@@ -40,9 +110,7 @@ impl Layout {
             }
         }
 
-        self.display = Some(display);
-
-        Ok(())
+        Ok(display)
     }
 
     fn draw_prompt(&mut self, state: &State) -> Result<String> {
@@ -128,11 +196,14 @@ impl Layout {
     }
 }
 
-impl fmt::Display for Layout {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.display {
-            None => write!(f, ""),
-            Some(display) => write!(f, "{}", display),
-        }
+impl<W: io::Write + Send + Unpin + 'static> Drop for Layout<W> {
+    fn drop(&mut self) {
+        task::block_on(async {
+            if let Some(teardown) = self.screen.teardown() {
+                self.write(&teardown)
+                    .await
+                    .expect("Error writing to output");
+            }
+        });
     }
 }
