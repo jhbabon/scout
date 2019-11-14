@@ -16,11 +16,9 @@ where
     let reader = io::BufReader::new(pipein);
     let mut stream = reader
         .lines()
-        .map(|res| {
-            let line = res.expect("Error reading from PIPE");
-
-            Event::Packet(line)
-        })
+        .map(|res| res.expect("Error reading from PIPE"))
+        .filter(|line| !line.is_empty())
+        .map(|line| Event::Packet(line))
         .chain(stream::once(Event::EOF));
 
     while let Some(event) = stream.next().await {
