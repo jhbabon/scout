@@ -21,7 +21,7 @@ doc = false
 test = false
 
 [dependencies]
-futures = { version = "0.3", features = [ "async-await" ] }
+futures = { version = "0.3", features = ["async-await"] }
 async-std = { version = "1.0", features = ["unstable"] }
 termios = "0.3.1"
 termion = "1.5.3"
