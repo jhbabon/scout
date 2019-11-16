@@ -34,3 +34,4 @@ unicode-truncate = "0.1.1"
 libc = "0.2.65"
 clap = "2.33.0"
 serde = { version = "1.0.101", features = ["derive"] }
+ansi_term = "0.12.1"

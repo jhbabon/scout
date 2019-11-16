@@ -1,11 +1,13 @@
-use crate::common::{Result, Text};
+use crate::common::Result;
 use crate::config::Config;
+use crate::fuzzy::Candidate;
 use crate::state::{State, StateUpdate};
+use ansi_term::{ANSIString, ANSIStrings, Style};
 use async_std::io;
 use async_std::prelude::*;
 use async_std::task;
 use std::fmt;
-use termion::{clear, cursor, style};
+use termion::{clear, cursor};
 use unicode_truncate::UnicodeTruncateStr;
 
 const ALTERNATE_SCREEN: &'static str = csi!("?1049h");
@@ -78,12 +80,12 @@ impl fmt::Display for Meter {
 
 #[derive(Debug, Clone)]
 enum Item {
-    Choice(Text, usize),
-    Selected(Text, usize),
+    Choice(Candidate, usize),
+    Selected(Candidate, usize),
 }
 
 impl Item {
-    fn new(width: usize, candidate: Text, selected: bool) -> Self {
+    fn new(width: usize, candidate: Candidate, selected: bool) -> Self {
         if selected {
             Self::Selected(candidate, width)
         } else {
@@ -92,25 +94,78 @@ impl Item {
     }
 }
 
+// Adaptation of the original sublime_fuzzy::format_simple function
+fn format_matches<'a>(
+    candidate: &Candidate,
+    string: &'a str,
+    unmatch_style: Style,
+    match_style: Style,
+) -> Vec<ANSIString<'a>> {
+    let mut pieces = Vec::new();
+
+    if let Some(result) = &candidate.score_match {
+        let mut last_end = 0;
+
+        for &(start, len) in &result.continuous_matches() {
+            // Take piece between last match and this match.
+            pieces.push(
+                unmatch_style.paint(
+                    string
+                        .chars()
+                        .skip(last_end)
+                        .take(start - last_end)
+                        .collect::<String>(),
+                ),
+            );
+            // Add actual match.
+            pieces
+                .push(match_style.paint(string.chars().skip(start).take(len).collect::<String>()));
+            last_end = start + len;
+        }
+
+        // If there's characters left after the last match, make sure to append them.
+        if last_end != string.len() {
+            pieces.push(
+                unmatch_style.paint(
+                    string
+                        .chars()
+                        .skip(last_end)
+                        .take_while(|_| true)
+                        .collect::<String>(),
+                ),
+            );
+        }
+    } else {
+        pieces.push(unmatch_style.paint(string));
+    };
+
+    pieces
+}
+
 impl fmt::Display for Item {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Choice(text, width) => {
-                let (truncated, _) = text.unicode_truncate(*width);
+            Self::Choice(candidate, width) => {
+                let (truncated, _) = candidate.text.unicode_truncate(*width);
 
-                write!(f, "{}  {}", clear::CurrentLine, truncated)
+                let painted =
+                    format_matches(&candidate, &truncated, Style::new(), Style::new().bold());
+
+                write!(f, "{}  {}", clear::CurrentLine, ANSIStrings(&painted),)
             }
-            Self::Selected(text, width) => {
-                let (truncated, _) = text.unicode_truncate(*width);
+            Self::Selected(candidate, width) => {
+                let (truncated, _) = candidate.text.unicode_truncate(*width);
 
-                write!(
-                    f,
-                    "{}{}> {}{}",
-                    clear::CurrentLine,
-                    style::Invert,
-                    truncated,
-                    style::NoInvert
-                )
+                let mut strings: Vec<ANSIString<'_>> = vec![Style::new().reverse().paint("> ")];
+                let mut painted = format_matches(
+                    &candidate,
+                    &truncated,
+                    Style::new().reverse(),
+                    Style::new().reverse().bold(),
+                );
+                strings.append(&mut painted);
+
+                write!(f, "{}{}", clear::CurrentLine, ANSIStrings(&strings),)
             }
         }
     }
@@ -174,7 +229,6 @@ impl Component for List {
             .enumerate()
             .skip(offset)
             .take(lines)
-            .map(|(idx, c)| (idx, c.text))
             .map(|(index, candidate)| {
                 let selected = index == state.selection_idx();
 
@@ -271,13 +325,6 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
         Ok(layout)
     }
 
-    pub async fn write(&mut self, display: &str) -> Result<()> {
-        self.writer.write_all(display.as_bytes()).await?;
-        self.writer.flush().await?;
-
-        Ok(())
-    }
-
     pub async fn render(&mut self, state: &State) -> Result<()> {
         match state.last_update() {
             StateUpdate::Query => {
@@ -304,12 +351,10 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
                     meter_separator,
                     self.list,
                     clear::AfterCursor,
-
                     // We always need to reprint the prompt after
                     // going up to set the cursor in the last
                     // position
                     cursor::Up(list_len + 1),
-
                     clear::CurrentLine,
                     self.prompt,
                 );
@@ -317,6 +362,13 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
                 self.write(&display).await?;
             }
         }
+
+        Ok(())
+    }
+
+    async fn write(&mut self, display: &str) -> Result<()> {
+        self.writer.write_all(display.as_bytes()).await?;
+        self.writer.flush().await?;
 
         Ok(())
     }
