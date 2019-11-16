@@ -1,4 +1,4 @@
-use crate::common::Result;
+use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::state::{State, StateUpdate};
 use async_std::io;
@@ -76,11 +76,51 @@ impl fmt::Display for Meter {
     }
 }
 
+#[derive(Debug, Clone)]
+enum Item {
+    Choice(Text, usize),
+    Selected(Text, usize),
+}
+
+impl Item {
+    fn new(width: usize, candidate: Text, selected: bool) -> Self {
+        if selected {
+            Self::Selected(candidate, width)
+        } else {
+            Self::Choice(candidate, width)
+        }
+    }
+}
+
+impl fmt::Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Choice(text, width) => {
+                let (truncated, _) = text.unicode_truncate(*width);
+
+                write!(f, "{}  {}", clear::CurrentLine, truncated)
+            }
+            Self::Selected(text, width) => {
+                let (truncated, _) = text.unicode_truncate(*width);
+
+                write!(
+                    f,
+                    "{}{}> {}{}",
+                    clear::CurrentLine,
+                    style::Invert,
+                    truncated,
+                    style::NoInvert
+                )
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct List {
     size: (usize, usize),
     offset: usize,
-    items: Vec<String>,
+    items: Vec<Item>,
 }
 
 // TODO: From Config
@@ -123,9 +163,6 @@ impl List {
 
 impl Component for List {
     fn render(&mut self, state: &State) -> Result<()> {
-        let invert = format!("{}", style::Invert);
-        let no_invert = format!("{}", style::NoInvert);
-
         let (width, _) = self.size;
         let line_len = width - 2;
         let (offset, lines) = self.scroll(state);
@@ -139,18 +176,9 @@ impl Component for List {
             .take(lines)
             .map(|(idx, c)| (idx, c.text))
             .map(|(index, candidate)| {
-                let (truncated, _) = candidate.unicode_truncate(line_len);
-                if index == state.selection_idx() {
-                    format!(
-                        "{}{}> {}{}",
-                        clear::CurrentLine,
-                        invert,
-                        truncated,
-                        no_invert
-                    )
-                } else {
-                    format!("{}  {}", clear::CurrentLine, truncated)
-                }
+                let selected = index == state.selection_idx();
+
+                Item::new(line_len, candidate, selected)
             })
             .collect();
 
@@ -160,7 +188,13 @@ impl Component for List {
 
 impl fmt::Display for List {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.items.join("\n"))
+        let len = self.items.len();
+        for (idx, item) in self.items.iter().enumerate() {
+            let eol = if idx == (len - 1) { "" } else { "\n" };
+            write!(f, "{}{}", item, eol)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -286,8 +320,7 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
 
         let list_len = self.list.len() as u16;
 
-        // Only add a new line if we are going to print
-        // items
+        // Only add a new line if we are going to print items
         let meter_separator = if list_len == 0 { "" } else { "\n" };
 
         write!(
