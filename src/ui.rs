@@ -4,7 +4,7 @@ use crate::state::{State, StateUpdate};
 use async_std::io;
 use async_std::prelude::*;
 use async_std::task;
-use std::fmt::{self, Write};
+use std::fmt;
 use termion::{clear, cursor, style};
 use unicode_truncate::UnicodeTruncateStr;
 
@@ -271,74 +271,54 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
         Ok(layout)
     }
 
-    pub async fn write<D: std::fmt::Display>(&mut self, display: &D) -> Result<()> {
-        let rendered = format!("{}", display,);
-        self.writer.write_all(rendered.as_bytes()).await?;
+    pub async fn write(&mut self, display: &str) -> Result<()> {
+        self.writer.write_all(display.as_bytes()).await?;
         self.writer.flush().await?;
 
         Ok(())
     }
 
     pub async fn render(&mut self, state: &State) -> Result<()> {
-        let d = self.draw(state)?;
-
-        self.write(&d).await?;
-
-        Ok(())
-    }
-
-    pub fn draw(&mut self, state: &State) -> Result<String> {
-        let mut display = String::new();
-
         match state.last_update() {
             StateUpdate::Query => {
-                let prompt = self.draw_prompt(&state)?;
-                write!(&mut display, "{}", prompt)?;
+                self.prompt.render(state)?;
+
+                let display = format!("{}\r{}", clear::CurrentLine, self.prompt);
+                self.write(&display).await?;
             }
             _ => {
-                let list = self.draw_list(&state)?;
-                let prompt = self.draw_prompt(&state)?;
-                write!(&mut display, "{}{}", list, prompt)?;
+                self.prompt.render(state)?;
+                self.meter.render(state)?;
+                self.list.render(state)?;
+
+                let list_len = self.list.len() as u16;
+
+                // Only add a new line if we are going to print items
+                let meter_separator = if list_len == 0 { "" } else { "\n" };
+
+                let display = format!(
+                    "{}{}\r{}{}{}{}{}{}\r{}",
+                    cursor::Down(1),
+                    clear::CurrentLine,
+                    self.meter,
+                    meter_separator,
+                    self.list,
+                    clear::AfterCursor,
+
+                    // We always need to reprint the prompt after
+                    // going up to set the cursor in the last
+                    // position
+                    cursor::Up(list_len + 1),
+
+                    clear::CurrentLine,
+                    self.prompt,
+                );
+
+                self.write(&display).await?;
             }
         }
 
-        Ok(display)
-    }
-
-    fn draw_prompt(&mut self, state: &State) -> Result<String> {
-        self.prompt.render(state)?;
-        let prompt = format!("{}\r{}", clear::CurrentLine, self.prompt);
-
-        Ok(prompt)
-    }
-
-    fn draw_list(&mut self, state: &State) -> Result<String> {
-        let mut display = String::new();
-
-        self.meter.render(state)?;
-        self.list.render(state)?;
-
-        let list_len = self.list.len() as u16;
-
-        // Only add a new line if we are going to print items
-        let meter_separator = if list_len == 0 { "" } else { "\n" };
-
-        write!(
-            &mut display,
-            "{}{}\r{}{}{}{}{}",
-            cursor::Down(1),
-            clear::CurrentLine,
-            self.meter,
-            meter_separator,
-            self.list,
-            clear::AfterCursor,
-            // We always need to reprint the prompt after
-            // going up to set the cursor in the last
-            // position
-            cursor::Up(list_len + 1),
-        )?;
-
-        Ok(display)
+        Ok(())
     }
 }
 
