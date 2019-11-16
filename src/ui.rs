@@ -45,6 +45,37 @@ impl fmt::Display for Prompt {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct Meter {
+    current: usize,
+    total: usize,
+}
+
+// TODO: From Config
+impl Meter {
+    fn new(_config: &Config) -> Self {
+        let current = 0;
+        let total = 0;
+
+        Self { current, total }
+    }
+}
+
+impl Component for Meter {
+    fn render(&mut self, state: &State) -> Result<()> {
+        self.current = state.matches().len();
+        self.total = state.pool_len();
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for Meter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "  {}/{}", self.current, self.total)
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Mode {
     Full,
@@ -88,6 +119,7 @@ pub struct Layout<W: io::Write + Send + Unpin + 'static> {
     writer: W,
 
     prompt: Prompt,
+    meter: Meter,
 }
 
 impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
@@ -102,6 +134,7 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
         };
 
         let prompt = Prompt::new(config);
+        let meter = Meter::new(config);
 
         let mut layout = Self {
             size,
@@ -109,6 +142,7 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
             mode,
             writer,
             prompt,
+            meter,
         };
 
         if let Some(setup) = layout.mode.setup() {
@@ -162,11 +196,11 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
     fn draw_list(&mut self, state: &State) -> Result<String> {
         let mut display = String::new();
 
+        self.meter.render(state)?;
         let counter = format!(
-            "{}  {}/{}",
+            "{}  {}",
             clear::CurrentLine,
-            state.matches().len(),
-            state.pool_len()
+            self.meter
         );
 
         let invert = format!("{}", style::Invert);
