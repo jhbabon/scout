@@ -76,6 +76,94 @@ impl fmt::Display for Meter {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct List {
+    size: (usize, usize),
+    offset: usize,
+    items: Vec<String>,
+}
+
+// TODO: From Config
+impl List {
+    fn new(config: &Config) -> Self {
+        let size = config.screen.size;
+        let offset = 0;
+        let items = vec![];
+
+        Self {
+            size,
+            offset,
+            items,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    fn scroll(&mut self, state: &State) -> (usize, usize) {
+        let (_, height) = self.size;
+        let len = height - 2;
+
+        let selection = state.selection_idx();
+
+        let top_position = self.offset;
+        let last_position = (len + self.offset) - 1;
+
+        // cycle through the list
+        if selection > last_position {
+            self.offset += selection - last_position;
+        } else if selection < top_position {
+            self.offset -= top_position - selection;
+        }
+
+        (self.offset, len)
+    }
+}
+
+impl Component for List {
+    fn render(&mut self, state: &State) -> Result<()> {
+        let invert = format!("{}", style::Invert);
+        let no_invert = format!("{}", style::NoInvert);
+
+        let (width, _) = self.size;
+        let line_len = width - 2;
+        let (offset, lines) = self.scroll(state);
+
+        self.items = state
+            .matches()
+            .iter()
+            .cloned()
+            .enumerate()
+            .skip(offset)
+            .take(lines)
+            .map(|(idx, c)| (idx, c.text))
+            .map(|(index, candidate)| {
+                let (truncated, _) = candidate.unicode_truncate(line_len);
+                if index == state.selection_idx() {
+                    format!(
+                        "{}{}> {}{}",
+                        clear::CurrentLine,
+                        invert,
+                        truncated,
+                        no_invert
+                    )
+                } else {
+                    format!("{}  {}", clear::CurrentLine, truncated)
+                }
+            })
+            .collect();
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for List {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.items.join("\n"))
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Mode {
     Full,
@@ -113,19 +201,16 @@ impl Mode {
 
 #[derive(Debug, Clone)]
 pub struct Layout<W: io::Write + Send + Unpin + 'static> {
-    size: (usize, usize),
-    offset: usize,
     mode: Mode,
     writer: W,
-
     prompt: Prompt,
     meter: Meter,
+    list: List,
 }
 
 impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
     pub async fn new(config: &Config, writer: W) -> Result<Self> {
         let size = config.screen.size;
-        let offset = 0;
         let mode = if config.screen.full {
             Mode::Full
         } else {
@@ -135,14 +220,14 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
 
         let prompt = Prompt::new(config);
         let meter = Meter::new(config);
+        let list = List::new(config);
 
         let mut layout = Self {
-            size,
-            offset,
             mode,
             writer,
             prompt,
             meter,
+            list,
         };
 
         if let Some(setup) = layout.mode.setup() {
@@ -197,76 +282,30 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
         let mut display = String::new();
 
         self.meter.render(state)?;
-        let counter = format!(
-            "{}  {}",
-            clear::CurrentLine,
-            self.meter
-        );
+        self.list.render(state)?;
 
-        let invert = format!("{}", style::Invert);
-        let no_invert = format!("{}", style::NoInvert);
+        let list_len = self.list.len() as u16;
 
-        let (width, _) = self.size;
-        let line_len = width - 2;
-        let (offset, lines) = self.scroll(&state);
-        let mut list: Vec<String> = state
-            .matches()
-            .iter()
-            .cloned()
-            .enumerate()
-            .skip(offset)
-            .take(lines)
-            .map(|(idx, c)| (idx, c.text))
-            .map(|(index, candidate)| {
-                let (truncated, _) = candidate.unicode_truncate(line_len);
-                if index == state.selection_idx() {
-                    format!(
-                        "{}{}> {}{}",
-                        clear::CurrentLine,
-                        invert,
-                        truncated,
-                        no_invert
-                    )
-                } else {
-                    format!("{}  {}", clear::CurrentLine, truncated)
-                }
-            })
-            .collect();
-
-        // The counter is another element of the list
-        list.insert(0, counter);
+        // Only add a new line if we are going to print
+        // items
+        let meter_separator = if list_len == 0 { "" } else { "\n" };
 
         write!(
             &mut display,
-            "{}\r{}{}{}",
+            "{}{}\r{}{}{}{}{}",
             cursor::Down(1),
-            list.join("\n"),
+            clear::CurrentLine,
+            self.meter,
+            meter_separator,
+            self.list,
             clear::AfterCursor,
             // We always need to reprint the prompt after
             // going up to set the cursor in the last
             // position
-            cursor::Up(list.len() as u16),
+            cursor::Up(list_len + 1),
         )?;
 
         Ok(display)
-    }
-
-    fn scroll(&mut self, state: &State) -> (usize, usize) {
-        let (_, height) = self.size;
-        let lines_len = height - 2;
-
-        let selection = state.selection_idx();
-
-        let top_position = self.offset;
-        let last_position = (lines_len + self.offset) - 1;
-
-        if selection > last_position {
-            self.offset += selection - last_position;
-        } else if selection < top_position {
-            self.offset -= top_position - selection;
-        }
-
-        (self.offset, lines_len)
     }
 }
 
