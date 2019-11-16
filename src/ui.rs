@@ -4,20 +4,54 @@ use crate::state::{State, StateUpdate};
 use async_std::io;
 use async_std::prelude::*;
 use async_std::task;
-use std::fmt::Write;
+use std::fmt::{self, Write};
 use termion::{clear, cursor, style};
 use unicode_truncate::UnicodeTruncateStr;
 
 const ALTERNATE_SCREEN: &'static str = csi!("?1049h");
 const MAIN_SCREEN: &'static str = csi!("?1049l");
 
+trait Component {
+    fn render(&mut self, state: &State) -> Result<()>;
+}
+
+#[derive(Debug, Clone, Default)]
+struct Prompt {
+    symbol: String,
+    query: String,
+}
+
+// TODO: From Config
+impl Prompt {
+    fn new(_config: &Config) -> Self {
+        let symbol = "$".into();
+        let query = "".into();
+
+        Self { symbol, query }
+    }
+}
+
+impl Component for Prompt {
+    fn render(&mut self, state: &State) -> Result<()> {
+        self.query = state.query();
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for Prompt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.symbol, self.query)
+    }
+}
+
 #[derive(Debug, Clone)]
-enum Screen {
+enum Mode {
     Full,
     Inline(usize),
 }
 
-impl Screen {
+impl Mode {
     pub fn setup(&self) -> Option<String> {
         let setup = match self {
             Self::Full => format!("{}{}", ALTERNATE_SCREEN, cursor::Goto(1, 1)),
@@ -50,29 +84,34 @@ impl Screen {
 pub struct Layout<W: io::Write + Send + Unpin + 'static> {
     size: (usize, usize),
     offset: usize,
-    screen: Screen,
+    mode: Mode,
     writer: W,
+
+    prompt: Prompt,
 }
 
 impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
     pub async fn new(config: &Config, writer: W) -> Result<Self> {
         let size = config.screen.size;
         let offset = 0;
-        let screen = if config.screen.full {
-            Screen::Full
+        let mode = if config.screen.full {
+            Mode::Full
         } else {
             let (_, height) = size;
-            Screen::Inline(height)
+            Mode::Inline(height)
         };
+
+        let prompt = Prompt::new(config);
 
         let mut layout = Self {
             size,
             offset,
-            screen,
+            mode,
             writer,
+            prompt,
         };
 
-        if let Some(setup) = layout.screen.setup() {
+        if let Some(setup) = layout.mode.setup() {
             layout.write(&setup).await?;
         }
 
@@ -114,7 +153,8 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
     }
 
     fn draw_prompt(&mut self, state: &State) -> Result<String> {
-        let prompt = format!("{}\r$ {}", clear::CurrentLine, state.query());
+        self.prompt.render(state)?;
+        let prompt = format!("{}\r{}", clear::CurrentLine, self.prompt);
 
         Ok(prompt)
     }
@@ -199,7 +239,7 @@ impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
 impl<W: io::Write + Send + Unpin + 'static> Drop for Layout<W> {
     fn drop(&mut self) {
         task::block_on(async {
-            if let Some(teardown) = self.screen.teardown() {
+            if let Some(teardown) = self.mode.teardown() {
                 self.write(&teardown)
                     .await
                     .expect("Error writing to output");
