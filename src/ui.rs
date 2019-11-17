@@ -2,38 +2,152 @@ use crate::common::Result;
 use crate::config::Config;
 use crate::fuzzy::Candidate;
 use crate::state::{State, StateUpdate};
-use ansi_term::{ANSIString, ANSIStrings, Style};
+use ansi_term::{ANSIString, ANSIStrings, Color, Style};
 use async_std::io;
 use async_std::prelude::*;
 use async_std::task;
+use lazy_static;
+use std::collections::HashMap;
 use std::fmt;
 use termion::{clear, cursor};
 use unicode_truncate::UnicodeTruncateStr;
+use std::convert::Into;
 
 const ALTERNATE_SCREEN: &'static str = csi!("?1049h");
 const MAIN_SCREEN: &'static str = csi!("?1049l");
+
+lazy_static! {
+    pub static ref NAMED_COLORS: HashMap<&'static str, Color> = {
+        let mut m = HashMap::new();
+        m.insert("black", Color::Black);
+        m.insert("red", Color::Red);
+        m.insert("green", Color::Green);
+        m.insert("yellow", Color::Yellow);
+        m.insert("blue", Color::Blue);
+        m.insert("purple", Color::Purple);
+        m.insert("cyan", Color::Cyan);
+        m.insert("white", Color::White);
+
+        m
+    };
+}
+
+#[derive(Debug)]
+enum Decoration {
+    Underline,
+    Strikethrough,
+    Reverse,
+}
+
+#[derive(Debug)]
+enum FontStyle {
+    Regular,
+    Bold,
+    Italic,
+    Dimmed,
+}
+
+#[derive(Debug)]
+struct StyleConfig<'a> {
+    text: &'a str,                     // default: ""
+    decorations: Vec<Decoration>,     // default: vec![]
+    font_style: FontStyle,            // default: Regular
+    color: Option<&'a str>,            // default: None
+    background_color: Option<&'a str>, // default: None
+}
+
+impl<'a> Default for StyleConfig<'a> {
+    fn default() -> Self {
+        Self {
+            text: "",
+            decorations: vec![],
+            font_style: FontStyle::Regular,
+            color: None,
+            background_color: None,
+        }
+    }
+}
+
+impl<'a> Into<Style> for StyleConfig<'a> {
+    fn into(self) -> Style {
+        let mut style = Style::default();
+
+        style = self.decorations.iter().fold(style, |acc, dec| {
+            match dec {
+                Decoration::Underline => acc.underline(),
+                Decoration::Strikethrough => acc.strikethrough(),
+                Decoration::Reverse => acc.reverse(),
+            }
+        });
+
+        style = match self.font_style {
+            FontStyle::Regular => style,
+            FontStyle::Bold => style.bold(),
+            FontStyle::Italic => style.italic(),
+            FontStyle::Dimmed => style.dimmed(),
+        };
+
+        // TODO: Convert colors like fixed(123) and rgb(255, 2, 100)
+        if let Some(name) = self.color {
+            if let Some(&color) = NAMED_COLORS.get(name) {
+                style = style.fg(color);
+            }
+        }
+
+        if let Some(name) = self.background_color {
+            if let Some(&color) = NAMED_COLORS.get(name) {
+                style = style.on(color);
+            }
+        }
+
+        style
+    }
+}
 
 trait Component {
     fn render(&mut self, state: &State) -> Result<()>;
 }
 
 #[derive(Debug, Clone, Default)]
-struct Prompt {
-    symbol: String,
+struct Prompt<'a> {
+    symbol_style: Style,
+    symbol: &'a str,
+    query_style: Style,
     query: String,
 }
 
+// Possible configuration for UI elements
+//
+// text = "$" // to set the text for things like prompt or selection icon
+// decorations = [] // array of this values: underline, strikethrough, reverse
+// font-style = "regular" // one of: regular, bold, italic, dimmed
+// color = "inherit" // basic colors, fixed(u8), rgb(u8, u8, u8)
+// background-color = "inherit" // ditto
+
 // TODO: From Config
-impl Prompt {
+impl<'a> Prompt<'a> {
     fn new(_config: &Config) -> Self {
-        let symbol = "$".into();
+        let style_config = StyleConfig {
+            text: ">",
+            ..Default::default()
+        };
+
+        let symbol = style_config.text.into();
+        let symbol_style = style_config.into();
+
+        let query_config = StyleConfig {
+            decorations: vec![Decoration::Underline],
+            font_style: FontStyle::Bold,
+            ..Default::default()
+        };
+        let query_style = query_config.into();
         let query = "".into();
 
-        Self { symbol, query }
+        Self { symbol_style, symbol, query_style, query }
     }
 }
 
-impl Component for Prompt {
+impl<'a> Component for Prompt<'a> {
     fn render(&mut self, state: &State) -> Result<()> {
         self.query = state.query();
 
@@ -41,14 +155,15 @@ impl Component for Prompt {
     }
 }
 
-impl fmt::Display for Prompt {
+impl<'a> fmt::Display for Prompt<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.symbol, self.query)
+        write!(f, "{} {}", self.symbol_style.paint(self.symbol), self.query_style.paint(&self.query))
     }
 }
 
 #[derive(Debug, Clone, Default)]
 struct Meter {
+    style: Style,
     current: usize,
     total: usize,
 }
@@ -56,10 +171,16 @@ struct Meter {
 // TODO: From Config
 impl Meter {
     fn new(_config: &Config) -> Self {
+        let style_config = StyleConfig {
+            color: Some("black"),
+            background_color: Some("cyan"),
+            ..Default::default()
+        };
+        let style = style_config.into();
         let current = 0;
         let total = 0;
 
-        Self { current, total }
+        Self { style, current, total }
     }
 }
 
@@ -74,23 +195,101 @@ impl Component for Meter {
 
 impl fmt::Display for Meter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "  {}/{}", self.current, self.total)
+        let display = format!("  {}/{}", self.current, self.total);
+
+        write!(f, "{}", self.style.paint(&display))
     }
 }
 
 #[derive(Debug, Clone)]
-enum Item {
-    Choice(Candidate, usize),
-    Selected(Candidate, usize),
+struct Item {
+    width: usize,
+    is_selected: bool,
+    candidate: Candidate,
+    symbol: String,
+    symbol_style: Style,
+    unselected_style: Style,
+    unselected_match_style: Style,
+    selected_style: Style,
+    selected_match_style: Style,
 }
 
 impl Item {
-    fn new(width: usize, candidate: Candidate, selected: bool) -> Self {
-        if selected {
-            Self::Selected(candidate, width)
-        } else {
-            Self::Choice(candidate, width)
+    // TODO: Maybe is better to have a ItemBuilder that does the StyleConfig.into once
+    // and creates a new Item per new candidate
+    fn new(width: usize, candidate: Candidate, is_selected: bool) -> Self {
+        let unselected_style = StyleConfig::default().into();
+        let unselected_match_config = StyleConfig {
+            font_style: FontStyle::Dimmed,
+            ..Default::default()
+        };
+        let unselected_match_style = unselected_match_config.into();
+
+        let selected_config = StyleConfig {
+            color: Some("white"),
+            background_color: Some("red"),
+            ..Default::default()
+        };
+        let selected_style = selected_config.into();
+
+        let selected_match_config = StyleConfig {
+            color: Some("black"),
+            background_color: Some("cyan"),
+            ..Default::default()
+        };
+        let selected_match_style = selected_match_config.into();
+
+        let symbol_config = StyleConfig {
+            text: ">",
+            font_style: FontStyle::Bold,
+            color: Some("black"),
+            background_color: Some("purple"),
+            ..Default::default()
+        };
+        let symbol = symbol_config.text.into();
+        let symbol_style = symbol_config.into();
+
+        Self {
+            width,
+            candidate,
+            is_selected,
+            symbol,
+            symbol_style,
+            unselected_style,
+            unselected_match_style,
+            selected_style,
+            selected_match_style,
         }
+    }
+}
+
+impl fmt::Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: Maybe is better to add padding to the whole line than just the text?
+        let (truncated, _) = self.candidate.text.unicode_truncate(self.width);
+
+        let mut indicator = " ";
+        let mut style = self.unselected_style;
+        let mut match_style = self.unselected_match_style;
+        let mut symbol_style = self.unselected_style;
+
+        if self.is_selected {
+            indicator = &self.symbol;
+            style = self.selected_style;
+            match_style = self.selected_match_style;
+            symbol_style = self.symbol_style;
+        }
+
+        let mut strings: Vec<ANSIString<'_>> = vec![symbol_style.paint(indicator), style.paint(" ")];
+        let mut painted = format_matches(
+            &self.candidate,
+            &truncated,
+            style,
+            match_style,
+        );
+        strings.append(&mut painted);
+
+        write!(f, "{}{}", clear::CurrentLine, ANSIStrings(&strings),)
     }
 }
 
@@ -140,35 +339,6 @@ fn format_matches<'a>(
     };
 
     pieces
-}
-
-impl fmt::Display for Item {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Choice(candidate, width) => {
-                let (truncated, _) = candidate.text.unicode_truncate(*width);
-
-                let painted =
-                    format_matches(&candidate, &truncated, Style::new(), Style::new().bold());
-
-                write!(f, "{}  {}", clear::CurrentLine, ANSIStrings(&painted),)
-            }
-            Self::Selected(candidate, width) => {
-                let (truncated, _) = candidate.text.unicode_truncate(*width);
-
-                let mut strings: Vec<ANSIString<'_>> = vec![Style::new().reverse().paint("> ")];
-                let mut painted = format_matches(
-                    &candidate,
-                    &truncated,
-                    Style::new().reverse(),
-                    Style::new().reverse().bold(),
-                );
-                strings.append(&mut painted);
-
-                write!(f, "{}{}", clear::CurrentLine, ANSIStrings(&strings),)
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -230,9 +400,9 @@ impl Component for List {
             .skip(offset)
             .take(lines)
             .map(|(index, candidate)| {
-                let selected = index == state.selection_idx();
+                let is_selected = index == state.selection_idx();
 
-                Item::new(line_len, candidate, selected)
+                Item::new(line_len, candidate, is_selected)
             })
             .collect();
 
@@ -291,7 +461,7 @@ impl Mode {
 pub struct Layout<W: io::Write + Send + Unpin + 'static> {
     mode: Mode,
     writer: W,
-    prompt: Prompt,
+    prompt: Prompt<'static>,
     meter: Meter,
     list: List,
 }
