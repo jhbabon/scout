@@ -3,7 +3,9 @@ extern crate log;
 #[macro_use]
 extern crate clap;
 
+use async_std::fs;
 use async_std::io;
+use async_std::io::prelude::*;
 use async_std::os::unix::io::AsRawFd;
 use async_std::task;
 use clap::{App, Arg};
@@ -50,7 +52,16 @@ fn main() {
         // We only need to set up the ptty into noncanonical mode once
         let tty = get_ptty().await?;
 
-        let config = Configurator::new().from_ptty(&tty).from_args(&args).build();
+        let mut configurator = Configurator::new();
+
+        // TODO: Use $HOME/.scout.toml (or similar) path or pass it through args
+        if let Ok(mut config_file) = fs::File::open("./config.toml").await {
+            let mut contents = String::new();
+            config_file.read_to_string(&mut contents).await?;
+            configurator.from_str(&contents);
+        }
+
+        let config = configurator.from_ptty(&tty).from_args(&args).build();
 
         debug!("Config {:?}", config);
 
