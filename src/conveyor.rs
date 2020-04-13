@@ -52,6 +52,8 @@ where
                 // we will update the state. This way
                 // we will drop any intermediate search
                 // and reduce the number of renders
+                // TODO: Remove this check? With debounced searches
+                // it might not be necessary
                 if timestamp >= last_timestamp {
                     state.set_matches((matches, len));
                     render = true;
