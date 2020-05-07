@@ -59,7 +59,7 @@ pub fn terminal_size(fileno: c_int) -> io::Result<(u16, u16)> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]
