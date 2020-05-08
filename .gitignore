@@ -4,3 +4,4 @@
 /.vimrc
 TODO.md
 config.toml
+.envrc

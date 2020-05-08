@@ -208,6 +208,8 @@ impl Item {
 impl fmt::Display for Item {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: Maybe is better to add padding to the whole line than just the text?
+        // If I use unicode_segmentation to get graphemes I can reuse that here to get
+        // the truncation
         let (truncated, _) = self.candidate.text.unicode_truncate(self.width);
 
         let mut indicator = &self.item_symbol;
@@ -248,7 +250,7 @@ fn format_matches<'a>(
             pieces.push(
                 unmatch_style.paint(
                     string
-                        .chars()
+                        .chars() // If I use graphemes for filtering I have to use them here as well
                         .skip(last_end)
                         .take(start - last_end)
                         .collect::<String>(),
