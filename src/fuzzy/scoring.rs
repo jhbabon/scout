@@ -10,8 +10,6 @@ const POSITION_BONUS: f32 = 20.0;
 const POSITION_MIN: f32 = 0.0;
 // Full path length at which the whole match score is halved.
 const TAU_SIZE: f32 = 150.0;
-// Max number missed consecutive hit = ceil(MISS_COEFF * query.len) + 5
-const MISS_COEFF: f32 = 0.75;
 
 /// Given a qualified score (quality), calculate how good it is based on query's
 /// and subject's length and position
@@ -181,6 +179,110 @@ pub fn score_pattern(count: usize, len: usize, same_case: usize, start: bool, en
     (same_case + (sc * (sc + bonus))) as f32
 }
 
+/// Forward search for a sequence of consecutive characters
+///
+/// Return the score and the cursors for where query and subject had the last match
+///
+/// TODO: Create ConsecutiveResult (?)
+pub fn score_consecutives(
+    query: &Query,
+    subject: &Subject,
+    query_position: usize,
+    subject_position: usize,
+    start: bool,
+) -> (
+    /* score */ f32,
+    /* query_cursor */ usize,
+    /* subject_cursor */ usize,
+) {
+    let query_left = query.len - query_position;
+    let subject_left = subject.len - subject_position;
+
+    let left;
+    if subject_left < query_left {
+        left = subject_left;
+    } else {
+        left = query_left;
+    }
+
+    let mut same_case = 0;
+    let mut sz = 1;
+
+    if &query.graphemes[query_position] == &subject.graphemes[subject_position] {
+        same_case += 1;
+    }
+
+    let mut query_iter = query
+        .graphemes_lw
+        .iter()
+        .enumerate()
+        .skip(query_position + 1);
+    let mut subject_iter = subject
+        .graphemes_lw
+        .iter()
+        .enumerate()
+        .skip(subject_position + 1);
+
+    let mut query_cursor = query_position;
+    let mut subject_cursor = subject_position;
+
+    while let Some((qindex, query_grapheme)) = query_iter.next() {
+        sz += 1;
+
+        if let Some((index, subject_grapheme)) = subject_iter.next() {
+            if query_grapheme == subject_grapheme {
+                query_cursor = qindex;
+                subject_cursor = index;
+
+                if &query.graphemes[qindex] == &subject.graphemes[index] {
+                    same_case += 1;
+                }
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+
+        if sz >= left {
+            break;
+        }
+    }
+
+    if sz == 1 {
+        let score = 1 + 2 * same_case;
+
+        return (score as f32, query_cursor, subject_cursor);
+    }
+
+    let end = is_end_of_word(subject, subject_cursor);
+    let score = score_pattern(sz, query.len, same_case, start, end);
+
+    (score, query_cursor, subject_cursor)
+}
+
+/// Calcualte the score of a character based on its position and calculated
+/// acronym and consecutive scores around it.
+pub fn score_character(
+    position: usize,
+    start: bool,
+    acronym_score: f32,
+    consecutive_score: f32,
+) -> f32 {
+    let position_score = score_position(position as f32);
+
+    let mut start_bonus = 0.0;
+    let mut score = consecutive_score;
+    if start {
+        start_bonus = 10.0;
+        if acronym_score > consecutive_score {
+            score = acronym_score;
+        }
+    }
+
+    position_score + (WM * (score + start_bonus))
+}
+
 /// Get the position of the exact sequence of Query contained in Subject, if any
 /// It also returns the number of same case graphemes in the sequence
 fn sequence_position(query: &Query, subject: &Subject, skip: usize) -> Option<(usize, usize)> {
@@ -327,6 +429,93 @@ mod tests {
                 score_exact_match(&query, &subject),
                 expected,
                 "Expected {:?} to score {:?} inside {:?}",
+                query.string,
+                expected,
+                subject.text,
+            );
+        }
+    }
+
+    #[test]
+    fn score_consecutives_test() {
+        let cases = vec![
+            // isolated character match
+            (
+                Query::from("foo"),
+                Subject::from("faa"),
+                0,
+                0,
+                true,
+                (23.0, 0, 0),
+            ),
+            // not the whole query is consecutive
+            (
+                Query::from("foo"),
+                Subject::from("foxo"),
+                0,
+                0,
+                true,
+                (54.0, 1, 1),
+            ),
+            (
+                Query::from("qfoo"),
+                Subject::from("qabfoxo"),
+                1,
+                3,
+                false,
+                (29.0, 2, 4),
+            ),
+            // query finished
+            (
+                Query::from("foo"),
+                Subject::from("what/foo/bar"),
+                0,
+                5,
+                true,
+                (93.0, 2, 7),
+            ),
+            // last subject char is not end of word
+            (
+                Query::from("foo"),
+                Subject::from("what/foobar"),
+                0,
+                5,
+                true,
+                (83.0, 2, 7),
+            ),
+            // firt subject char is not start of word
+            (
+                Query::from("foo"),
+                Subject::from("whatfoobar"),
+                0,
+                4,
+                false,
+                (36.0, 2, 6),
+            ),
+            // subject finished
+            (
+                Query::from("foo"),
+                Subject::from("what/fo"),
+                0,
+                5,
+                true,
+                (30.0, 1, 6),
+            ),
+            (
+                Query::from("foo"),
+                Subject::from("fxoox"),
+                1,
+                2,
+                true,
+                (28.0, 2, 3),
+            ),
+        ];
+
+        for (query, subject, qp, sp, start, expected) in cases {
+            assert_eq!(
+                score_consecutives(&query, &subject, qp, sp, start),
+                expected,
+                "Expected {:?} to score {:?} in {:?}",
                 query.string,
                 expected,
                 subject.text,

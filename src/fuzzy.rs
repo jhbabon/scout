@@ -1,5 +1,3 @@
-// I don't feel like I can build a good fuzzy search algorithm
-// so let's use a library, at least for the moment
 pub mod types;
 mod predicates;
 mod scoring;
@@ -74,6 +72,8 @@ pub fn finder(query: &str, target: Text) -> Option<Candidate> {
 // Let's try to implement fuzzaldrin-plus algorithm
 // @see: https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/scorer.coffee#L83
 // =======================================================================
+// Max number missed consecutive hit = ceil(MISS_COEFF * query.len) + 5
+const MISS_COEFF: f32 = 0.75;
 
 // probably is better to use something like {Score|Scoring}<Subject> instead of overloading Subject
 // with score and matched fields
@@ -114,8 +114,9 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
     }
 
     // -----------------------------------------------------------------
-    // TODO: Individual characters
+    // Individual characters
     // (Smith Waterman algorithm)
+
 
     let mut new_subject = Subject::from(subject);
     new_subject.score = acronym.score;
