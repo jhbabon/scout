@@ -1,12 +1,16 @@
 // I don't feel like I can build a good fuzzy search algorithm
 // so let's use a library, at least for the moment
-use log::debug;
+pub mod types;
+mod predicates;
+
+use types::*;
+use predicates::*;
+
 use crate::common::Text;
 use async_std::sync::Arc;
 use std::cmp::Ordering;
 use sublime_fuzzy::{best_match, Match};
 
-use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone)]
 pub struct Candidate {
@@ -75,151 +79,6 @@ const TAU_SIZE: f32 = 150.0; // Full path length at which the whole match score 
 const MISS_COEFF: f32 = 0.75; //Max number missed consecutive hit = ceil(miss_coeff*query.length) + 5
 const ZERO: f32 = 0.0;
 
-#[derive(Debug, Clone)]
-pub struct Query {
-    pub string: String,
-    pub string_lw: String,
-    // I think I can use chars instead of graphemes for filtering (?)
-    // but with graphemes I'll have options for UI truncation, etc
-    pub graphemes: Vec<String>,
-    pub graphemes_lw: Vec<String>,
-    pub len: usize,
-}
-
-impl Query {
-    pub fn new(string: String) -> Self {
-        let string_lw = string.to_lowercase();
-        let graphemes = string
-            .graphemes(true)
-            .map(|s| String::from(s))
-            .collect::<Vec<_>>();
-        let graphemes_lw = graphemes
-            .iter()
-            .map(|s| s.to_lowercase())
-            .collect::<Vec<_>>();
-
-        let len = graphemes.len();
-
-        Self {
-            string,
-            string_lw,
-            graphemes,
-            graphemes_lw,
-            len,
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.string.is_empty()
-    }
-}
-
-impl From<&str> for Query {
-    fn from(string: &str) -> Self {
-        Self::new(String::from(string))
-    }
-}
-
-// Candidate replacement. This represent a possible choice
-#[derive(Debug, Clone)]
-pub struct Subject {
-    pub text: Text,
-    pub text_lw: Text,
-    pub graphemes: Arc<Vec<String>>,
-    pub graphemes_lw: Arc<Vec<String>>,
-    pub score: f32,
-    pub matches: Vec<usize>,
-    pub len: usize,
-}
-
-impl Subject {
-    pub fn new(string: String) -> Self {
-        let text_lw: Text = string.to_lowercase().into();
-        let text: Text = string.into();
-        let graphemes = Arc::new(
-            text.graphemes(true)
-                .map(|s| String::from(s))
-                .collect::<Vec<_>>(),
-        );
-        let graphemes_lw = Arc::new(
-            graphemes
-                .iter()
-                .map(|s| s.to_lowercase())
-                .collect::<Vec<_>>()
-        );
-
-        let len = graphemes.len();
-
-        let score = 0.0;
-        let matches = Vec::new();
-
-        Self {
-            text,
-            text_lw,
-            graphemes,
-            graphemes_lw,
-            len,
-            score,
-            matches,
-        }
-    }
-}
-
-impl From<&Subject> for Subject {
-    fn from(other: &Subject) -> Self {
-        let text = other.text.clone();
-        let text_lw = other.text_lw.clone();
-        let graphemes = other.graphemes.clone();
-        let graphemes_lw = other.graphemes_lw.clone();
-        let len = graphemes.len();
-        let score = 0.0;
-        let matches = Vec::new();
-
-        Self {
-            text,
-            text_lw,
-            graphemes,
-            graphemes_lw,
-            len,
-            score,
-            matches,
-        }
-    }
-}
-
-impl From<&str> for Subject {
-    fn from(string: &str) -> Self {
-        Self::new(String::from(string))
-    }
-}
-
-#[derive(Debug, Clone)]
-struct AcronymResult {
-    pub score: f32,
-    pub position: f32,
-    pub count: usize,
-}
-
-impl AcronymResult {
-    pub fn new(score: f32, position: f32, count: usize) -> Self {
-        Self {
-            score,
-            position,
-            count,
-        }
-    }
-
-    pub fn empty() -> Self {
-        // I have no idea why position here is 0.1, to be honest
-        // The original code is like this
-        //
-        // ```js
-        // const emptyAcronymResult = new AcronymResult(/*score*/ 0, /*position*/ 0.1, /*count*/ 0);
-        // ```
-        Self::new(0.0, 0.1, 0)
-    }
-}
-
 // probably is better to use something like {Score|Scoring}<Subject> instead of overloading Subject
 // with score and matched fields
 pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
@@ -268,34 +127,6 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
     Some(new_subject)
 }
 
-fn is_match(query: &Query, subject: &Subject) -> bool {
-    let mut query_iter = query.graphemes_lw.iter();
-    let mut subject_iter = subject.graphemes_lw.iter();
-
-    let mut count = 0;
-    let mut done = false;
-    while let Some(query_grapheme) = query_iter.next() {
-        if done {
-            // The subject_graphemes collection is done, but not the query_graphemes
-            // which means that the query is not inside the subject text
-            return false;
-        }
-
-        'inner: while let Some(subject_grapheme) = subject_iter.next() {
-            count += 1;
-            if query_grapheme == subject_grapheme {
-                break 'inner;
-            }
-        }
-
-        if count == subject.len {
-            done = true;
-        }
-    }
-
-    true
-}
-
 fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
     // single char strings are not an acronym
     if query.len <= 1 || subject.len <= 1 {
@@ -322,11 +153,11 @@ fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
             progress += 1;
 
             if query_grapheme == subject_grapheme {
-                if is_separator(query_grapheme) {
+                if is_word_separator(query_grapheme) {
                     // separators don't score points, but we keep track of them
                     sep_count += 1;
                     break 'inner;
-                } else if is_word_start(index, subject) {
+                } else if is_start_of_word(subject, index) {
                     // only count chars that are start of a word
                     sum_position += index;
                     count += 1;
@@ -351,7 +182,7 @@ fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
 
     let mut full_world = false;
     if count == query.len {
-        full_world = is_acronym_full_word(query, subject, count);
+        full_world = is_a_unique_acronym(subject, count);
     }
     let score = score_pattern(count, query.len, same_case, true, full_world);
     let position = sum_position as f32 / count as f32;
@@ -367,13 +198,13 @@ fn score_exact_match(query: &Query, subject: &Subject) -> Option<f32> {
     let (mut position, mut same_case) = sequence_position(query, subject, 0)?;
 
     let mut start;
-    start = is_word_start(position, subject);
+    start = is_start_of_word(subject, position);
 
     if !start {
         // try a second sequence to see if is better (word start) than the previous one
         // we don't want to try more than twice
         if let Some((sec_position, sec_same_case)) = sequence_position(query, subject, position + query.len) {
-            start = is_word_start(sec_position, subject);
+            start = is_start_of_word(subject, sec_position);
 
             if start {
                 position = sec_position;
@@ -382,7 +213,7 @@ fn score_exact_match(query: &Query, subject: &Subject) -> Option<f32> {
         }
     }
 
-    let end = is_word_end((position + query.len) - 1, subject);
+    let end = is_end_of_word(subject, (position + query.len) - 1);
 
     let score = score_exact(query.len, subject.len, score_pattern(query.len, query.len, same_case, start, end), position as f32);
 
@@ -481,79 +312,6 @@ fn score_size(n: usize, m: usize) -> f32 {
     }
 
     TAU_SIZE / (TAU_SIZE + calc as f32)
-}
-
-fn is_word_start(position: usize, subject: &Subject) -> bool {
-    if position == 0 {
-        // first grapheme of subject
-        return true;
-    }
-
-    let prev_position = position - 1;
-
-    let current_grapheme = &subject.graphemes[position];
-    let prev_grapheme = &subject.graphemes[prev_position];
-
-    is_separator(prev_grapheme) // match follows a separator
-        || ((current_grapheme != &subject.graphemes_lw[position])
-            && (prev_grapheme == &subject.graphemes_lw[prev_position])) // match is Capital in camelCase (preceded by lowercase)
-}
-
-fn is_word_end(position: usize, subject: &Subject) -> bool {
-    if position == subject.len - 1 {
-        // last grapheme of subject
-        return true;
-    }
-
-    let next_position = position + 1;
-
-    let current_grapheme = &subject.graphemes[position];
-    let next_grapheme = &subject.graphemes[next_position];
-
-    is_separator(next_grapheme) // match is followed by a separator
-        || ((current_grapheme == &subject.graphemes_lw[position])
-            && (next_grapheme != &subject.graphemes_lw[next_position])) // match is lowercase, followed by uppercase
-}
-
-fn is_separator(grapheme: &str) -> bool {
-    // TODO: Use  HashSet with lazy_static!
-    grapheme == " "
-        || grapheme == "."
-        || grapheme == "-"
-        || grapheme == "_"
-        || grapheme == "/"
-        || grapheme == "\\"
-}
-
-// All acronym of candidate must be matched to a character of query to be considered a full word
-// acronym
-fn is_acronym_full_word(query: &Query, subject: &Subject, nb_acronym_in_query: usize) -> bool {
-    let mut count = 0;
-
-    // Heuristic:
-    // Assume one acronym every (at most) 12 character on average
-    // This filter out long paths, but then they can match on the filename.
-    if subject.len > (12 * query.len) {
-        return false;
-    }
-
-    let mut iter = subject.graphemes.iter().enumerate();
-
-    while let Some((index, _)) = iter.next() {
-        // For each char of subject
-        // Test if we have an acronym, if so increase acronym count.
-        if is_word_start(index, subject) {
-            count += 1;
-
-            // If the acronym count is more than nbAcronymInQuery (number of non separator char in query)
-            // Then we do not have 1:1 relationship.
-            if count > nb_acronym_in_query {
-                return false;
-            }
-        }
-    }
-
-    true
 }
 
 #[cfg(test)]
