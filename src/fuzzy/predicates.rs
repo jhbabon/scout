@@ -1,5 +1,9 @@
 //! Collection of predicate functions over Query and Subject structs
 
+
+// TODO: I can probably precalculate start and end of words and
+// acronym sizes on Subject initialization
+
 use super::types::*;
 use lazy_static;
 use std::collections::HashSet;
