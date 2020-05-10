@@ -24,9 +24,23 @@ lazy_static! {
     };
 }
 
+lazy_static! {
+    static ref OPTIONAL_GRAPHEMES: HashSet<&'static str> = {
+        let mut s = HashSet::new();
+        s.insert(" ");
+        s.insert(":");
+        s.insert("-");
+        s.insert("_");
+        s.insert("/");
+        s.insert("\\");
+
+        s
+    };
+}
+
 /// Check whether a query is inside a subject or not
 pub fn is_match(query: &Query, subject: &Subject) -> bool {
-    let mut query_iter = query.graphemes_lw.iter();
+    let mut query_iter = query.graphemes_lw.iter().filter(|g| !is_optional(&g));
     let mut subject_iter = subject.graphemes_lw.iter();
 
     let mut count = 0;
@@ -130,6 +144,10 @@ pub fn is_word_separator(grapheme: &str) -> bool {
     WORD_SEPARATORS.contains(grapheme)
 }
 
+fn is_optional(grapheme: &str) -> bool {
+    OPTIONAL_GRAPHEMES.contains(grapheme)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,7 +165,7 @@ mod tests {
             (Query::from("foo"), Subject::from("FxOxox"), true),
             (Query::from("foo"), Subject::from("bar"), false),
             (Query::from("foo"), Subject::from("fo"), false),
-            (Query::from("f oo"), Subject::from("fo o"), false),
+            (Query::from("f oo"), Subject::from("fo o"), true),
         ];
 
         for (query, subject, expected) in cases {
