@@ -1,82 +1,33 @@
-use crate::common::Text;
-use async_std::sync::Arc;
+use crate::common::{Text, TextBuilder};
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
-use std::iter::Iterator;
-use std::slice::Iter;
 use std::fmt;
-use unicode_segmentation::UnicodeSegmentation;
+use std::ops::Deref;
 
 #[derive(Debug, Clone)]
 pub struct Query {
-    string: String,
-    graphemes: Vec<String>,
-    graphemes_lw: Vec<String>,
-    graphemes_set: HashSet<String>,
+    text: Text,
+    set: HashSet<String>,
 }
 
 impl Query {
     pub fn new(string: String) -> Self {
-        let graphemes = string
-            .graphemes(true)
-            .map(|s| String::from(s))
-            .collect::<Vec<_>>();
+        let text: Text = TextBuilder::build(string);
+        let set = text.lowercase_iter().map(|s| s.clone()).collect();
 
-        let mut graphemes_set = HashSet::new();
-        let graphemes_lw = graphemes
-            .iter()
-            .scan(&mut graphemes_set, |set, s| {
-                let lower = s.to_lowercase();
-                set.insert(lower.clone());
-
-                Some(lower)
-            })
-            .collect::<Vec<_>>();
-
-        Self {
-            string,
-            graphemes,
-            graphemes_lw,
-            graphemes_set,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.graphemes.len()
-    }
-
-    pub fn last_index(&self) -> usize {
-        let len = self.len();
-
-        if len == 0 {
-            return 0;
-        }
-
-        len - 1
-    }
-
-    pub fn grapheme_at(&self, index: usize) -> &'_ str {
-        &self.graphemes[index]
-    }
-
-    pub fn lowercase_grapheme_at(&self, index: usize) -> &'_ str {
-        &self.graphemes_lw[index]
-    }
-
-    pub fn iter(&self) -> Iter<'_, String> {
-        self.graphemes.iter()
-    }
-
-    pub fn lowercase_iter(&self) -> Iter<'_, String> {
-        self.graphemes_lw.iter()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.string.is_empty()
+        Self { text, set }
     }
 
     pub fn contains(&self, grapheme: &str) -> bool {
-        self.graphemes_set.contains(grapheme)
+        self.set.contains(grapheme)
+    }
+}
+
+impl Deref for Query {
+    type Target = Text;
+
+    fn deref(&self) -> &Self::Target {
+        &self.text
     }
 }
 
@@ -86,9 +37,15 @@ impl From<&str> for Query {
     }
 }
 
+impl From<String> for Query {
+    fn from(string: String) -> Self {
+        Self::new(string)
+    }
+}
+
 impl fmt::Display for Query {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.string)
+        write!(f, "{}", self.text)
     }
 }
 
@@ -96,34 +53,18 @@ impl fmt::Display for Query {
 #[derive(Debug, Clone)]
 pub struct Subject {
     pub text: Text,
-    graphemes: Arc<Vec<String>>,
-    graphemes_lw: Arc<Vec<String>>,
     score: f32,
     pub matches: Vec<usize>,
 }
 
 impl Subject {
     pub fn new(string: String) -> Self {
-        let text: Text = string.into();
-        let graphemes = Arc::new(
-            text.graphemes(true)
-                .map(|s| String::from(s))
-                .collect::<Vec<_>>(),
-        );
-        let graphemes_lw = Arc::new(
-            graphemes
-                .iter()
-                .map(|s| s.to_lowercase())
-                .collect::<Vec<_>>(),
-        );
-
+        let text: Text = TextBuilder::build(string);
         let score = 0.0;
         let matches = Vec::new();
 
         Self {
             text,
-            graphemes,
-            graphemes_lw,
             score,
             matches,
         }
@@ -137,56 +78,50 @@ impl Subject {
         refined
     }
 
-    pub fn grapheme_at(&self, index: usize) -> &'_ str {
-        &self.graphemes[index]
-    }
-
-    pub fn lowercase_grapheme_at(&self, index: usize) -> &'_ str {
-        &self.graphemes_lw[index]
-    }
-
-    pub fn len(&self) -> usize {
-        self.graphemes.len()
-    }
-
-    pub fn last_index(&self) -> usize {
-        let len = self.len();
-
-        if len == 0 {
-            return 0;
-        }
-
-        len - 1
-    }
-
-    pub fn iter(&self) -> Iter<'_, String> {
-        self.graphemes.iter()
-    }
-
-    pub fn lowercase_iter(&self) -> Iter<'_, String> {
-        self.graphemes_lw.iter()
-    }
-
     pub fn score(&self) -> f32 {
         self.score
+    }
+}
+
+impl Deref for Subject {
+    type Target = Text;
+
+    fn deref(&self) -> &Self::Target {
+        &self.text
     }
 }
 
 impl From<&Subject> for Subject {
     fn from(other: &Subject) -> Self {
         let text = other.text.clone();
-        let graphemes = other.graphemes.clone();
-        let graphemes_lw = other.graphemes_lw.clone();
         let score = 0.0;
         let matches = Vec::new();
 
         Self {
             text,
-            graphemes,
-            graphemes_lw,
             score,
             matches,
         }
+    }
+}
+
+impl From<&Text> for Subject {
+    fn from(txt: &Text) -> Self {
+        let text = txt.clone();
+        let score = 0.0;
+        let matches = Vec::new();
+
+        Self {
+            text,
+            score,
+            matches,
+        }
+    }
+}
+
+impl From<&str> for Subject {
+    fn from(string: &str) -> Self {
+        Self::new(String::from(string))
     }
 }
 
@@ -218,12 +153,6 @@ impl Eq for Subject {}
 impl PartialEq for Subject {
     fn eq(&self, other: &Subject) -> bool {
         self.score == other.score
-    }
-}
-
-impl From<&str> for Subject {
-    fn from(string: &str) -> Self {
-        Self::new(String::from(string))
     }
 }
 

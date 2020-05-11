@@ -210,7 +210,7 @@ impl fmt::Display for Item {
         // TODO: Maybe is better to add padding to the whole line than just the text?
         // If I use unicode_segmentation to get graphemes I can reuse that here to get
         // the truncation
-        let (truncated, _) = self.candidate.text.unicode_truncate(self.width);
+        let (truncated, _) = self.candidate.text.string.unicode_truncate(self.width);
 
         let mut indicator = &self.item_symbol;
         let mut style = self.item_style;

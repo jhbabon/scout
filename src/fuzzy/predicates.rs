@@ -1,6 +1,5 @@
 //! Collection of predicate functions over Query and Subject structs
 
-
 // TODO: I can probably precalculate start and end of words and
 // acronym sizes on Subject initialization
 
@@ -130,7 +129,7 @@ pub fn is_end_of_word(subject: &Subject, position: usize) -> bool {
     let next_position = position + 1;
 
     let current_grapheme = subject.grapheme_at(position);
-    let next_grapheme =    subject.grapheme_at(next_position);
+    let next_grapheme = subject.grapheme_at(next_position);
 
     is_word_separator(next_grapheme) // (b)
         || ((current_grapheme == subject.lowercase_grapheme_at(position))
@@ -164,9 +163,12 @@ mod tests {
             (Query::from("foo"), Subject::from("bar"), false),
             (Query::from("foo"), Subject::from("fo"), false),
             (Query::from("f oo"), Subject::from("fo o"), true),
-            (Query::from("ffb"), Subject::from("activerecord/test/fixtures/faces.yml"), false),
+            (
+                Query::from("ffb"),
+                Subject::from("activerecord/test/fixtures/faces.yml"),
+                false,
+            ),
         ];
-
 
         for (query, subject, expected) in cases {
             assert_eq!(
@@ -207,7 +209,6 @@ mod tests {
             (Subject::from("FactoryFiles"), 7, true),
             (Subject::from("factory files"), 8, true),
             (Subject::from("fuzzy.rs"), 6, true),
-
             (Subject::from("FactoryFiles"), 11, false),
             (Subject::from("FactoryFiles"), 3, false),
             (Subject::from("FactoryFiles"), 1, false),
@@ -235,7 +236,6 @@ mod tests {
             (Subject::from("factory files"), 6, true),
             (Subject::from("fuzzy.rs"), 7, true),
             (Subject::from("fuzzy.rs"), 4, true),
-
             (Subject::from("FactoryFiles"), 0, false),
             (Subject::from("FactoryFiles"), 1, false),
             (Subject::from("FactoryFiles"), 3, false),

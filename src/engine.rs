@@ -1,8 +1,9 @@
-use crate::common::Result;
+use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::events::Event;
 use crate::fuzzy::{self, Candidate};
 use async_std::prelude::*;
+use async_std::sync::Arc;
 use async_std::sync::{Receiver, Sender};
 use async_std::task::{Context, Poll};
 use futures::stream::select;
@@ -78,7 +79,7 @@ pub async fn task(
 ) -> Result<()> {
     debug!("[task] start");
 
-    let mut pool: VecDeque<Candidate> = VecDeque::new();
+    let mut pool: VecDeque<Text> = VecDeque::new();
     let mut count = 0;
     let mut query = String::from("");
 
@@ -90,7 +91,7 @@ pub async fn task(
 
         let next = match event {
             Event::Packet(s) => {
-                pool.push_back(Candidate::new(s));
+                pool.push_back(Arc::new(s.into()));
                 count += 1;
 
                 if pool.len() > POOL_LIMIT {
@@ -134,17 +135,16 @@ pub async fn task(
 }
 
 // TODO: Move search inside fuzzy module
-fn search(q: &str, pool: &VecDeque<Candidate>) -> Vec<Candidate> {
+fn search(q: &str, pool: &VecDeque<Text>) -> Vec<Candidate> {
     let mut matches: Vec<Candidate>;
-
     let query: fuzzy::Query = q.into();
 
     if query.is_empty() {
-        matches = pool.par_iter().cloned().collect();
+        matches = pool.par_iter().map(|txt| txt.into()).collect();
     } else {
         matches = pool
             .par_iter()
-            .map(|c| fuzzy::score(&query, &c))
+            .map(|c| fuzzy::compute(&query, &c))
             .filter(|c| c.is_some())
             .map(|c| c.unwrap())
             .collect();

@@ -149,7 +149,13 @@ pub fn score_exact_match(query: &Query, subject: &Subject) -> Option<ExactMatchR
 ///
 /// It also takes into account structural quality of the pattern with word
 /// boundaries (start and end).
-pub fn score_pattern(count: usize, len: usize, same_case: usize, is_start: bool, is_end: bool) -> f32 {
+pub fn score_pattern(
+    count: usize,
+    len: usize,
+    same_case: usize,
+    is_start: bool,
+    is_end: bool,
+) -> f32 {
     let mut sc = count;
     let mut bonus = 6;
 
@@ -207,10 +213,7 @@ pub fn score_consecutives(
         same_case += 1;
     }
 
-    let mut query_iter = query
-        .lowercase_iter()
-        .enumerate()
-        .skip(query_position + 1);
+    let mut query_iter = query.lowercase_iter().enumerate().skip(query_position + 1);
     let mut subject_iter = subject
         .lowercase_iter()
         .enumerate()

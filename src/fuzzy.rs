@@ -6,6 +6,8 @@ use predicates::*;
 use scoring::*;
 use types::*;
 
+use crate::common::Text;
+
 // TODO: Replace Subject with Candidate instead of using a type (alias)
 pub type Candidate = Subject;
 pub use types::Query;
@@ -17,9 +19,13 @@ pub use types::Query;
 // Max number missed consecutive hit = ceil(MISS_COEFF * query.len()) + 5
 const MISS_COEFF: f32 = 0.75;
 
-// probably is better to use something like {Score|Scoring}<Subject> instead of overloading Subject
-// with score and matched fields
-pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
+pub fn compute(query: &Query, text: &Text) -> Option<Subject> {
+    let subject = text.into();
+    score(&query, &subject)
+}
+
+// TODO: Remove score an leave only compute. Update tests to use Text instead of Subject
+fn score(query: &Query, subject: &Subject) -> Option<Subject> {
     if query.is_empty() {
         return None;
     }
@@ -70,7 +76,6 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
 
     let mut subject_iter = subject.lowercase_iter().enumerate();
     'subject_loop: while let Some((subject_index, subject_grapheme)) = subject_iter.next() {
-
         if !query.contains(subject_grapheme) {
             if should_rebuild {
                 consecutive_row = vec![0.0_f32; query.len()];
@@ -122,7 +127,8 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
                         miss_left -= 1.0;
 
                         if miss_left <= 0.0 {
-                            let final_score = score.max(score_row[query.last_index()]) * scored_size;
+                            let final_score =
+                                score.max(score_row[query.last_index()]) * scored_size;
                             if final_score <= 0.0 {
                                 return None;
                             } else {
@@ -187,12 +193,14 @@ mod tests {
             ("fft".into(), "FirstFactoryTest".into(), vec![0, 5, 12]),
             // Extra acronym letters
             ("fft".into(), "FirstFactoryTest.ts".into(), vec![0, 5, 12]),
-
             // Exact match
             ("core".into(), "0core0app.rb".into(), vec![1, 2, 3, 4]),
             // Exact match, second position is better
-            ("core".into(), "0core0app_core.rb".into(), vec![10, 11, 12, 13]),
-
+            (
+                "core".into(),
+                "0core0app_core.rb".into(),
+                vec![10, 11, 12, 13],
+            ),
             // Consecutive letters
             ("core".into(), "controller".into(), vec![0, 1, 4, 8]),
         ];
@@ -203,12 +211,9 @@ mod tests {
 
             let result = result.unwrap();
             assert_eq!(
-                result.matches,
-                expected,
+                result.matches, expected,
                 "Expected {} to have matches {:?} inside {:?}",
-                query,
-                expected,
-                subject,
+                query, expected, subject,
             );
         }
     }
