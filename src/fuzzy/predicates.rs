@@ -40,8 +40,8 @@ lazy_static! {
 
 /// Check whether a query is inside a subject or not
 pub fn is_match(query: &Query, subject: &Subject) -> bool {
-    let mut query_iter = query.graphemes_lw.iter().filter(|g| !is_optional(&g));
-    let mut subject_iter = subject.graphemes_lw.iter();
+    let mut query_iter = query.lowercase_iter().filter(|g| !is_optional(&g));
+    let mut subject_iter = subject.lowercase_iter();
 
     let mut query_count = 0;
     let mut subject_count = 0;
@@ -49,7 +49,7 @@ pub fn is_match(query: &Query, subject: &Subject) -> bool {
     'query_loop: while let Some(query_grapheme) = query_iter.next() {
         query_count += 1;
 
-        if subject_count == subject.len {
+        if subject_count == subject.len() {
             break 'query_loop;
         }
 
@@ -73,11 +73,11 @@ pub fn is_a_unique_acronym(subject: &Subject, acronym_size: usize) -> bool {
 
     // Assume one acronym every (at most) ACRONYM_FREQUENCY characters
     // on average. This is done to filter long paths
-    if subject.len > (ACRONYM_FREQUENCY * acronym_size) {
+    if subject.len() > (ACRONYM_FREQUENCY * acronym_size) {
         return false;
     }
 
-    let mut iter = subject.graphemes.iter().enumerate();
+    let mut iter = subject.iter().enumerate();
 
     while let Some((index, _)) = iter.next() {
         if is_start_of_word(subject, index) {
@@ -108,12 +108,12 @@ pub fn is_start_of_word(subject: &Subject, position: usize) -> bool {
 
     let prev_position = position - 1;
 
-    let current_grapheme = &subject.graphemes[position];
-    let prev_grapheme = &subject.graphemes[prev_position];
+    let current_grapheme = subject.grapheme_at(position);
+    let prev_grapheme = subject.grapheme_at(prev_position);
 
     is_word_separator(prev_grapheme) // (b)
-        || ((current_grapheme != &subject.graphemes_lw[position])
-            && (prev_grapheme == &subject.graphemes_lw[prev_position])) // (c)
+        || ((current_grapheme != subject.lowercase_grapheme_at(position))
+            && (prev_grapheme == subject.lowercase_grapheme_at(prev_position))) // (c)
 }
 
 /// Check whether the grapheme at given the position is an end of word or not
@@ -123,18 +123,18 @@ pub fn is_start_of_word(subject: &Subject, position: usize) -> bool {
 ///   * (b) followed by a word separator
 ///   * (c) lowercase letter followed by a capital letter (camelCase rule)
 pub fn is_end_of_word(subject: &Subject, position: usize) -> bool {
-    if position == subject.len - 1 {
+    if position == subject.last_index() {
         return true; // (a)
     }
 
     let next_position = position + 1;
 
-    let current_grapheme = &subject.graphemes[position];
-    let next_grapheme = &subject.graphemes[next_position];
+    let current_grapheme = subject.grapheme_at(position);
+    let next_grapheme =    subject.grapheme_at(next_position);
 
     is_word_separator(next_grapheme) // (b)
-        || ((current_grapheme == &subject.graphemes_lw[position])
-            && (next_grapheme != &subject.graphemes_lw[next_position])) // (c)
+        || ((current_grapheme == subject.lowercase_grapheme_at(position))
+            && (next_grapheme != subject.lowercase_grapheme_at(next_position))) // (c)
 }
 
 /// Check whether the given grapheme is a word separator
@@ -164,17 +164,17 @@ mod tests {
             (Query::from("foo"), Subject::from("bar"), false),
             (Query::from("foo"), Subject::from("fo"), false),
             (Query::from("f oo"), Subject::from("fo o"), true),
-
             (Query::from("ffb"), Subject::from("activerecord/test/fixtures/faces.yml"), false),
         ];
+
 
         for (query, subject, expected) in cases {
             assert_eq!(
                 is_match(&query, &subject),
                 expected,
-                "Query {:?}. Subject {:?}",
-                query.string,
-                subject.text
+                "Query {}. Subject {}",
+                query,
+                subject
             );
         }
     }
@@ -193,8 +193,8 @@ mod tests {
             assert_eq!(
                 is_a_unique_acronym(&subject, size),
                 expected,
-                "Expected {:?} to have a unique acronym of size {:?}",
-                subject.text,
+                "Expected {} to have a unique acronym of size {:?}",
+                subject,
                 size
             );
         }
@@ -220,8 +220,8 @@ mod tests {
             assert_eq!(
                 is_start_of_word(&subject, position),
                 expected,
-                "Expected {:?} to have a start of word at {:?}",
-                subject.text,
+                "Expected {} to have a start of word at {:?}",
+                subject,
                 position
             );
         }
@@ -246,8 +246,8 @@ mod tests {
             assert_eq!(
                 is_end_of_word(&subject, position),
                 expected,
-                "Expected {:?} to have an end of word at {:?}",
-                subject.text,
+                "Expected {} to have an end of word at {:?}",
+                subject,
                 position
             );
         }

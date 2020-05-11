@@ -3,42 +3,72 @@ use async_std::sync::Arc;
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::iter::Iterator;
+use std::slice::Iter;
+use std::fmt;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone)]
 pub struct Query {
-    pub len: usize,
-    pub string: String,
-    pub string_lw: String,
-    pub graphemes: Vec<String>,
-    pub graphemes_lw: Vec<String>,
+    string: String,
+    graphemes: Vec<String>,
+    graphemes_lw: Vec<String>,
     graphemes_set: HashSet<String>,
 }
 
 impl Query {
     pub fn new(string: String) -> Self {
-        let string_lw = string.to_lowercase();
         let graphemes = string
             .graphemes(true)
             .map(|s| String::from(s))
             .collect::<Vec<_>>();
+
+        let mut graphemes_set = HashSet::new();
         let graphemes_lw = graphemes
             .iter()
-            .map(|s| s.to_lowercase())
+            .scan(&mut graphemes_set, |set, s| {
+                let lower = s.to_lowercase();
+                set.insert(lower.clone());
+
+                Some(lower)
+            })
             .collect::<Vec<_>>();
 
-        let graphemes_set = graphemes_lw.iter().map(|s| s.clone()).collect();
-
-        let len = graphemes.len();
-
         Self {
-            len,
             string,
-            string_lw,
             graphemes,
             graphemes_lw,
             graphemes_set,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.graphemes.len()
+    }
+
+    pub fn last_index(&self) -> usize {
+        let len = self.len();
+
+        if len == 0 {
+            return 0;
+        }
+
+        len - 1
+    }
+
+    pub fn grapheme_at(&self, index: usize) -> &'_ str {
+        &self.graphemes[index]
+    }
+
+    pub fn lowercase_grapheme_at(&self, index: usize) -> &'_ str {
+        &self.graphemes_lw[index]
+    }
+
+    pub fn iter(&self) -> Iter<'_, String> {
+        self.graphemes.iter()
+    }
+
+    pub fn lowercase_iter(&self) -> Iter<'_, String> {
+        self.graphemes_lw.iter()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -56,21 +86,24 @@ impl From<&str> for Query {
     }
 }
 
+impl fmt::Display for Query {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.string)
+    }
+}
+
 // Candidate replacement. This represent a possible choice
 #[derive(Debug, Clone)]
 pub struct Subject {
     pub text: Text,
-    pub text_lw: Text,
-    pub graphemes: Arc<Vec<String>>,
-    pub graphemes_lw: Arc<Vec<String>>,
-    pub score: f32,
+    graphemes: Arc<Vec<String>>,
+    graphemes_lw: Arc<Vec<String>>,
+    score: f32,
     pub matches: Vec<usize>,
-    pub len: usize,
 }
 
 impl Subject {
     pub fn new(string: String) -> Self {
-        let text_lw: Text = string.to_lowercase().into();
         let text: Text = string.into();
         let graphemes = Arc::new(
             text.graphemes(true)
@@ -84,42 +117,82 @@ impl Subject {
                 .collect::<Vec<_>>(),
         );
 
-        let len = graphemes.len();
-
         let score = 0.0;
         let matches = Vec::new();
 
         Self {
             text,
-            text_lw,
             graphemes,
             graphemes_lw,
-            len,
             score,
             matches,
         }
+    }
+
+    pub fn refine(&self, score: f32, matches: Vec<usize>) -> Self {
+        let mut refined: Self = self.into();
+        refined.score = score;
+        refined.matches = matches;
+
+        refined
+    }
+
+    pub fn grapheme_at(&self, index: usize) -> &'_ str {
+        &self.graphemes[index]
+    }
+
+    pub fn lowercase_grapheme_at(&self, index: usize) -> &'_ str {
+        &self.graphemes_lw[index]
+    }
+
+    pub fn len(&self) -> usize {
+        self.graphemes.len()
+    }
+
+    pub fn last_index(&self) -> usize {
+        let len = self.len();
+
+        if len == 0 {
+            return 0;
+        }
+
+        len - 1
+    }
+
+    pub fn iter(&self) -> Iter<'_, String> {
+        self.graphemes.iter()
+    }
+
+    pub fn lowercase_iter(&self) -> Iter<'_, String> {
+        self.graphemes_lw.iter()
+    }
+
+    pub fn score(&self) -> f32 {
+        self.score
     }
 }
 
 impl From<&Subject> for Subject {
     fn from(other: &Subject) -> Self {
         let text = other.text.clone();
-        let text_lw = other.text_lw.clone();
         let graphemes = other.graphemes.clone();
         let graphemes_lw = other.graphemes_lw.clone();
-        let len = graphemes.len();
         let score = 0.0;
         let matches = Vec::new();
 
         Self {
             text,
-            text_lw,
             graphemes,
             graphemes_lw,
-            len,
             score,
             matches,
         }
+    }
+}
+
+impl fmt::Display for Subject {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.text)
     }
 }
 

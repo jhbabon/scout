@@ -39,7 +39,7 @@ pub fn score_size(query_len: usize, subject_len: usize) -> f32 {
 /// Calculate the score of the acronyms represented by the query, if any
 pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
     // single char strings are not an acronym
-    if query.len <= 1 || subject.len <= 1 {
+    if query.len() <= 1 || subject.len() <= 1 {
         return AcronymResult::empty();
     }
 
@@ -49,12 +49,12 @@ pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
     let mut sum_position = 0;
     let mut same_case = 0;
 
-    let mut query_iter = query.graphemes_lw.iter().enumerate();
-    let mut subject_iter = subject.graphemes_lw.iter().enumerate();
+    let mut query_iter = query.lowercase_iter().enumerate();
+    let mut subject_iter = subject.lowercase_iter().enumerate();
 
     let mut progress = 0;
     'query_loop: while let Some((qindex, query_grapheme)) = query_iter.next() {
-        if progress == subject.len {
+        if progress == subject.len() {
             // The subject text has been consumed, we can stop
             break 'query_loop;
         }
@@ -79,7 +79,7 @@ pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
                     // the number of matches will equal that length as well
                     matches.push(index);
 
-                    if &query.graphemes[qindex] == &subject.graphemes[index] {
+                    if query.grapheme_at(qindex) == subject.grapheme_at(index) {
                         same_case += 1;
                     }
 
@@ -94,12 +94,12 @@ pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
     }
 
     let mut full_world = false;
-    if count == query.len {
+    if count == query.len() {
         // the query doesn't have any separator so it might be
         // the unique acronym inside subject
         full_world = is_a_unique_acronym(subject, count);
     }
-    let score = score_pattern(count, query.len, same_case, true, full_world);
+    let score = score_pattern(count, query.len(), same_case, true, full_world);
     let position = sum_position as f32 / count as f32;
 
     AcronymResult::new(score, position, count + sep_count, matches)
@@ -116,7 +116,7 @@ pub fn score_exact_match(query: &Query, subject: &Subject) -> Option<ExactMatchR
         // try a second sequence to see if is better (word start) than the previous one
         // we don't want to try more than twice
         if let Some((sec_position, sec_same_case)) =
-            sequence_position(query, subject, position + query.len)
+            sequence_position(query, subject, position + query.len())
         {
             is_start = is_start_of_word(subject, sec_position);
 
@@ -127,14 +127,14 @@ pub fn score_exact_match(query: &Query, subject: &Subject) -> Option<ExactMatchR
         }
     }
 
-    let is_end = is_end_of_word(subject, (position + query.len) - 1);
+    let is_end = is_end_of_word(subject, (position + query.len()) - 1);
     let score = score_quality(
-        query.len,
-        subject.len,
-        score_pattern(query.len, query.len, same_case, is_start, is_end),
+        query.len(),
+        subject.len(),
+        score_pattern(query.len(), query.len(), same_case, is_start, is_end),
         position as f32,
     );
-    let matches: Vec<usize> = (position..(position + query.len)).collect();
+    let matches: Vec<usize> = (position..(position + query.len())).collect();
 
     Some(ExactMatchResult::new(score, matches))
 }
@@ -190,8 +190,8 @@ pub fn score_consecutives(
     subject_position: usize,
     is_start: bool,
 ) -> f32 {
-    let query_left = query.len - query_position;
-    let subject_left = subject.len - subject_position;
+    let query_left = query.len() - query_position;
+    let subject_left = subject.len() - subject_position;
 
     let left;
     if subject_left < query_left {
@@ -203,18 +203,16 @@ pub fn score_consecutives(
     let mut same_case = 0;
     let mut sz = 0;
 
-    if &query.graphemes[query_position] == &subject.graphemes[subject_position] {
+    if query.grapheme_at(query_position) == subject.grapheme_at(subject_position) {
         same_case += 1;
     }
 
     let mut query_iter = query
-        .graphemes_lw
-        .iter()
+        .lowercase_iter()
         .enumerate()
         .skip(query_position + 1);
     let mut subject_iter = subject
-        .graphemes_lw
-        .iter()
+        .lowercase_iter()
         .enumerate()
         .skip(subject_position + 1);
 
@@ -227,7 +225,7 @@ pub fn score_consecutives(
             if query_grapheme == subject_grapheme {
                 subject_cursor = index;
 
-                if &query.graphemes[qindex] == &subject.graphemes[index] {
+                if query.grapheme_at(qindex) == subject.grapheme_at(index) {
                     same_case += 1;
                 }
             } else {
@@ -249,7 +247,7 @@ pub fn score_consecutives(
     }
 
     let is_end = is_end_of_word(subject, subject_cursor);
-    let score = score_pattern(sz, query.len, same_case, is_start, is_end);
+    let score = score_pattern(sz, query.len(), same_case, is_start, is_end);
 
     score
 }
@@ -279,8 +277,8 @@ pub fn score_character(
 /// Get the position of the exact sequence of Query contained in Subject, if any
 /// It also returns the number of same case graphemes in the sequence
 fn sequence_position(query: &Query, subject: &Subject, skip: usize) -> Option<(usize, usize)> {
-    let mut query_iter = query.graphemes_lw.iter().enumerate();
-    let mut subject_iter = subject.graphemes_lw.iter().enumerate().skip(skip);
+    let mut query_iter = query.lowercase_iter().enumerate();
+    let mut subject_iter = subject.lowercase_iter().enumerate().skip(skip);
 
     let mut sequence = false;
     let mut position = 0;
@@ -295,7 +293,7 @@ fn sequence_position(query: &Query, subject: &Subject, skip: usize) -> Option<(u
             }
             sequence = true;
 
-            if &query.graphemes[qindex] == &subject.graphemes[index] {
+            if query.grapheme_at(qindex) == subject.grapheme_at(index) {
                 same_case += 1
             }
         } else {
@@ -303,7 +301,7 @@ fn sequence_position(query: &Query, subject: &Subject, skip: usize) -> Option<(u
             sequence = false;
 
             // rewind the iterator
-            query_iter = query.graphemes_lw.iter().enumerate();
+            query_iter = query.lowercase_iter().enumerate();
         }
     }
 
@@ -363,8 +361,8 @@ mod tests {
 
             assert_eq!(
                 result.score, expected,
-                "Expected query {:?} to score {:?} inside {:?}",
-                query.string, expected, subject.text
+                "Expected query {} to score {} inside {:?}",
+                query, expected, subject
             );
         }
     }
@@ -421,8 +419,8 @@ mod tests {
     //         assert_eq!(
     //             score_exact_match(&query, &subject),
     //             expected,
-    //             "Expected {:?} to score {:?} inside {:?}",
-    //             query.string,
+    //             "Expected {} to score {:?} inside {:?}",
+    //             query,
     //             expected,
     //             subject.text,
     //         );
@@ -548,9 +546,9 @@ mod tests {
             assert_eq!(
                 sequence_position(&query, &subject, skip),
                 expected,
-                "Expected query {:?} to be contained in {:?} at {:?}",
-                query.string,
-                subject.text,
+                "Expected query {} to be contained in {} at {:?}",
+                query,
+                subject,
                 expected
             );
         }

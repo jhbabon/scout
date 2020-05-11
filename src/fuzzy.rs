@@ -14,7 +14,7 @@ pub use types::Query;
 // Let's try to implement fuzzaldrin-plus algorithm
 // @see: https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/scorer.coffee#L83
 // =======================================================================
-// Max number missed consecutive hit = ceil(MISS_COEFF * query.len) + 5
+// Max number missed consecutive hit = ceil(MISS_COEFF * query.len()) + 5
 const MISS_COEFF: f32 = 0.75;
 
 // probably is better to use something like {Score|Scoring}<Subject> instead of overloading Subject
@@ -35,24 +35,20 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
     let acronym = score_acronyms(query, subject);
 
     // The whole query is an acronym, let's return that
-    if acronym.count == query.len {
-        let score = score_quality(query.len, subject.len, acronym.score, acronym.position);
+    if acronym.count == query.len() {
+        let score = score_quality(query.len(), subject.len(), acronym.score, acronym.position);
+        let matches = acronym.matches;
 
-        let mut new_subject: Subject = subject.into();
-        new_subject.score = score;
-        new_subject.matches = acronym.matches;
-
-        return Some(new_subject);
+        return Some(subject.refine(score, matches));
     }
 
     // -----------------------------------------------------------------
     // Exact Match
     if let Some(result) = score_exact_match(query, subject) {
-        let mut new_subject: Subject = subject.into();
-        new_subject.score = result.score;
-        new_subject.matches = result.matches;
+        let score = result.score;
+        let matches = result.matches;
 
-        return Some(new_subject);
+        return Some(subject.refine(score, matches));
     }
 
     // -----------------------------------------------------------------
@@ -61,28 +57,26 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
 
     // Init
     let mut score;
-    let mut score_row = vec![0.0_f32; query.len];
-    let mut consecutive_row = vec![0.0_f32; query.len];
-    let scored_size = score_size(query.len, subject.len);
+    let mut score_row = vec![0.0_f32; query.len()];
+    let mut consecutive_row = vec![0.0_f32; query.len()];
+    let scored_size = score_size(query.len(), subject.len());
 
     // backtrace Matrix
-    let mut trace = TraceMatrix::new(subject.len, query.len);
+    let mut trace = TraceMatrix::new(subject.len(), query.len());
 
-    let miss_budget = (MISS_COEFF * query.len as f32).ceil() + 5.0;
+    let miss_budget = (MISS_COEFF * query.len() as f32).ceil() + 5.0;
     let mut miss_left = miss_budget;
     let mut should_rebuild = true;
 
-    let mut subject_index = 0;
-    'subject_loop: while subject_index < subject.len {
-        let subject_grapheme = &subject.graphemes_lw[subject_index];
+    let mut subject_iter = subject.lowercase_iter().enumerate();
+    'subject_loop: while let Some((subject_index, subject_grapheme)) = subject_iter.next() {
 
         if !query.contains(subject_grapheme) {
             if should_rebuild {
-                consecutive_row = vec![0.0_f32; query.len];
+                consecutive_row = vec![0.0_f32; query.len()];
                 should_rebuild = false;
             }
 
-            subject_index += 1;
             continue 'subject_loop;
         }
 
@@ -92,8 +86,8 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
         let mut record_miss = true;
         should_rebuild = true;
 
-        let mut query_index = 0;
-        while query_index < query.len {
+        let mut query_iter = query.lowercase_iter().enumerate();
+        while let Some((query_index, query_grapheme)) = query_iter.next() {
             let score_up = score_row[query_index];
             if score_up >= score {
                 score = score_up;
@@ -104,7 +98,7 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
 
             let mut consecutive_score = 0.0;
 
-            if &query.graphemes_lw[query_index] == subject_grapheme {
+            if query_grapheme == subject_grapheme {
                 let is_start = is_start_of_word(subject, subject_index);
 
                 if consecutive_diag > 0.0 {
@@ -128,16 +122,13 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
                         miss_left -= 1.0;
 
                         if miss_left <= 0.0 {
-                            let final_score = score.max(score_row[query.len - 1]) * scored_size;
+                            let final_score = score.max(score_row[query.last_index()]) * scored_size;
                             if final_score <= 0.0 {
                                 return None;
                             } else {
                                 let matches = trace.traceback(query_index, subject_index);
-                                let mut new_subject: Subject = subject.into();
-                                new_subject.score = final_score;
-                                new_subject.matches = matches;
 
-                                return Some(new_subject);
+                                return Some(subject.refine(final_score, matches));
                             }
                         }
                     }
@@ -154,24 +145,16 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
             if score <= 0.0 {
                 trace.stop_at(query_index, subject_index);
             }
-
-            query_index += 1;
         }
-
-        subject_index += 1;
     }
 
-    let final_score = score_row[query.len - 1] * scored_size;
+    let final_score = score_row[query.last_index()] * scored_size;
     if final_score == 0.0 {
         None
     } else {
-        let matches = trace.traceback(query.len - 1, subject.len - 1);
+        let matches = trace.traceback(query.last_index(), subject.last_index());
 
-        let mut new_subject: Subject = subject.into();
-        new_subject.score = final_score;
-        new_subject.matches = matches;
-
-        Some(new_subject)
+        Some(subject.refine(final_score, matches))
     }
 }
 
@@ -190,9 +173,9 @@ mod tests {
         for (query, subject) in cases {
             assert!(
                 score(&query, &subject).is_none(),
-                "Expected {:?} to not be scored in {:?}",
-                query.string,
-                subject.text,
+                "Expected {} to not be scored in {}",
+                query,
+                subject,
             );
         }
     }
@@ -222,10 +205,10 @@ mod tests {
             assert_eq!(
                 result.matches,
                 expected,
-                "Expected {:?} to have matches {:?} inside {:?}",
-                query.string,
+                "Expected {} to have matches {:?} inside {:?}",
+                query,
                 expected,
-                subject.text,
+                subject,
             );
         }
     }
@@ -252,11 +235,11 @@ mod tests {
             let result_b = result_b.unwrap();
 
             assert!(
-                result_a.score > result_b.score,
-                "Expected {:?} to have a higher score than {:?} inside {:?}",
-                a.string,
-                b.string,
-                subject.text,
+                result_a.score() > result_b.score(),
+                "Expected {} to have a higher score than {} inside {:?}",
+                a,
+                b,
+                subject,
             );
         }
     }
@@ -272,13 +255,13 @@ mod tests {
         let result_b = result_b.unwrap();
 
         assert!(
-            result_a.score > result_b.score,
-            "Expected {:?} to have a higher score in {:?} than in {:?}. A {:?} <= B {:?}",
-            query.string,
+            result_a.score() > result_b.score(),
+            "Expected {} to have a higher score in {:?} than in {:?}. A {:?} <= B {:?}",
+            query,
             a.text,
             b.text,
-            result_a.score,
-            result_b.score,
+            result_a.score(),
+            result_b.score(),
         );
     }
 
