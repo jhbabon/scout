@@ -1,16 +1,18 @@
 use crate::common::Text;
 use async_std::sync::Arc;
+use std::cmp::Ordering;
+use std::collections::{HashSet, VecDeque};
+use std::iter::Iterator;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone)]
 pub struct Query {
+    pub len: usize,
     pub string: String,
     pub string_lw: String,
-    // I think I can use chars instead of graphemes for filtering (?)
-    // but with graphemes I'll have options for UI truncation, etc
     pub graphemes: Vec<String>,
     pub graphemes_lw: Vec<String>,
-    pub len: usize,
+    graphemes_set: HashSet<String>,
 }
 
 impl Query {
@@ -25,19 +27,26 @@ impl Query {
             .map(|s| s.to_lowercase())
             .collect::<Vec<_>>();
 
+        let graphemes_set = graphemes_lw.iter().map(|s| s.clone()).collect();
+
         let len = graphemes.len();
 
         Self {
+            len,
             string,
             string_lw,
             graphemes,
             graphemes_lw,
-            len,
+            graphemes_set,
         }
     }
 
     pub fn is_empty(&self) -> bool {
         self.string.is_empty()
+    }
+
+    pub fn contains(&self, grapheme: &str) -> bool {
+        self.graphemes_set.contains(grapheme)
     }
 }
 
@@ -72,7 +81,7 @@ impl Subject {
             graphemes
                 .iter()
                 .map(|s| s.to_lowercase())
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>(),
         );
 
         let len = graphemes.len();
@@ -114,6 +123,31 @@ impl From<&Subject> for Subject {
     }
 }
 
+impl Ord for Subject {
+    fn cmp(&self, other: &Subject) -> Ordering {
+        match self.partial_cmp(other) {
+            Some(ord) => ord,
+            // let's just assume that if two subject's can't be compared
+            // they are equal
+            None => Ordering::Equal,
+        }
+    }
+}
+
+impl PartialOrd for Subject {
+    fn partial_cmp(&self, other: &Subject) -> Option<Ordering> {
+        self.score.partial_cmp(&other.score)
+    }
+}
+
+impl Eq for Subject {}
+
+impl PartialEq for Subject {
+    fn eq(&self, other: &Subject) -> bool {
+        self.score == other.score
+    }
+}
+
 impl From<&str> for Subject {
     fn from(string: &str) -> Self {
         Self::new(String::from(string))
@@ -125,14 +159,16 @@ pub struct AcronymResult {
     pub score: f32,
     pub position: f32,
     pub count: usize,
+    pub matches: Vec<usize>,
 }
 
 impl AcronymResult {
-    pub fn new(score: f32, position: f32, count: usize) -> Self {
+    pub fn new(score: f32, position: f32, count: usize, matches: Vec<usize>) -> Self {
         Self {
             score,
             position,
             count,
+            matches,
         }
     }
 
@@ -143,6 +179,100 @@ impl AcronymResult {
         // ```js
         // const emptyAcronymResult = new AcronymResult(/*score*/ 0, /*position*/ 0.1, /*count*/ 0);
         // ```
-        Self::new(0.0, 0.1, 0)
+        Self::new(0.0, 0.1, 0, vec![])
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ExactMatchResult {
+    pub score: f32,
+    pub matches: Vec<usize>,
+}
+
+impl ExactMatchResult {
+    pub fn new(score: f32, matches: Vec<usize>) -> Self {
+        Self { score, matches }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Movement {
+    Up,
+    Left,
+    Diagonal,
+    Stop,
+}
+
+#[derive(Debug, Clone)]
+pub struct TraceMatrix {
+    columns: usize,
+    matrix: Vec<Movement>,
+}
+
+impl TraceMatrix {
+    pub fn new(rows: usize, columns: usize) -> Self {
+        let matrix = vec![Movement::Up; rows * columns];
+
+        Self { columns, matrix }
+    }
+
+    pub fn traceback(self, x: usize, y: usize) -> Vec<usize> {
+        let mut row = y;
+        let mut column = x;
+        let mut position = row * self.columns + column;
+        let mut matches: VecDeque<usize> = VecDeque::new();
+
+        loop {
+            match self.matrix[position] {
+                Movement::Up => {
+                    if row == 0 {
+                        break;
+                    }
+                    row -= 1;
+                    position -= self.columns;
+                }
+                Movement::Left => {
+                    if column == 0 {
+                        break;
+                    }
+                    column -= 1;
+                    position -= 1;
+                }
+                Movement::Diagonal => {
+                    matches.push_front(row);
+
+                    if row == 0 || column == 0 {
+                        break;
+                    }
+                    row -= 1;
+                    column -= 1;
+                    position -= self.columns + 1;
+                }
+                Movement::Stop => break,
+            };
+        }
+
+        matches.into()
+    }
+
+    pub fn up_at(&mut self, x: usize, y: usize) {
+        self.set(x, y, Movement::Up);
+    }
+
+    pub fn left_at(&mut self, x: usize, y: usize) {
+        self.set(x, y, Movement::Left);
+    }
+
+    pub fn diagonal_at(&mut self, x: usize, y: usize) {
+        self.set(x, y, Movement::Diagonal);
+    }
+
+    pub fn stop_at(&mut self, x: usize, y: usize) {
+        self.set(x, y, Movement::Stop);
+    }
+
+    fn set(&mut self, x: usize, y: usize, mv: Movement) {
+        let position = y * self.columns + x;
+        self.matrix[position] = mv;
     }
 }

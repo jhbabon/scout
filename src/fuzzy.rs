@@ -2,8 +2,6 @@ mod predicates;
 mod scoring;
 pub mod types;
 
-use log::debug;
-
 use predicates::*;
 use scoring::*;
 use types::*;
@@ -11,7 +9,6 @@ use types::*;
 use crate::common::Text;
 use async_std::sync::Arc;
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use sublime_fuzzy::{best_match, Match};
 
 #[derive(Debug, Clone)]
@@ -80,25 +77,13 @@ const MISS_COEFF: f32 = 0.75;
 // probably is better to use something like {Score|Scoring}<Subject> instead of overloading Subject
 // with score and matched fields
 pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
-    debug!("------------------------------------------------------------");
-    debug!(
-        "Got Query {:?} and Subject {:?}",
-        query.string, subject.text
-    );
-    debug!(
-        "query_len {:?} and subject_len {:?}",
-        query.len, subject.len
-    );
-
     if query.is_empty() {
-        debug!("Empty query, returning None");
         return None;
     }
 
     // -----------------------------------------------------------------
     // Check if the query is inside the subject
     if !is_match(query, subject) {
-        debug!("Query is not inside Subject, returning None");
         return None;
     }
 
@@ -109,20 +94,20 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
     // The whole query is an acronym, let's return that
     if acronym.count == query.len {
         let score = score_quality(query.len, subject.len, acronym.score, acronym.position);
-        debug!("Query is a full acronym, returning the score {:?}", score);
 
         let mut new_subject: Subject = subject.into();
         new_subject.score = score;
+        new_subject.matches = acronym.matches;
 
         return Some(new_subject);
     }
 
     // -----------------------------------------------------------------
     // Exact Match
-    if let Some(score) = score_exact_match(query, subject) {
-        debug!("Query is a exact match, returning the score {:?}", score);
+    if let Some(result) = score_exact_match(query, subject) {
         let mut new_subject: Subject = subject.into();
-        new_subject.score = score;
+        new_subject.score = result.score;
+        new_subject.matches = result.matches;
 
         return Some(new_subject);
     }
@@ -137,10 +122,8 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
     let mut consecutive_row = vec![0.0_f32; query.len];
     let scored_size = score_size(query.len, subject.len);
 
-    debug!("scored_size {:?}", scored_size);
-
-    // TODO: Move to Query struct
-    let query_set: HashSet<String> = query.graphemes_lw.iter().map(|s| s.clone()).collect();
+    // backtrace Matrix
+    let mut trace = TraceMatrix::new(subject.len, query.len);
 
     let miss_budget = (MISS_COEFF * query.len as f32).ceil() + 5.0;
     let mut miss_left = miss_budget;
@@ -149,15 +132,9 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
     let mut subject_index = 0;
     'subject_loop: while subject_index < subject.len {
         let subject_grapheme = &subject.graphemes_lw[subject_index];
-        debug!(
-            "  Checking grapheme {:?} at {:?}",
-            subject_grapheme, subject_index
-        );
 
-        if !query_set.contains(subject_grapheme) {
-            debug!("  It's not in Query");
+        if !query.contains(subject_grapheme) {
             if should_rebuild {
-                debug!("  Rebuilding");
                 consecutive_row = vec![0.0_f32; query.len];
                 should_rebuild = false;
             }
@@ -165,8 +142,6 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
             subject_index += 1;
             continue 'subject_loop;
         }
-
-        debug!("  It's in query");
 
         score = 0.0;
         let mut score_diag = 0.0;
@@ -176,68 +151,48 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
 
         let mut query_index = 0;
         while query_index < query.len {
-            debug!("    Checking query at {:?}", query_index);
-
             let score_up = score_row[query_index];
-            debug!(
-                "    Scores so far: score_up {:?}, score {:?}",
-                score_up, score
-            );
-            if score_up > score {
-                debug!("    score is now score_up");
+            if score_up >= score {
                 score = score_up;
+                trace.up_at(query_index, subject_index);
+            } else {
+                trace.left_at(query_index, subject_index);
             }
 
             let mut consecutive_score = 0.0;
 
             if &query.graphemes_lw[query_index] == subject_grapheme {
-                debug!("    It's a match!");
-
-                let start = is_start_of_word(subject, subject_index);
-
-                debug!("    Is a start of word? {:?}", start);
-
-                debug!("    consecutive_diag {:?}", consecutive_diag);
+                let is_start = is_start_of_word(subject, subject_index);
 
                 if consecutive_diag > 0.0 {
                     consecutive_score = consecutive_diag;
                 } else {
                     consecutive_score =
-                        score_consecutives(query, subject, query_index, subject_index, start);
+                        score_consecutives(query, subject, query_index, subject_index, is_start);
                 }
 
-                debug!("    consecutive_score {:?}", consecutive_score);
-
-                debug!("    score_diag {:?}", score_diag);
-                let score_char =
-                    score_character(subject_index, start, acronym.score, consecutive_score);
-                debug!("    score_char {:?}", score_char);
-                let align = score_diag + score_char;
-
-                debug!("    align {:?}", align);
+                let align = score_diag
+                    + score_character(subject_index, is_start, acronym.score, consecutive_score);
 
                 if align > score {
-                    debug!("    score is now align");
                     score = align;
+                    trace.diagonal_at(query_index, subject_index);
                     miss_left = miss_budget;
                 } else {
+                    consecutive_score = 0.0;
+
                     if record_miss {
-                        debug!("    Recording a miss");
                         miss_left -= 1.0;
 
-                        debug!("    miss_left {:?}", miss_left);
-
                         if miss_left <= 0.0 {
-                            debug!("    No more miss_left budget");
-
                             let final_score = score.max(score_row[query.len - 1]) * scored_size;
-                            debug!("    final_score after misses exhausted {:?}", final_score);
-                            if final_score == 0.0 {
-                                debug!("    Returning None");
+                            if final_score <= 0.0 {
                                 return None;
                             } else {
+                                let matches = trace.traceback(query_index, subject_index);
                                 let mut new_subject: Subject = subject.into();
                                 new_subject.score = final_score;
+                                new_subject.matches = matches;
 
                                 return Some(new_subject);
                             }
@@ -253,24 +208,25 @@ pub fn score(query: &Query, subject: &Subject) -> Option<Subject> {
             consecutive_row[query_index] = consecutive_score;
             score_row[query_index] = score;
 
+            if score <= 0.0 {
+                trace.stop_at(query_index, subject_index);
+            }
+
             query_index += 1;
-            debug!("    Next query_index {:?}", query_index);
         }
 
         subject_index += 1;
-        debug!("  Next subject_index {:?}", subject_index);
     }
 
-    debug!("Subject done");
-
     let final_score = score_row[query.len - 1] * scored_size;
-    debug!("final_score {:?}", final_score);
-    debug!("------------------------------------------------------------");
     if final_score == 0.0 {
         None
     } else {
+        let matches = trace.traceback(query.len - 1, subject.len - 1);
+
         let mut new_subject: Subject = subject.into();
         new_subject.score = final_score;
+        new_subject.matches = matches;
 
         Some(new_subject)
     }
@@ -293,6 +249,39 @@ mod tests {
                 score(&query, &subject).is_none(),
                 "Expected {:?} to not be scored in {:?}",
                 query.string,
+                subject.text,
+            );
+        }
+    }
+
+    #[test]
+    fn score_matches_test() {
+        let cases: Vec<(Query, Subject, Vec<usize>)> = vec![
+            // Exact acronym
+            ("fft".into(), "FirstFactoryTest".into(), vec![0, 5, 12]),
+            // Extra acronym letters
+            ("fft".into(), "FirstFactoryTest.ts".into(), vec![0, 5, 12]),
+
+            // Exact match
+            ("core".into(), "0core0app.rb".into(), vec![1, 2, 3, 4]),
+            // Exact match, second position is better
+            ("core".into(), "0core0app_core.rb".into(), vec![10, 11, 12, 13]),
+
+            // Consecutive letters
+            ("core".into(), "controller".into(), vec![0, 1, 4, 8]),
+        ];
+
+        for (query, subject, expected) in cases {
+            let result = score(&query, &subject);
+            assert!(result.is_some());
+
+            let result = result.unwrap();
+            assert_eq!(
+                result.matches,
+                expected,
+                "Expected {:?} to have matches {:?} inside {:?}",
+                query.string,
+                expected,
                 subject.text,
             );
         }
@@ -507,13 +496,29 @@ mod tests {
     fn score_on_consecutive_letters_preference_test() {
         let cases: Vec<(Query, Subject, Subject)> = vec![
             // full-word > start-of-word
-            ("modelcore".into(), "model-0-core-000.x".into(), "model-0-core0-00.x".into()),
+            (
+                "modelcore".into(),
+                "model-0-core-000.x".into(),
+                "model-0-core0-00.x".into(),
+            ),
             // start-of-word > end-of-word
-            ("modelcore".into(), "model-0-core0-00.x".into(), "model-0core-0000.x".into()),
+            (
+                "modelcore".into(),
+                "model-0-core0-00.x".into(),
+                "model-0core-0000.x".into(),
+            ),
             // end-of-word > middle-of-word
-            ("modelcore".into(), "model-0core-0000.x".into(), "model-0core0-000.x".into()),
+            (
+                "modelcore".into(),
+                "model-0core-0000.x".into(),
+                "model-0core0-000.x".into(),
+            ),
             // middle-of-word > scattered letters
-            ("modelcore".into(), "model-0core0-000.x".into(), "model-controller.x".into()),
+            (
+                "modelcore".into(),
+                "model-0core0-000.x".into(),
+                "model-controller.x".into(),
+            ),
         ];
 
         for (query, a, b) in cases {
@@ -525,13 +530,29 @@ mod tests {
     fn score_on_consecutive_letters_full_word_preference_test() {
         let cases: Vec<(Query, Subject, Subject)> = vec![
             // full-word > start-of-word
-            ("modelcorex".into(), "model-0-core-000.x".into(), "model-0-core0-00.x".into()),
+            (
+                "modelcorex".into(),
+                "model-0-core-000.x".into(),
+                "model-0-core0-00.x".into(),
+            ),
             // start-of-word > end-of-word
-            ("modelcorex".into(), "model-0-core0-00.x".into(), "model-0core-0000.x".into()),
+            (
+                "modelcorex".into(),
+                "model-0-core0-00.x".into(),
+                "model-0core-0000.x".into(),
+            ),
             // end-of-word > middle-of-word
-            ("modelcorex".into(), "model-0core-0000.x".into(), "model-0core0-000.x".into()),
+            (
+                "modelcorex".into(),
+                "model-0core-0000.x".into(),
+                "model-0core0-000.x".into(),
+            ),
             // middle-of-word > scattered letters
-            ("modelcorex".into(), "model-0core0-000.x".into(), "model-controller.x".into()),
+            (
+                "modelcorex".into(),
+                "model-0core0-000.x".into(),
+                "model-controller.x".into(),
+            ),
         ];
 
         for (query, a, b) in cases {
@@ -543,13 +564,29 @@ mod tests {
     fn score_on_consecutive_letters_preference_test_vs_directory_depth_test() {
         let cases: Vec<(Query, Subject, Subject)> = vec![
             // full-word > start-of-word
-            ("model core".into(), "0/0/0/0/model/core_000.x".into(), "0/0/0/model/core0_00.x".into()),
+            (
+                "model core".into(),
+                "0/0/0/0/model/core_000.x".into(),
+                "0/0/0/model/core0_00.x".into(),
+            ),
             // start-of-word > end-of-word
-            ("model core".into(), "0/0/0/model/core0_00.x".into(), "0/0/model/0core_00.x".into()),
+            (
+                "model core".into(),
+                "0/0/0/model/core0_00.x".into(),
+                "0/0/model/0core_00.x".into(),
+            ),
             // end-of-word > middle-of-word
-            ("model core".into(), "0/0/model/0core_00.x".into(), "0/model/0core0_0.x".into()),
+            (
+                "model core".into(),
+                "0/0/model/0core_00.x".into(),
+                "0/model/0core0_0.x".into(),
+            ),
             // middle-of-word > scattered letters
-            ("model core".into(), "0/model/0core0_0.x".into(), "model/controller.x".into()),
+            (
+                "model core".into(),
+                "0/model/0core0_0.x".into(),
+                "model/controller.x".into(),
+            ),
         ];
 
         for (query, a, b) in cases {
@@ -559,7 +596,11 @@ mod tests {
 
     #[test]
     fn score_on_consecutive_letters_score_higher_than_scattered_test() {
-        assert_scores_between_subjects("acon".into(), "applicatio_controller.rb".into(), "application.rb".into());
+        assert_scores_between_subjects(
+            "acon".into(),
+            "applicatio_controller.rb".into(),
+            "application.rb".into(),
+        );
     }
 
     #[test]
@@ -592,7 +633,11 @@ mod tests {
 
     #[test]
     fn score_allows_consecutive_letter_in_path_overcome_deeper_path_test() {
-        assert_scores_between_subjects("core app".into(), "controller/core/app.rb".into(), "controller/app.rb".into());
+        assert_scores_between_subjects(
+            "core app".into(),
+            "controller/core/app.rb".into(),
+            "controller/app.rb".into(),
+        );
     }
 
     #[test]
