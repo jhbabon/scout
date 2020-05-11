@@ -53,14 +53,13 @@ pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
     let mut subject_iter = subject.graphemes_lw.iter().enumerate();
 
     let mut progress = 0;
-    let mut done = false;
-    'outer: while let Some((qindex, query_grapheme)) = query_iter.next() {
-        if done {
+    'query_loop: while let Some((qindex, query_grapheme)) = query_iter.next() {
+        if progress == subject.len {
             // The subject text has been consumed, we can stop
-            break 'outer;
+            break 'query_loop;
         }
 
-        'inner: while let Some((index, subject_grapheme)) = subject_iter.next() {
+        'subject_loop: while let Some((index, subject_grapheme)) = subject_iter.next() {
             progress += 1;
 
             if query_grapheme == subject_grapheme {
@@ -68,7 +67,7 @@ pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
                     // separators don't score points, but we keep track of them
                     sep_count += 1;
 
-                    break 'inner;
+                    break 'subject_loop;
                 } else if is_start_of_word(subject, index) {
                     // only count graphemes that are start of a word
                     sum_position += index;
@@ -84,13 +83,9 @@ pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
                         same_case += 1;
                     }
 
-                    break 'inner;
+                    break 'subject_loop;
                 }
             }
-        }
-
-        if progress == subject.len {
-            done = true;
         }
     }
 

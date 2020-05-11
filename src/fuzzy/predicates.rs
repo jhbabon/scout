@@ -43,30 +43,28 @@ pub fn is_match(query: &Query, subject: &Subject) -> bool {
     let mut query_iter = query.graphemes_lw.iter().filter(|g| !is_optional(&g));
     let mut subject_iter = subject.graphemes_lw.iter();
 
-    let mut count = 0;
-    let mut done = false;
-    while let Some(query_grapheme) = query_iter.next() {
-        if done {
-            // The subject.graphemes_lw collection is done, but not the query.graphemes_lw
-            // which means that the query is not inside the subject
-            return false;
+    let mut query_count = 0;
+    let mut subject_count = 0;
+    let mut matching = 0;
+    'query_loop: while let Some(query_grapheme) = query_iter.next() {
+        query_count += 1;
+
+        if subject_count == subject.len {
+            break 'query_loop;
         }
 
-        'inner: while let Some(subject_grapheme) = subject_iter.next() {
-            count += 1;
+        'subject_loop: while let Some(subject_grapheme) = subject_iter.next() {
+            subject_count += 1;
 
             if query_grapheme == subject_grapheme {
+                matching += 1;
                 // this grapheme is inside the subject, we can move to the next one
-                break 'inner;
+                break 'subject_loop;
             }
-        }
-
-        if count == subject.len {
-            done = true;
         }
     }
 
-    true
+    matching == query_count
 }
 
 /// Check whether the subject has a unique acronym of the given size
@@ -166,13 +164,15 @@ mod tests {
             (Query::from("foo"), Subject::from("bar"), false),
             (Query::from("foo"), Subject::from("fo"), false),
             (Query::from("f oo"), Subject::from("fo o"), true),
+
+            (Query::from("ffb"), Subject::from("activerecord/test/fixtures/faces.yml"), false),
         ];
 
         for (query, subject, expected) in cases {
             assert_eq!(
                 is_match(&query, &subject),
                 expected,
-                "Expected {:?} to be in {:?}",
+                "Query {:?}. Subject {:?}",
                 query.string,
                 subject.text
             );
