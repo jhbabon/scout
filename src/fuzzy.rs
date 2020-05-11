@@ -1,71 +1,14 @@
 mod predicates;
 mod scoring;
-pub mod types;
+mod types;
 
 use predicates::*;
 use scoring::*;
 use types::*;
 
-use crate::common::Text;
-use async_std::sync::Arc;
-use std::cmp::Ordering;
-use sublime_fuzzy::{best_match, Match};
-
-#[derive(Debug, Clone)]
-pub struct Candidate {
-    pub text: Text,
-    pub score_match: Option<Match>,
-}
-
-impl Candidate {
-    pub fn new(text: String) -> Self {
-        Self {
-            text: Arc::new(text),
-            score_match: None,
-        }
-    }
-}
-
-impl Ord for Candidate {
-    fn cmp(&self, other: &Candidate) -> Ordering {
-        self.score_match.cmp(&other.score_match)
-    }
-}
-
-impl PartialOrd for Candidate {
-    fn partial_cmp(&self, other: &Candidate) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Eq for Candidate {}
-
-impl PartialEq for Candidate {
-    fn eq(&self, other: &Candidate) -> bool {
-        self.score_match == other.score_match
-    }
-}
-
-pub fn finder(query: &str, target: Text) -> Option<Candidate> {
-    if query.is_empty() {
-        let candidate = Candidate {
-            text: target,
-            score_match: None,
-        };
-        return Some(candidate);
-    }
-
-    match best_match(query, &target) {
-        None => None,
-        Some(score_match) => {
-            let candidate = Candidate {
-                text: target,
-                score_match: Some(score_match),
-            };
-            Some(candidate)
-        }
-    }
-}
+// TODO: Replace Subject with Candidate instead of using a type (alias)
+pub type Candidate = Subject;
+pub use types::Query;
 
 // =======================================================================
 // Let's try to implement fuzzaldrin-plus algorithm

@@ -242,41 +242,8 @@ fn format_matches<'a>(
 ) -> Vec<ANSIString<'a>> {
     let mut pieces = Vec::new();
 
-    if let Some(result) = &candidate.score_match {
-        let mut last_end = 0;
-
-        for &(start, len) in &result.continuous_matches() {
-            // Take piece between last match and this match.
-            pieces.push(
-                unmatch_style.paint(
-                    string
-                        .chars() // If I use graphemes for filtering I have to use them here as well
-                        .skip(last_end)
-                        .take(start - last_end)
-                        .collect::<String>(),
-                ),
-            );
-            // Add actual match.
-            pieces
-                .push(match_style.paint(string.chars().skip(start).take(len).collect::<String>()));
-            last_end = start + len;
-        }
-
-        // If there's characters left after the last match, make sure to append them.
-        if last_end != string.len() {
-            pieces.push(
-                unmatch_style.paint(
-                    string
-                        .chars()
-                        .skip(last_end)
-                        .take_while(|_| true)
-                        .collect::<String>(),
-                ),
-            );
-        }
-    } else {
-        pieces.push(unmatch_style.paint(string));
-    };
+    // TODO: Redo this using new matches
+    pieces.push(unmatch_style.paint(string));
 
     pieces
 }

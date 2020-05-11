@@ -82,7 +82,8 @@ pub async fn task(
     let mut count = 0;
     let mut query = String::from("");
 
-    let mut incoming = debounce(select(input_recv, pipe_recv));
+    // let mut incoming = debounce(select(input_recv, pipe_recv));
+    let mut incoming = select(input_recv, pipe_recv);
 
     while let Some(event) = incoming.next().await {
         debug!("Got event {:?}", event);
@@ -132,15 +133,18 @@ pub async fn task(
     Ok(())
 }
 
-fn search(query: &str, pool: &VecDeque<Candidate>) -> Vec<Candidate> {
+// TODO: Move search inside fuzzy module
+fn search(q: &str, pool: &VecDeque<Candidate>) -> Vec<Candidate> {
     let mut matches: Vec<Candidate>;
+
+    let query: fuzzy::Query = q.into();
 
     if query.is_empty() {
         matches = pool.par_iter().cloned().collect();
     } else {
         matches = pool
             .par_iter()
-            .map(|c| fuzzy::finder(&query, c.text.clone()))
+            .map(|c| fuzzy::score(&query, &c))
             .filter(|c| c.is_some())
             .map(|c| c.unwrap())
             .collect();
