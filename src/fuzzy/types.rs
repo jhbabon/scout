@@ -11,8 +11,8 @@ pub struct Query {
 }
 
 impl Query {
-    pub fn new(string: String) -> Self {
-        let text: Text = TextBuilder::build(string);
+    pub fn new(text: &Text) -> Self {
+        let text = text.clone();
         let set = text.lowercase_iter().map(|s| s.clone()).collect();
 
         Self { text, set }
@@ -33,13 +33,17 @@ impl Deref for Query {
 
 impl From<&str> for Query {
     fn from(string: &str) -> Self {
-        Self::new(String::from(string))
+        let text = TextBuilder::build(string);
+
+        Self::new(&text)
     }
 }
 
 impl From<String> for Query {
     fn from(string: String) -> Self {
-        Self::new(string)
+        let text = TextBuilder::build(&string);
+
+        Self::new(&text)
     }
 }
 
@@ -49,33 +53,22 @@ impl fmt::Display for Query {
     }
 }
 
-// Candidate replacement. This represent a possible choice
 #[derive(Debug, Clone)]
-pub struct Subject {
+pub struct Candidate {
     pub text: Text,
     score: f32,
     pub matches: Vec<usize>,
 }
 
-impl Subject {
-    pub fn new(string: String) -> Self {
-        let text: Text = TextBuilder::build(string);
-        let score = 0.0;
-        let matches = Vec::new();
+impl Candidate {
+    pub fn new(text: &Text, score: f32, matches: Vec<usize>) -> Self {
+        let text = text.clone();
 
         Self {
             text,
             score,
             matches,
         }
-    }
-
-    pub fn refine(&self, score: f32, matches: Vec<usize>) -> Self {
-        let mut refined: Self = self.into();
-        refined.score = score;
-        refined.matches = matches;
-
-        refined
     }
 
     pub fn score(&self) -> f32 {
@@ -83,7 +76,7 @@ impl Subject {
     }
 }
 
-impl Deref for Subject {
+impl Deref for Candidate {
     type Target = Text;
 
     fn deref(&self) -> &Self::Target {
@@ -91,48 +84,20 @@ impl Deref for Subject {
     }
 }
 
-impl From<&Subject> for Subject {
-    fn from(other: &Subject) -> Self {
-        let text = other.text.clone();
-        let score = 0.0;
-        let matches = Vec::new();
-
-        Self {
-            text,
-            score,
-            matches,
-        }
-    }
-}
-
-impl From<&Text> for Subject {
+impl From<&Text> for Candidate {
     fn from(txt: &Text) -> Self {
-        let text = txt.clone();
-        let score = 0.0;
-        let matches = Vec::new();
-
-        Self {
-            text,
-            score,
-            matches,
-        }
+        Self::new(txt, 0.0, Vec::new())
     }
 }
 
-impl From<&str> for Subject {
-    fn from(string: &str) -> Self {
-        Self::new(String::from(string))
-    }
-}
-
-impl fmt::Display for Subject {
+impl fmt::Display for Candidate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.text)
     }
 }
 
-impl Ord for Subject {
-    fn cmp(&self, other: &Subject) -> Ordering {
+impl Ord for Candidate {
+    fn cmp(&self, other: &Candidate) -> Ordering {
         match self.partial_cmp(other) {
             Some(ord) => ord,
             // let's just assume that if two subject's can't be compared
@@ -142,16 +107,16 @@ impl Ord for Subject {
     }
 }
 
-impl PartialOrd for Subject {
-    fn partial_cmp(&self, other: &Subject) -> Option<Ordering> {
+impl PartialOrd for Candidate {
+    fn partial_cmp(&self, other: &Candidate) -> Option<Ordering> {
         self.score.partial_cmp(&other.score)
     }
 }
 
-impl Eq for Subject {}
+impl Eq for Candidate {}
 
-impl PartialEq for Subject {
-    fn eq(&self, other: &Subject) -> bool {
+impl PartialEq for Candidate {
+    fn eq(&self, other: &Candidate) -> bool {
         self.score == other.score
     }
 }
@@ -175,12 +140,6 @@ impl AcronymResult {
     }
 
     pub fn empty() -> Self {
-        // I have no idea why position here is 0.1, to be honest
-        // The original code is like this
-        //
-        // ```js
-        // const emptyAcronymResult = new AcronymResult(/*score*/ 0, /*position*/ 0.1, /*count*/ 0);
-        // ```
         Self::new(0.0, 0.1, 0, vec![])
     }
 }

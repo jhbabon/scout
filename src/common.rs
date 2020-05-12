@@ -12,7 +12,7 @@ pub type Text = Arc<Letters>;
 pub struct TextBuilder;
 
 impl TextBuilder {
-    pub fn build(string: String) -> Text {
+    pub fn build(string: &str) -> Text {
         let text: Letters = string.into();
 
         Arc::new(text)

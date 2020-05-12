@@ -1,9 +1,8 @@
-use crate::common::{Result, Text};
+use crate::common::{Result, Text, TextBuilder};
 use crate::config::Config;
 use crate::events::Event;
 use crate::fuzzy::{self, Candidate};
 use async_std::prelude::*;
-use async_std::sync::Arc;
 use async_std::sync::{Receiver, Sender};
 use async_std::task::{Context, Poll};
 use futures::stream::select;
@@ -91,7 +90,7 @@ pub async fn task(
 
         let next = match event {
             Event::Packet(s) => {
-                pool.push_back(Arc::new(s.into()));
+                pool.push_back(TextBuilder::build(&s));
                 count += 1;
 
                 if pool.len() > POOL_LIMIT {

@@ -2,6 +2,7 @@
 
 use super::predicates::*;
 use super::types::*;
+use crate::common::Text;
 
 const WM: f32 = 150.0;
 const POSITION_BOOST: f32 = 100.0;
@@ -37,7 +38,7 @@ pub fn score_size(query_len: usize, subject_len: usize) -> f32 {
 }
 
 /// Calculate the score of the acronyms represented by the query, if any
-pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
+pub fn score_acronyms(query: &Query, subject: &Text) -> AcronymResult {
     // single char strings are not an acronym
     if query.len() <= 1 || subject.len() <= 1 {
         return AcronymResult::empty();
@@ -106,7 +107,7 @@ pub fn score_acronyms(query: &Query, subject: &Subject) -> AcronymResult {
 }
 
 /// Calculate the score of an exact match, if any
-pub fn score_exact_match(query: &Query, subject: &Subject) -> Option<ExactMatchResult> {
+pub fn score_exact_match(query: &Query, subject: &Text) -> Option<ExactMatchResult> {
     let (mut position, mut same_case) = sequence_position(query, subject, 0)?;
 
     let mut is_start;
@@ -191,7 +192,7 @@ pub fn score_pattern(
 /// Forward search for a sequence of consecutive characters and return the score
 pub fn score_consecutives(
     query: &Query,
-    subject: &Subject,
+    subject: &Text,
     query_position: usize,
     subject_position: usize,
     is_start: bool,
@@ -279,7 +280,7 @@ pub fn score_character(
 
 /// Get the position of the exact sequence of Query contained in Subject, if any
 /// It also returns the number of same case graphemes in the sequence
-fn sequence_position(query: &Query, subject: &Subject, skip: usize) -> Option<(usize, usize)> {
+fn sequence_position(query: &Query, subject: &Text, skip: usize) -> Option<(usize, usize)> {
     let mut query_iter = query.lowercase_iter().enumerate();
     let mut subject_iter = subject.lowercase_iter().enumerate().skip(skip);
 
@@ -314,49 +315,62 @@ fn sequence_position(query: &Query, subject: &Subject, skip: usize) -> Option<(u
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::TextBuilder;
 
     #[test]
     fn score_acronyms_test() {
         let cases = vec![
             // full word acronym
-            (Query::from("fft"), Subject::from("FirstFactoryTests"), 60.0),
-            (Query::from("y̆ft"), Subject::from("Y̆irstFactoryTests"), 60.0),
-            (
-                Query::from("ft🍣"),
-                Subject::from("first/tests/🍣.js"),
-                83.0,
-            ),
-            (Query::from("f公🍣"), Subject::from("first/公/🍣.js"), 83.0),
             (
                 Query::from("fft"),
-                Subject::from("FirstFactoryTests.html"),
+                TextBuilder::build("FirstFactoryTests"),
+                60.0,
+            ),
+            (
+                Query::from("y̆ft"),
+                TextBuilder::build("Y̆irstFactoryTests"),
+                60.0,
+            ),
+            (
+                Query::from("ft🍣"),
+                TextBuilder::build("first/tests/🍣.js"),
+                83.0,
+            ),
+            (
+                Query::from("f公🍣"),
+                TextBuilder::build("first/公/🍣.js"),
+                83.0,
+            ),
+            (
+                Query::from("fft"),
+                TextBuilder::build("FirstFactoryTests.html"),
                 52.0,
             ),
             // word separators don't count
             (
                 Query::from("ff/t"),
-                Subject::from("FirstFactory/Tests.html"),
+                TextBuilder::build("FirstFactory/Tests.html"),
                 36.0,
             ),
             // letters in the subject, but not as acronym
             (
                 Query::from("fft"),
-                Subject::from("Firstfactorytests.html"),
+                TextBuilder::build("Firstfactorytests.html"),
                 0.0,
             ),
             (
                 Query::from("iae"),
-                Subject::from("FirstFactoryTests.html"),
+                TextBuilder::build("FirstFactoryTests.html"),
                 0.0,
             ),
             // query too short
             (
                 Query::from("f"),
-                Subject::from("FirstFactoryTests.html"),
+                TextBuilder::build("FirstFactoryTests.html"),
                 0.0,
             ),
             // subject too short
-            (Query::from("fft"), Subject::from("f"), 0.0),
+            (Query::from("fft"), TextBuilder::build("f"), 0.0),
         ];
 
         for (query, subject, expected) in cases {
@@ -373,47 +387,47 @@ mod tests {
     // #[test]
     // fn score_exact_match_test() {
     //     let cases = vec![
-    //         (Query::from("bar"), Subject::from("notherthing"), None),
-    //         (Query::from("foo"), Subject::from("fxoxo"), None),
-    //         (Query::from("foo"), Subject::from("fo o"), None),
+    //         (Query::from("bar"), TextBuilder::build("notherthing"), None),
+    //         (Query::from("foo"), TextBuilder::build("fxoxo"), None),
+    //         (Query::from("foo"), TextBuilder::build("fo o"), None),
     //         (
     //             Query::from("test"),
-    //             Subject::from("subject_test.rb"),
+    //             TextBuilder::build("subject_test.rb"),
     //             Some(133744.11),
     //         ),
     //         // first is start of word
     //         (
     //             Query::from("foo"),
-    //             Subject::from("foo/foo_test.rb"),
+    //             TextBuilder::build("foo/foo_test.rb"),
     //             Some(80277.77),
     //         ),
     //         // second is start of word
     //         (
     //             Query::from("foo"),
-    //             Subject::from("xfoo/foo_test.rb"),
+    //             TextBuilder::build("xfoo/foo_test.rb"),
     //             Some(78819.016),
     //         ),
     //         // none is start of word
     //         (
     //             Query::from("foo"),
-    //             Subject::from("xfooxfoo_test.rb"),
+    //             TextBuilder::build("xfooxfoo_test.rb"),
     //             Some(32361.35),
     //         ),
     //         // different case
     //         (
     //             Query::from("foo"),
-    //             Subject::from("FooTest.rb"),
+    //             TextBuilder::build("FooTest.rb"),
     //             Some(56178.344),
     //         ),
     //         (
     //             Query::from("y̆公🍣"),
-    //             Subject::from("first/y̆公🍣.js"),
+    //             TextBuilder::build("first/y̆公🍣.js"),
     //             Some(80637.734),
     //         ),
     //         // different case
     //         (
     //             Query::from("y̆公🍣"),
-    //             Subject::from("First/Y̆公🍣.js"),
+    //             TextBuilder::build("First/Y̆公🍣.js"),
     //             Some(54316.98),
     //         ),
     //     ];
@@ -436,7 +450,7 @@ mod tests {
     //         // isolated character match
     //         (
     //             Query::from("foo"),
-    //             Subject::from("faa"),
+    //             TextBuilder::build("faa"),
     //             0,
     //             0,
     //             true,
@@ -445,7 +459,7 @@ mod tests {
     //         // not the whole query is consecutive
     //         (
     //             Query::from("foo"),
-    //             Subject::from("foxo"),
+    //             TextBuilder::build("foxo"),
     //             0,
     //             0,
     //             true,
@@ -453,7 +467,7 @@ mod tests {
     //         ),
     //         (
     //             Query::from("qfoo"),
-    //             Subject::from("qabfoxo"),
+    //             TextBuilder::build("qabfoxo"),
     //             1,
     //             3,
     //             false,
@@ -462,7 +476,7 @@ mod tests {
     //         // query finished
     //         (
     //             Query::from("foo"),
-    //             Subject::from("what/foo/bar"),
+    //             TextBuilder::build("what/foo/bar"),
     //             0,
     //             5,
     //             true,
@@ -471,7 +485,7 @@ mod tests {
     //         // last subject char is not end of word
     //         (
     //             Query::from("foo"),
-    //             Subject::from("what/foobar"),
+    //             TextBuilder::build("what/foobar"),
     //             0,
     //             5,
     //             true,
@@ -480,7 +494,7 @@ mod tests {
     //         // firt subject char is not start of word
     //         (
     //             Query::from("foo"),
-    //             Subject::from("whatfoobar"),
+    //             TextBuilder::build("whatfoobar"),
     //             0,
     //             4,
     //             false,
@@ -489,7 +503,7 @@ mod tests {
     //         // subject finished
     //         (
     //             Query::from("foo"),
-    //             Subject::from("what/fo"),
+    //             TextBuilder::build("what/fo"),
     //             0,
     //             5,
     //             true,
@@ -497,7 +511,7 @@ mod tests {
     //         ),
     //         (
     //             Query::from("foo"),
-    //             Subject::from("fxoox"),
+    //             TextBuilder::build("fxoox"),
     //             1,
     //             2,
     //             true,
@@ -520,29 +534,64 @@ mod tests {
     #[test]
     fn sequence_position_test() {
         let cases = vec![
-            (Query::from("foo"), Subject::from("foo"), 0, Some((0, 3))),
-            (Query::from("foo"), Subject::from("FOO"), 0, Some((0, 0))),
-            (Query::from("Foo"), Subject::from("foo"), 0, Some((0, 2))),
             (
                 Query::from("foo"),
-                Subject::from("fooxfoo"),
+                TextBuilder::build("foo"),
                 0,
                 Some((0, 3)),
             ),
-            (Query::from("foo"), Subject::from("xfoo"), 0, Some((1, 3))),
-            (Query::from("y̆"), Subject::from("xfy̆oo"), 0, Some((2, 1))),
-            (Query::from("y̆"), Subject::from("xfY̆oo"), 0, Some((2, 0))),
-            (Query::from("公"), Subject::from("公"), 0, Some((0, 1))),
-            (Query::from("🍣"), Subject::from("y̆公🍣"), 0, Some((2, 1))),
             (
                 Query::from("foo"),
-                Subject::from("fooxfoo"),
+                TextBuilder::build("FOO"),
+                0,
+                Some((0, 0)),
+            ),
+            (
+                Query::from("Foo"),
+                TextBuilder::build("foo"),
+                0,
+                Some((0, 2)),
+            ),
+            (
+                Query::from("foo"),
+                TextBuilder::build("fooxfoo"),
+                0,
+                Some((0, 3)),
+            ),
+            (
+                Query::from("foo"),
+                TextBuilder::build("xfoo"),
+                0,
+                Some((1, 3)),
+            ),
+            (
+                Query::from("y̆"),
+                TextBuilder::build("xfy̆oo"),
+                0,
+                Some((2, 1)),
+            ),
+            (
+                Query::from("y̆"),
+                TextBuilder::build("xfY̆oo"),
+                0,
+                Some((2, 0)),
+            ),
+            (Query::from("公"), TextBuilder::build("公"), 0, Some((0, 1))),
+            (
+                Query::from("🍣"),
+                TextBuilder::build("y̆公🍣"),
+                0,
+                Some((2, 1)),
+            ),
+            (
+                Query::from("foo"),
+                TextBuilder::build("fooxfoo"),
                 2,
                 Some((4, 3)),
             ),
-            (Query::from("foo"), Subject::from("xfoo"), 2, None),
-            (Query::from("foo"), Subject::from("foxo"), 0, None),
-            (Query::from("foo"), Subject::from("nope"), 0, None),
+            (Query::from("foo"), TextBuilder::build("xfoo"), 2, None),
+            (Query::from("foo"), TextBuilder::build("foxo"), 0, None),
+            (Query::from("foo"), TextBuilder::build("nope"), 0, None),
         ];
 
         for (query, subject, skip, expected) in cases {

@@ -1,9 +1,7 @@
-//! Collection of predicate functions over Query and Subject structs
-
-// TODO: I can probably precalculate start and end of words and
-// acronym sizes on Subject initialization
+//! Collection of predicate functions over Query and Text structs
 
 use super::types::*;
+use crate::common::Text;
 use lazy_static;
 use std::collections::HashSet;
 
@@ -38,7 +36,7 @@ lazy_static! {
 }
 
 /// Check whether a query is inside a subject or not
-pub fn is_match(query: &Query, subject: &Subject) -> bool {
+pub fn is_match(query: &Query, subject: &Text) -> bool {
     let mut query_iter = query.lowercase_iter().filter(|g| !is_optional(&g));
     let mut subject_iter = subject.lowercase_iter();
 
@@ -67,7 +65,7 @@ pub fn is_match(query: &Query, subject: &Subject) -> bool {
 }
 
 /// Check whether the subject has a unique acronym of the given size
-pub fn is_a_unique_acronym(subject: &Subject, acronym_size: usize) -> bool {
+pub fn is_a_unique_acronym(subject: &Text, acronym_size: usize) -> bool {
     let mut count = 0;
 
     // Assume one acronym every (at most) ACRONYM_FREQUENCY characters
@@ -100,7 +98,7 @@ pub fn is_a_unique_acronym(subject: &Subject, acronym_size: usize) -> bool {
 ///   * (a) in the first position of the subject
 ///   * (b) following a word separator
 ///   * (c) capital letter after a lowercase letter (camelCase rule)
-pub fn is_start_of_word(subject: &Subject, position: usize) -> bool {
+pub fn is_start_of_word(subject: &Text, position: usize) -> bool {
     if position == 0 {
         return true; // (a)
     }
@@ -121,7 +119,7 @@ pub fn is_start_of_word(subject: &Subject, position: usize) -> bool {
 ///   * (a) in the last position of the subject
 ///   * (b) followed by a word separator
 ///   * (c) lowercase letter followed by a capital letter (camelCase rule)
-pub fn is_end_of_word(subject: &Subject, position: usize) -> bool {
+pub fn is_end_of_word(subject: &Text, position: usize) -> bool {
     if position == subject.last_index() {
         return true; // (a)
     }
@@ -148,24 +146,25 @@ fn is_optional(grapheme: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::TextBuilder;
 
     #[test]
     fn is_match_test() {
         let cases = vec![
-            (Query::from("y̆公🍣"), Subject::from("y̆公🍣"), true),
-            (Query::from("y̆公🍣"), Subject::from("y̆f公x🍣.rb"), true),
-            (Query::from("foo"), Subject::from("foo"), true),
-            (Query::from("f oo"), Subject::from("f   oo"), true),
-            (Query::from("foo"), Subject::from("fXoXo"), true),
-            (Query::from("foo"), Subject::from("f_o.o"), true),
-            (Query::from("FoO"), Subject::from("foo"), true),
-            (Query::from("foo"), Subject::from("FxOxox"), true),
-            (Query::from("foo"), Subject::from("bar"), false),
-            (Query::from("foo"), Subject::from("fo"), false),
-            (Query::from("f oo"), Subject::from("fo o"), true),
+            (Query::from("y̆公🍣"), TextBuilder::build("y̆公🍣"), true),
+            (Query::from("y̆公🍣"), TextBuilder::build("y̆f公x🍣.rb"), true),
+            (Query::from("foo"), TextBuilder::build("foo"), true),
+            (Query::from("f oo"), TextBuilder::build("f   oo"), true),
+            (Query::from("foo"), TextBuilder::build("fXoXo"), true),
+            (Query::from("foo"), TextBuilder::build("f_o.o"), true),
+            (Query::from("FoO"), TextBuilder::build("foo"), true),
+            (Query::from("foo"), TextBuilder::build("FxOxox"), true),
+            (Query::from("foo"), TextBuilder::build("bar"), false),
+            (Query::from("foo"), TextBuilder::build("fo"), false),
+            (Query::from("f oo"), TextBuilder::build("fo o"), true),
             (
                 Query::from("ffb"),
-                Subject::from("activerecord/test/fixtures/faces.yml"),
+                TextBuilder::build("activerecord/test/fixtures/faces.yml"),
                 false,
             ),
         ];
@@ -184,11 +183,15 @@ mod tests {
     #[test]
     fn is_a_unique_acronym_test() {
         let cases = vec![
-            (Subject::from("FactoryFiles"), 2, true),
-            (Subject::from("factoryFiles"), 2, true),
-            (Subject::from("factory files"), 2, true),
-            (Subject::from("FactoryFilesTests"), 2, false),
-            (Subject::from("FxxFxxfxxfxxfxxfxxfxxfxxfxxfxx"), 2, false), // filter out long paths
+            (TextBuilder::build("FactoryFiles"), 2, true),
+            (TextBuilder::build("factoryFiles"), 2, true),
+            (TextBuilder::build("factory files"), 2, true),
+            (TextBuilder::build("FactoryFilesTests"), 2, false),
+            (
+                TextBuilder::build("FxxFxxfxxfxxfxxfxxfxxfxxfxxfxx"),
+                2,
+                false,
+            ), // filter out long paths
         ];
 
         for (subject, size, expected) in cases {
@@ -205,16 +208,16 @@ mod tests {
     #[test]
     fn is_start_of_word_test() {
         let cases = vec![
-            (Subject::from("FactoryFiles"), 0, true),
-            (Subject::from("FactoryFiles"), 7, true),
-            (Subject::from("factory files"), 8, true),
-            (Subject::from("fuzzy.rs"), 6, true),
-            (Subject::from("FactoryFiles"), 11, false),
-            (Subject::from("FactoryFiles"), 3, false),
-            (Subject::from("FactoryFiles"), 1, false),
-            (Subject::from("fuzzy.rs"), 5, false),
-            (Subject::from("FFiles"), 1, false),
-            (Subject::from("factory files"), 6, false),
+            (TextBuilder::build("FactoryFiles"), 0, true),
+            (TextBuilder::build("FactoryFiles"), 7, true),
+            (TextBuilder::build("factory files"), 8, true),
+            (TextBuilder::build("fuzzy.rs"), 6, true),
+            (TextBuilder::build("FactoryFiles"), 11, false),
+            (TextBuilder::build("FactoryFiles"), 3, false),
+            (TextBuilder::build("FactoryFiles"), 1, false),
+            (TextBuilder::build("fuzzy.rs"), 5, false),
+            (TextBuilder::build("FFiles"), 1, false),
+            (TextBuilder::build("factory files"), 6, false),
         ];
 
         for (subject, position, expected) in cases {
@@ -231,15 +234,15 @@ mod tests {
     #[test]
     fn is_end_of_word_test() {
         let cases = vec![
-            (Subject::from("FactoryFiles"), 11, true),
-            (Subject::from("FactoryFiles"), 6, true),
-            (Subject::from("factory files"), 6, true),
-            (Subject::from("fuzzy.rs"), 7, true),
-            (Subject::from("fuzzy.rs"), 4, true),
-            (Subject::from("FactoryFiles"), 0, false),
-            (Subject::from("FactoryFiles"), 1, false),
-            (Subject::from("FactoryFiles"), 3, false),
-            (Subject::from("fuzzy.rs"), 5, false),
+            (TextBuilder::build("FactoryFiles"), 11, true),
+            (TextBuilder::build("FactoryFiles"), 6, true),
+            (TextBuilder::build("factory files"), 6, true),
+            (TextBuilder::build("fuzzy.rs"), 7, true),
+            (TextBuilder::build("fuzzy.rs"), 4, true),
+            (TextBuilder::build("FactoryFiles"), 0, false),
+            (TextBuilder::build("FactoryFiles"), 1, false),
+            (TextBuilder::build("FactoryFiles"), 3, false),
+            (TextBuilder::build("fuzzy.rs"), 5, false),
         ];
 
         for (subject, position, expected) in cases {
