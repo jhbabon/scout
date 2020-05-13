@@ -208,7 +208,7 @@ pub fn score_consecutives(
     }
 
     let mut same_case = 0;
-    let mut sz = 0;
+    let mut sz = 1;
 
     if query.grapheme_at(query_position) == subject.grapheme_at(subject_position) {
         same_case += 1;
@@ -223,8 +223,6 @@ pub fn score_consecutives(
     let mut subject_cursor = subject_position;
 
     while let Some((qindex, query_grapheme)) = query_iter.next() {
-        sz += 1;
-
         if let Some((index, subject_grapheme)) = subject_iter.next() {
             if query_grapheme == subject_grapheme {
                 subject_cursor = index;
@@ -242,6 +240,8 @@ pub fn score_consecutives(
         if sz >= left {
             break;
         }
+
+        sz += 1;
     }
 
     if sz == 1 {

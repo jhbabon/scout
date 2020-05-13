@@ -1,14 +1,13 @@
 use crate::common::{Result, Text, TextBuilder};
 use crate::config::Config;
 use crate::events::Event;
-use crate::fuzzy::{self, Candidate};
+use crate::fuzzy;
 use async_std::prelude::*;
 use async_std::sync::{Receiver, Sender};
 use async_std::task::{Context, Poll};
 use futures::stream::select;
 use futures_timer::Delay;
 use log::debug;
-use rayon::prelude::*;
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
@@ -99,20 +98,20 @@ pub async fn task(
 
                 if count > BUFFER_LIMIT {
                     count = 0;
-                    let matches = search(&query, &pool);
+                    let matches = fuzzy::search(&query, &pool);
                     Some(Event::FlushSearch((matches, pool.len())))
                 } else {
                     None
                 }
             }
             Event::EOF => {
-                let matches = search(&query, &pool);
+                let matches = fuzzy::search(&query, &pool);
 
                 Some(Event::FlushSearch((matches, pool.len())))
             }
             Event::Query((q, ts)) => {
                 query = q;
-                let matches = search(&query, &pool);
+                let matches = fuzzy::search(&query, &pool);
 
                 Some(Event::Search((matches, pool.len(), ts)))
             }
@@ -131,25 +130,4 @@ pub async fn task(
     debug!("[task] end");
 
     Ok(())
-}
-
-// TODO: Move search inside fuzzy module
-fn search(q: &str, pool: &VecDeque<Text>) -> Vec<Candidate> {
-    let mut matches: Vec<Candidate>;
-    let query: fuzzy::Query = q.into();
-
-    if query.is_empty() {
-        matches = pool.par_iter().map(|txt| txt.into()).collect();
-    } else {
-        matches = pool
-            .par_iter()
-            .map(|c| fuzzy::compute(&query, &c))
-            .filter(|c| c.is_some())
-            .map(|c| c.unwrap())
-            .collect();
-
-        matches.par_sort_unstable_by(|a, b| b.cmp(a));
-    }
-
-    matches
 }
