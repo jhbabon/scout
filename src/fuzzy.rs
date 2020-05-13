@@ -12,14 +12,14 @@ use std::collections::VecDeque;
 
 pub use types::{Candidate, Query};
 
-// =======================================================================
-// Let's try to implement fuzzaldrin-plus algorithm
-// @see: https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/scorer.coffee#L83
-// =======================================================================
-
 // Max number missed consecutive hit = ceil(MISS_COEFF * query.len()) + 5
 const MISS_COEFF: f32 = 0.75;
 
+/// Search for candidates to match a query
+///
+/// * If the query is empty it just returns the same pool of candidates
+/// * Otherwise it will try to compute the best match for each candidate
+///   and then sort them from higher score to lower
 pub fn search(q: &str, pool: &VecDeque<Text>) -> Vec<Candidate> {
     let mut matches: Vec<Candidate>;
     let query: Query = q.into();
@@ -40,8 +40,17 @@ pub fn search(q: &str, pool: &VecDeque<Text>) -> Vec<Candidate> {
     matches
 }
 
-// NOTE: The only part missing (I think) from the original algorithm
-// is the path score bonus
+/// Custom port of the fuzzaldrin-plus algorithm used in Atom editor.
+///
+/// This function will return a Candidate with the computed score and
+/// matches
+///
+/// NOTE: The only part missing (I think) from the original algorithm
+///   is the path score bonus
+///
+/// Links:
+///   * https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/scorer.coffee#L83
+///   * https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/matcher.coffee#L172
 fn compute_match(query: &Query, subject: &Text) -> Option<Candidate> {
     if query.is_empty() {
         return None;
@@ -84,12 +93,12 @@ fn compute_match(query: &Query, subject: &Text) -> Option<Candidate> {
     let mut consecutive_row = vec![0.0_f32; query.len()];
     let scored_size = score_size(query.len(), subject.len());
 
-    // backtrace Matrix
-    let mut trace = TraceMatrix::new(subject.len(), query.len());
-
     let miss_budget = (MISS_COEFF * query.len() as f32).ceil() + 5.0;
     let mut miss_left = miss_budget;
     let mut should_rebuild = true;
+
+    // Trace Matrix, this is used to recover best matches positions
+    let mut trace = TraceMatrix::new(subject.len(), query.len());
 
     let mut subject_iter = subject.lowercase_iter().enumerate();
     'subject_loop: while let Some((subject_index, subject_grapheme)) = subject_iter.next() {
@@ -110,6 +119,8 @@ fn compute_match(query: &Query, subject: &Text) -> Option<Candidate> {
 
         let mut query_iter = query.lowercase_iter().enumerate();
         while let Some((query_index, query_grapheme)) = query_iter.next() {
+            let mut consecutive_score = 0.0;
+
             let score_up = score_row[query_index];
             if score_up >= score {
                 score = score_up;
@@ -117,8 +128,6 @@ fn compute_match(query: &Query, subject: &Text) -> Option<Candidate> {
             } else {
                 trace.left_at(query_index, subject_index);
             }
-
-            let mut consecutive_score = 0.0;
 
             if query_grapheme == subject_grapheme {
                 let is_start = is_start_of_word(subject, subject_index);
@@ -191,11 +200,11 @@ mod tests {
     fn matches_test() {
         let cases: Vec<(Query, &str, Vec<usize>)> = vec![
             // Exact acronym
-            ("fft".into(), "FirstFactoryTest".into(), vec![0, 5, 12]),
+            ("fft".into(), "FirstFactoryTest", vec![0, 5, 12]),
             // Extra acronym letters
-            ("fft".into(), "FirstFactoryTest.ts".into(), vec![0, 5, 12]),
+            ("fft".into(), "FirstFactoryTest.ts", vec![0, 5, 12]),
             // Exact match
-            ("core".into(), "0core0app.rb".into(), vec![1, 2, 3, 4]),
+            ("core".into(), "0core0app.rb", vec![1, 2, 3, 4]),
             // Exact match, second position is better
             (
                 "core".into(),
@@ -214,7 +223,7 @@ mod tests {
             let result = result.unwrap();
             assert_eq!(
                 result.matches, expected,
-                "Expected {} to have matches {:?} inside {:?}",
+                "Expected {} to have matches {:?} inside {}",
                 query, expected, subject,
             );
         }
@@ -224,11 +233,11 @@ mod tests {
     fn compute_match_on_different_queries_test() {
         let cases: Vec<(Query, Query, &str)> = vec![
             // Acronym wins
-            ("psh".into(), "push".into(), "Plus: Stage Hunk".into()),
+            ("psh".into(), "push".into(), "Plus: Stage Hunk"),
             // Exact world wins
-            ("Hello".into(), "he".into(), "Hello World".into()),
+            ("Hello".into(), "he".into(), "Hello World"),
             // More consecutive chars wins
-            ("ello".into(), "hllo".into(), "Hello World".into()),
+            ("ello".into(), "hllo".into(), "Hello World"),
         ];
 
         for (a, b, string) in cases {
@@ -244,7 +253,7 @@ mod tests {
 
             assert!(
                 result_a.score() > result_b.score(),
-                "Expected {} to have a higher score than {} inside {:?}",
+                "Expected {} to have a higher score than {} inside {}",
                 a,
                 b,
                 subject,
