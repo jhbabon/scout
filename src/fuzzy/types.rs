@@ -138,10 +138,6 @@ impl AcronymResult {
             matches,
         }
     }
-
-    pub fn empty() -> Self {
-        Self::new(0.0, 0.1, 0, vec![])
-    }
 }
 
 #[derive(Debug, Clone)]

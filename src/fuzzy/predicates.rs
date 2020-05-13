@@ -67,16 +67,17 @@ pub fn is_match(query: &Query, subject: &Text) -> bool {
 /// Check whether the subject has a unique acronym of the given size
 pub fn is_a_unique_acronym(subject: &Text, acronym_size: usize) -> bool {
     let mut count = 0;
+    let len = subject.len();
 
     // Assume one acronym every (at most) ACRONYM_FREQUENCY characters
     // on average. This is done to filter long paths
-    if subject.len() > (ACRONYM_FREQUENCY * acronym_size) {
+    if len > (ACRONYM_FREQUENCY * acronym_size) {
         return false;
     }
 
-    let mut iter = subject.iter().enumerate();
+    let mut index = 0;
 
-    while let Some((index, _)) = iter.next() {
+    while index < len {
         if is_start_of_word(subject, index) {
             // only start of word graphemes are considered part of an acronym
             count += 1;
@@ -87,6 +88,8 @@ pub fn is_a_unique_acronym(subject: &Text, acronym_size: usize) -> bool {
                 return false;
             }
         }
+
+        index += 1;
     }
 
     true

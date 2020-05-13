@@ -2,8 +2,6 @@ use scout::common::{Text, TextBuilder};
 use scout::fuzzy::*;
 use std::collections::VecDeque;
 
-// TODO: Add tests with emojis and other complex letters
-
 fn as_pool(subjects: &Vec<&str>) -> VecDeque<Text> {
     subjects
         .into_iter()
@@ -49,6 +47,20 @@ fn search_when_there_are_no_results_test() {
     let results = perform_search("wat", &cases);
 
     assert!(results.is_empty());
+}
+
+#[test]
+fn search_using_fancy_letters_test() {
+    let cases = vec![
+        "Markdown Preview: Copy Html",
+        "Y̆xxxxxxx公xxxxxxxxxxxx🍣.js",
+    ];
+
+    let results = perform_search("y̆公🍣", &cases);
+
+    assert!(!results.is_empty());
+
+    assert_candidate(&results[0], cases[1]);
 }
 
 #[test]

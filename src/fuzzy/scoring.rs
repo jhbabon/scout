@@ -1,4 +1,4 @@
-//! Collection of functions that calcualte scores based on different heuristics
+//! Collection of functions that calculate scores based on different heuristics
 
 use super::predicates::*;
 use super::types::*;
@@ -38,10 +38,10 @@ pub fn score_size(query_len: usize, subject_len: usize) -> f32 {
 }
 
 /// Calculate the score of the acronyms represented by the query, if any
-pub fn score_acronyms(query: &Query, subject: &Text) -> AcronymResult {
+pub fn score_acronyms(query: &Query, subject: &Text) -> Option<AcronymResult> {
     // single char strings are not an acronym
     if query.len() <= 1 || subject.len() <= 1 {
-        return AcronymResult::empty();
+        return None;
     }
 
     let mut matches = vec![];
@@ -91,7 +91,7 @@ pub fn score_acronyms(query: &Query, subject: &Text) -> AcronymResult {
     }
 
     if count < 2 {
-        return AcronymResult::empty();
+        return None;
     }
 
     let mut full_world = false;
@@ -101,9 +101,19 @@ pub fn score_acronyms(query: &Query, subject: &Text) -> AcronymResult {
         full_world = is_a_unique_acronym(subject, count);
     }
     let score = score_pattern(count, query.len(), same_case, true, full_world);
+
+    if score <= 0.0 {
+        return None;
+    }
+
     let position = sum_position as f32 / count as f32;
 
-    AcronymResult::new(score, position, count + sep_count, matches)
+    Some(AcronymResult::new(
+        score,
+        position,
+        count + sep_count,
+        matches,
+    ))
 }
 
 /// Calculate the score of an exact match, if any
@@ -256,7 +266,7 @@ pub fn score_consecutives(
     score
 }
 
-/// Calcualte the score of a character based on its position and calculated
+/// Calculate the score of a character based on its position and calculated
 /// acronym and consecutive scores around it.
 pub fn score_character(
     position: usize,
@@ -318,283 +328,163 @@ mod tests {
     use crate::common::TextBuilder;
 
     #[test]
-    fn score_acronyms_test() {
+    fn score_acronyms_with_no_results_test() {
         let cases = vec![
-            // full word acronym
-            (
-                Query::from("fft"),
-                TextBuilder::build("FirstFactoryTests"),
-                60.0,
-            ),
-            (
-                Query::from("y̆ft"),
-                TextBuilder::build("Y̆irstFactoryTests"),
-                60.0,
-            ),
-            (
-                Query::from("ft🍣"),
-                TextBuilder::build("first/tests/🍣.js"),
-                83.0,
-            ),
-            (
-                Query::from("f公🍣"),
-                TextBuilder::build("first/公/🍣.js"),
-                83.0,
-            ),
-            (
-                Query::from("fft"),
-                TextBuilder::build("FirstFactoryTests.html"),
-                52.0,
-            ),
-            // word separators don't count
-            (
-                Query::from("ff/t"),
-                TextBuilder::build("FirstFactory/Tests.html"),
-                36.0,
-            ),
-            // letters in the subject, but not as acronym
-            (
-                Query::from("fft"),
-                TextBuilder::build("Firstfactorytests.html"),
-                0.0,
-            ),
-            (
-                Query::from("iae"),
-                TextBuilder::build("FirstFactoryTests.html"),
-                0.0,
-            ),
-            // query too short
-            (
-                Query::from("f"),
-                TextBuilder::build("FirstFactoryTests.html"),
-                0.0,
-            ),
-            // subject too short
-            (Query::from("fft"), TextBuilder::build("f"), 0.0),
+            ("fft", "FirstFactoryTests"),
+            ("ff/t", "FirstFactory/Tests"),
+            ("y̆f公🍣", "Y̆/first/公/🍣.js"),
         ];
 
-        for (query, subject, expected) in cases {
+        for (q, s) in cases {
+            let query = Query::from(q);
+            let subject = TextBuilder::build(s);
             let result = score_acronyms(&query, &subject);
 
-            assert_eq!(
-                result.score, expected,
-                "Expected query {} to score {} inside {:?}",
-                query, expected, subject
+            assert!(result.is_some(), "Expected {} be inside {}", query, subject);
+            assert!(
+                result.unwrap().score > 0.0,
+                "Expected {} be inside {}",
+                query,
+                subject
             );
         }
     }
 
-    // #[test]
-    // fn score_exact_match_test() {
-    //     let cases = vec![
-    //         (Query::from("bar"), TextBuilder::build("notherthing"), None),
-    //         (Query::from("foo"), TextBuilder::build("fxoxo"), None),
-    //         (Query::from("foo"), TextBuilder::build("fo o"), None),
-    //         (
-    //             Query::from("test"),
-    //             TextBuilder::build("subject_test.rb"),
-    //             Some(133744.11),
-    //         ),
-    //         // first is start of word
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("foo/foo_test.rb"),
-    //             Some(80277.77),
-    //         ),
-    //         // second is start of word
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("xfoo/foo_test.rb"),
-    //             Some(78819.016),
-    //         ),
-    //         // none is start of word
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("xfooxfoo_test.rb"),
-    //             Some(32361.35),
-    //         ),
-    //         // different case
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("FooTest.rb"),
-    //             Some(56178.344),
-    //         ),
-    //         (
-    //             Query::from("y̆公🍣"),
-    //             TextBuilder::build("first/y̆公🍣.js"),
-    //             Some(80637.734),
-    //         ),
-    //         // different case
-    //         (
-    //             Query::from("y̆公🍣"),
-    //             TextBuilder::build("First/Y̆公🍣.js"),
-    //             Some(54316.98),
-    //         ),
-    //     ];
+    #[test]
+    fn score_acronyms_test() {
+        let cases = vec![
+            ("f", "fact"),
+            ("fft", "f"),
+            ("iae", "FirstFactoryTests.html"),
+        ];
 
-    //     for (query, subject, expected) in cases {
-    //         assert_eq!(
-    //             score_exact_match(&query, &subject),
-    //             expected,
-    //             "Expected {} to score {:?} inside {:?}",
-    //             query,
-    //             expected,
-    //             subject.text,
-    //         );
-    //     }
-    // }
+        for (q, s) in cases {
+            let query = Query::from(q);
+            let subject = TextBuilder::build(s);
+            let result = score_acronyms(&query, &subject);
 
-    // #[test]
-    // fn score_consecutives_test() {
-    //     let cases = vec![
-    //         // isolated character match
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("faa"),
-    //             0,
-    //             0,
-    //             true,
-    //             23.0,
-    //         ),
-    //         // not the whole query is consecutive
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("foxo"),
-    //             0,
-    //             0,
-    //             true,
-    //             54.0,
-    //         ),
-    //         (
-    //             Query::from("qfoo"),
-    //             TextBuilder::build("qabfoxo"),
-    //             1,
-    //             3,
-    //             false,
-    //             29.0,
-    //         ),
-    //         // query finished
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("what/foo/bar"),
-    //             0,
-    //             5,
-    //             true,
-    //             93.0,
-    //         ),
-    //         // last subject char is not end of word
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("what/foobar"),
-    //             0,
-    //             5,
-    //             true,
-    //             83.0,
-    //         ),
-    //         // firt subject char is not start of word
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("whatfoobar"),
-    //             0,
-    //             4,
-    //             false,
-    //             36.0,
-    //         ),
-    //         // subject finished
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("what/fo"),
-    //             0,
-    //             5,
-    //             true,
-    //             30.0,
-    //         ),
-    //         (
-    //             Query::from("foo"),
-    //             TextBuilder::build("fxoox"),
-    //             1,
-    //             2,
-    //             true,
-    //             28.0,
-    //         ),
-    //     ];
+            assert!(
+                result.is_none(),
+                "Expected {} not to be inside {}",
+                query,
+                subject
+            );
+        }
+    }
 
-    //     for (query, subject, qp, sp, start, expected) in cases {
-    //         assert_eq!(
-    //             score_consecutives(&query, &subject, qp, sp, start),
-    //             expected,
-    //             "Expected {:?} to score {:?} in {:?}",
-    //             query.string,
-    //             expected,
-    //             subject.text,
-    //         );
-    //     }
-    // }
+    #[test]
+    fn score_exact_match_with_no_results_test() {
+        let cases = vec![
+            ("test", "t0e0s0t"),
+            ("foo", "f oo"),
+            ("y̆公🍣", "y̆x公x🍣.js"),
+        ];
+
+        for (q, s) in cases {
+            let query = Query::from(q);
+            let subject = TextBuilder::build(s);
+            let result = score_exact_match(&query, &subject);
+
+            assert!(
+                result.is_none(),
+                "Expected {} not to be inside {}",
+                query,
+                subject
+            );
+        }
+    }
+
+    #[test]
+    fn score_exact_match_test() {
+        let cases = vec![
+            ("test", "subject_test.rb"),
+            // first is start of word
+            ("foo", "foo/foo_test.rb"),
+            // second is start of word
+            ("foo", "xfoo/foo_test.rb"),
+            // none is start of word
+            ("foo", "xfooxfoo_test.rb"),
+            // different case
+            ("foo", "FooTest.rb"),
+            ("y̆公🍣", "first/y̆公🍣.js"),
+            // different case
+            ("y̆公🍣", "First/Y̆公🍣.js"),
+        ];
+
+        for (q, s) in cases {
+            let query = Query::from(q);
+            let subject = TextBuilder::build(s);
+            let result = score_exact_match(&query, &subject);
+
+            assert!(
+                result.is_some(),
+                "Expected {} to score inside {}",
+                query,
+                subject
+            );
+            assert!(
+                result.unwrap().score > 0.0,
+                "Expected {} to score inside {}",
+                query,
+                subject
+            );
+        }
+    }
+
+    #[test]
+    fn score_consecutives_test() {
+        let cases = vec![
+            // isolated character match
+            ("foo", "faa", 0, 0, true),
+            // not the whole query is consecutive
+            ("foo", "foxo", 0, 0, true),
+            ("qfoo", "qabfoxo", 1, 3, false),
+            // query finished
+            ("foo", "what/foo/bar", 0, 5, true),
+            // last subject char is not end of word
+            ("foo", "what/foobar", 0, 5, true),
+            // firt subject char is not start of word
+            ("foo", "whatfoobar", 0, 4, false),
+            // subject finished
+            ("foo", "what/fo", 0, 5, true),
+            ("foo", "fxoox", 1, 2, true),
+        ];
+
+        for (q, s, qp, sp, start) in cases {
+            let query = Query::from(q);
+            let subject = TextBuilder::build(s);
+
+            assert!(
+                score_consecutives(&query, &subject, qp, sp, start) > 0.0,
+                "Expected {} to score in {}",
+                query,
+                subject,
+            );
+        }
+    }
 
     #[test]
     fn sequence_position_test() {
         let cases = vec![
-            (
-                Query::from("foo"),
-                TextBuilder::build("foo"),
-                0,
-                Some((0, 3)),
-            ),
-            (
-                Query::from("foo"),
-                TextBuilder::build("FOO"),
-                0,
-                Some((0, 0)),
-            ),
-            (
-                Query::from("Foo"),
-                TextBuilder::build("foo"),
-                0,
-                Some((0, 2)),
-            ),
-            (
-                Query::from("foo"),
-                TextBuilder::build("fooxfoo"),
-                0,
-                Some((0, 3)),
-            ),
-            (
-                Query::from("foo"),
-                TextBuilder::build("xfoo"),
-                0,
-                Some((1, 3)),
-            ),
-            (
-                Query::from("y̆"),
-                TextBuilder::build("xfy̆oo"),
-                0,
-                Some((2, 1)),
-            ),
-            (
-                Query::from("y̆"),
-                TextBuilder::build("xfY̆oo"),
-                0,
-                Some((2, 0)),
-            ),
-            (Query::from("公"), TextBuilder::build("公"), 0, Some((0, 1))),
-            (
-                Query::from("🍣"),
-                TextBuilder::build("y̆公🍣"),
-                0,
-                Some((2, 1)),
-            ),
-            (
-                Query::from("foo"),
-                TextBuilder::build("fooxfoo"),
-                2,
-                Some((4, 3)),
-            ),
-            (Query::from("foo"), TextBuilder::build("xfoo"), 2, None),
-            (Query::from("foo"), TextBuilder::build("foxo"), 0, None),
-            (Query::from("foo"), TextBuilder::build("nope"), 0, None),
+            ("foo", "foo", 0, Some((0, 3))),
+            ("foo", "FOO", 0, Some((0, 0))),
+            ("Foo", "foo", 0, Some((0, 2))),
+            ("foo", "fooxfoo", 0, Some((0, 3))),
+            ("foo", "xfoo", 0, Some((1, 3))),
+            ("y̆", "xfy̆oo", 0, Some((2, 1))),
+            ("y̆", "xfY̆oo", 0, Some((2, 0))),
+            ("公", "公", 0, Some((0, 1))),
+            ("🍣", "y̆公🍣", 0, Some((2, 1))),
+            ("foo", "fooxfoo", 2, Some((4, 3))),
+            ("foo", "xfoo", 2, None),
+            ("foo", "foxo", 0, None),
+            ("foo", "nope", 0, None),
         ];
 
-        for (query, subject, skip, expected) in cases {
+        for (q, s, skip, expected) in cases {
+            let query = Query::from(q);
+            let subject = TextBuilder::build(s);
+
             assert_eq!(
                 sequence_position(&query, &subject, skip),
                 expected,
