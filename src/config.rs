@@ -1,3 +1,5 @@
+pub mod styling;
+
 use async_std::fs;
 use async_std::os::unix::io::AsRawFd;
 use clap::{value_t, ArgMatches};
