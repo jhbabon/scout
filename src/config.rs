@@ -49,7 +49,8 @@ impl Configurator {
     // Set screen full size from PTTY
     pub fn from_ptty<'a>(&'a mut self, ptty: &fs::File) -> &'a mut Self {
         if let Some(mut config) = self.config.take() {
-            let (cols, rows) = terminal_size(ptty.as_raw_fd()).expect("Error getting terminal size");
+            let (cols, rows) =
+                terminal_size(ptty.as_raw_fd()).expect("Error getting terminal size");
             config.screen.set_full_size(cols as usize, rows as usize);
 
             self.config = Some(config);
@@ -81,7 +82,7 @@ impl Configurator {
     pub fn build(&mut self) -> Config {
         match self.config.take() {
             Some(config) => config,
-            None => Default::default()
+            None => Default::default(),
         }
     }
 }

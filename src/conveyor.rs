@@ -2,7 +2,7 @@ use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::events::Event;
 use crate::state::State;
-use crate::ui::Layout;
+use crate::ui::Canvas;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::sync::Receiver;
@@ -24,9 +24,9 @@ where
     let mut selection = None;
 
     let mut state = State::new();
-    let mut layout = Layout::new(&config, outbound).await?;
+    let mut canvas = Canvas::new(&config, outbound).await?;
 
-    layout.render(&state).await?;
+    canvas.render(&state).await?;
 
     while let Some(event) = conveyor_recv.next().await {
         debug!("Got event {:?}", event);
@@ -69,17 +69,17 @@ where
                 render = true;
             }
 
-            // NOTE: We don't need to break the loop since
-            // the engine and input will drop the sender
-            // and the loop will stop
             Event::Done => {
                 selection = state.selection();
+                break;
             }
+            Event::Exit => break,
+
             _ => (),
         };
 
         if render {
-            layout.render(&state).await?;
+            canvas.render(&state).await?;
         }
     }
 
