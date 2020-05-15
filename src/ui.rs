@@ -1,13 +1,11 @@
 use crate::common::Result;
-use crate::config::{Config, Decoration, FontStyle, StyleConfig};
+use crate::config::{styling, Config};
 use crate::fuzzy::Candidate;
 use crate::state::{State, StateUpdate};
 use ansi_term::{ANSIString, ANSIStrings, Color, Style};
 use async_std::io;
 use async_std::prelude::*;
 use async_std::task;
-use lazy_static;
-use std::collections::HashMap;
 use std::convert::Into;
 use std::fmt;
 use termion::{clear, cursor};
@@ -16,54 +14,36 @@ use unicode_truncate::UnicodeTruncateStr;
 const ALTERNATE_SCREEN: &'static str = csi!("?1049h");
 const MAIN_SCREEN: &'static str = csi!("?1049l");
 
-lazy_static! {
-    pub static ref NAMED_COLORS: HashMap<&'static str, Color> = {
-        let mut m = HashMap::new();
-        m.insert("black", Color::Black);
-        m.insert("red", Color::Red);
-        m.insert("green", Color::Green);
-        m.insert("yellow", Color::Yellow);
-        m.insert("blue", Color::Blue);
-        m.insert("purple", Color::Purple);
-        m.insert("cyan", Color::Cyan);
-        m.insert("white", Color::White);
-
-        m
-    };
+impl Into<Color> for styling::Color {
+    fn into(self) -> Color {
+        match self {
+            styling::Color::Black => Color::Black,
+            styling::Color::Red => Color::Red,
+            styling::Color::Yellow => Color::Yellow,
+            styling::Color::Green => Color::Green,
+            styling::Color::Blue => Color::Blue,
+            styling::Color::Purple => Color::Purple,
+            styling::Color::Cyan => Color::Cyan,
+            styling::Color::White => Color::White,
+            styling::Color::Fixed(n) => Color::Fixed(n),
+            styling::Color::RGB(r, g, b) => Color::RGB(r, g, b),
+        }
+    }
 }
 
-impl Into<Style> for StyleConfig {
+impl Into<Style> for styling::Style {
     fn into(self) -> Style {
-        let mut style = Style::default();
-
-        style = self.decorations.iter().fold(style, |acc, dec| match dec {
-            Decoration::Underline => acc.underline(),
-            Decoration::Strikethrough => acc.strikethrough(),
-            Decoration::Reverse => acc.reverse(),
-            _ => acc,
-        });
-
-        style = match self.font_style {
-            FontStyle::Regular => style,
-            FontStyle::Bold => style.bold(),
-            FontStyle::Italic => style.italic(),
-            FontStyle::Dimmed => style.dimmed(),
-        };
-
-        // TODO: Convert colors like fixed(123) and rgb(255, 2, 100)
-        if let Some(name) = self.color {
-            if let Some(&color) = NAMED_COLORS.get(&*name) {
-                style = style.fg(color);
-            }
-        }
-
-        if let Some(name) = self.background_color {
-            if let Some(&color) = NAMED_COLORS.get(&*name) {
-                style = style.on(color);
-            }
-        }
-
-        style
+        self.into_iter().fold(Style::default(), |acc, rule| match rule {
+            styling::Rule::Reset => Style::default(),
+            styling::Rule::Underline => acc.underline(),
+            styling::Rule::Strikethrough => acc.strikethrough(),
+            styling::Rule::Reverse => acc.reverse(),
+            styling::Rule::Bold => acc.bold(),
+            styling::Rule::Italic => acc.italic(),
+            styling::Rule::Dimmed => acc.dimmed(),
+            styling::Rule::Fg(color) => acc.fg(color.into()),
+            styling::Rule::Bg(color) => acc.on(color.into()),
+        })
     }
 }
 
@@ -81,12 +61,9 @@ struct Prompt {
 
 impl Prompt {
     fn new(config: &Config) -> Self {
-        let style_config = config.styles.prompt.clone();
-
-        let symbol = style_config.text.clone();
-        let symbol_style = style_config.into();
-
-        let query_style = config.styles.query.clone().into();
+        let symbol_style = config.prompt.style_symbol().into();
+        let symbol = config.prompt.symbol();
+        let query_style = config.prompt.style().into();
         let query = "".into();
 
         Self {
@@ -110,7 +87,7 @@ impl fmt::Display for Prompt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} {}",
+            "{}{}",
             self.symbol_style.paint(&self.symbol),
             self.query_style.paint(&self.query)
         )
@@ -120,19 +97,25 @@ impl fmt::Display for Prompt {
 #[derive(Debug, Clone, Default)]
 struct Counter {
     style: Style,
+    symbol: String,
+    prefix: String,
     current: usize,
     total: usize,
 }
 
+// TODO: Rename to Gauge
 impl Counter {
     fn new(config: &Config) -> Self {
-        let style_config = config.styles.counter.clone();
-        let style = style_config.into();
+        let style = config.gauge.style().into();
+        let symbol = config.gauge.symbol();
+        let prefix = config.gauge.prefix();
         let current = 0;
         let total = 0;
 
         Self {
             style,
+            symbol,
+            prefix,
             current,
             total,
         }
@@ -150,7 +133,7 @@ impl Component for Counter {
 
 impl fmt::Display for Counter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let display = format!("  {}/{}", self.current, self.total);
+        let display = format!("{}{}{}{}", self.prefix, self.current, self.symbol, self.total);
 
         write!(f, "{}", self.style.paint(&display))
     }
@@ -177,17 +160,15 @@ impl Item {
     // TODO: Maybe is better to have a ItemBuilder that does the StyleConfig.into once
     // and creates a new Item per new candidate
     fn new(config: &Config, width: usize, candidate: Candidate, is_selected: bool) -> Self {
-        let item_style = config.styles.item.clone().into();
-        let item_match_style = config.styles.item_match.clone().into();
-        let item_bullet_config = config.styles.item_bullet.clone();
-        let item_symbol = item_bullet_config.text.clone();
-        let item_bullet_style = item_bullet_config.into();
+        let item_style = config.candidate.style().into();
+        let item_match_style = config.candidate.style_match().into();
+        let item_symbol = config.candidate.symbol();
+        let item_bullet_style = config.candidate.style_symbol().into();
 
-        let selection_style = config.styles.selection.clone().into();
-        let selection_match_style = config.styles.selection_match.clone().into();
-        let selection_bullet_config = config.styles.selection_bullet.clone();
-        let selection_symbol = selection_bullet_config.text.clone();
-        let selection_bullet_style = selection_bullet_config.into();
+        let selection_style = config.selection.style().into();
+        let selection_match_style = config.selection.style_match().into();
+        let selection_symbol = config.selection.symbol();
+        let selection_bullet_style = config.selection.style_symbol().into();
 
         Self {
             width,
@@ -224,8 +205,7 @@ impl fmt::Display for Item {
             symbol_style = self.selection_bullet_style;
         }
 
-        let mut strings: Vec<ANSIString<'_>> =
-            vec![symbol_style.paint(indicator), style.paint(" ")];
+        let mut strings: Vec<ANSIString<'_>> = vec![symbol_style.paint(indicator)];
         let mut painted = format_matches(&self.candidate, &truncated, style, match_style);
         strings.append(&mut painted);
 
@@ -258,7 +238,7 @@ struct List {
 
 impl List {
     fn new(config: &Config) -> Self {
-        let size = config.screen.size;
+        let size = config.screen.size();
         let offset = 0;
         let items = vec![];
 
@@ -376,8 +356,8 @@ pub struct Layout<W: io::Write + Send + Unpin + 'static> {
 
 impl<W: io::Write + Send + Unpin + 'static> Layout<W> {
     pub async fn new(config: &Config, writer: W) -> Result<Self> {
-        let size = config.screen.size;
-        let mode = if config.screen.full {
+        let size = config.screen.size();
+        let mode = if config.screen.is_full() {
             Mode::Full
         } else {
             let (_, height) = size;

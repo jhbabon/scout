@@ -58,12 +58,12 @@ fn main() {
         if let Ok(mut config_file) = fs::File::open("./config.toml").await {
             let mut contents = String::new();
             config_file.read_to_string(&mut contents).await?;
-            configurator.from_str(&contents);
+            configurator.from_toml(&contents);
         }
 
         let config = configurator.from_ptty(&tty).from_args(&args).build();
 
-        debug!("Config {:?}", config);
+        debug!("config: {:?}", config);
 
         let ptty = PTTY::try_from(tty.as_raw_fd())?;
         ptty.noncanonical_mode()?;
@@ -79,9 +79,7 @@ fn main() {
 
     match res {
         Ok(Some(selection)) => println!("{}", selection),
-        Ok(None) => {
-            process::exit(130);
-        }
+        Ok(None) => process::exit(130),
         Err(e) => {
             eprintln!("ERROR: {}", e);
             process::exit(1);

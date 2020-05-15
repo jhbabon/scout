@@ -3,6 +3,7 @@ use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::error::Error;
 use std::fmt;
+use std::iter::IntoIterator;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -27,7 +28,7 @@ impl fmt::Display for ParseRuleError {
 
 impl Error for ParseRuleError {}
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     Black,
     Red,
@@ -62,6 +63,14 @@ impl FromStr for Color {
             "purple" => Ok(Self::Purple),
             "cyan" => Ok(Self::Cyan),
             "white" => Ok(Self::White),
+            "bright-black" => Ok(Self::Fixed(8)),
+            "bright-red" => Ok(Self::Fixed(9)),
+            "bright-green" => Ok(Self::Fixed(10)),
+            "bright-yellow" => Ok(Self::Fixed(11)),
+            "bright-blue" => Ok(Self::Fixed(12)),
+            "bright-purple" => Ok(Self::Fixed(13)),
+            "bright-cyan" => Ok(Self::Fixed(14)),
+            "bright-white" => Ok(Self::Fixed(15)),
             maybe_fixed => maybe_fixed
                 .parse::<u8>()
                 .map(|f| Self::Fixed(f))
@@ -70,7 +79,7 @@ impl FromStr for Color {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Rule {
     Reset,
     Underline,
@@ -116,8 +125,7 @@ impl FromStr for Rule {
     }
 }
 
-// New StyleConfig
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Style {
     rules: Vec<Rule>,
 }
@@ -148,6 +156,15 @@ impl FromStr for Style {
         }
 
         Ok(Self::new(rules))
+    }
+}
+
+impl IntoIterator for Style {
+    type Item = Rule;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.rules.into_iter()
     }
 }
 
@@ -214,7 +231,7 @@ mod tests {
     #[test]
     fn style_from_str_with_none_rule_test() {
         assert_style_from_str("none", vec![Rule::Reset]);
-        assert_style_from_str("underline none bold", vec![Rule::Reset]);
+        assert_style_from_str("underline none bold fb:blue", vec![Rule::Reset]);
     }
 
     #[test]
@@ -230,6 +247,18 @@ mod tests {
     }
 
     #[test]
+    fn style_from_str_with_bright_foreground_color_test() {
+        assert_style_from_str("fg:bright-black", vec![Rule::Fg(Color::Fixed(8))]);
+        assert_style_from_str("fg:bright-red", vec![Rule::Fg(Color::Fixed(9))]);
+        assert_style_from_str("fg:bright-green", vec![Rule::Fg(Color::Fixed(10))]);
+        assert_style_from_str("fg:bright-yellow", vec![Rule::Fg(Color::Fixed(11))]);
+        assert_style_from_str("fg:bright-blue", vec![Rule::Fg(Color::Fixed(12))]);
+        assert_style_from_str("fg:bright-purple", vec![Rule::Fg(Color::Fixed(13))]);
+        assert_style_from_str("fg:bright-cyan", vec![Rule::Fg(Color::Fixed(14))]);
+        assert_style_from_str("fg:bright-white", vec![Rule::Fg(Color::Fixed(15))]);
+    }
+
+    #[test]
     fn style_from_str_with_background_color_test() {
         assert_style_from_str("bg:black", vec![Rule::Bg(Color::Black)]);
         assert_style_from_str("bg:red", vec![Rule::Bg(Color::Red)]);
@@ -239,6 +268,18 @@ mod tests {
         assert_style_from_str("bg:purple", vec![Rule::Bg(Color::Purple)]);
         assert_style_from_str("bg:cyan", vec![Rule::Bg(Color::Cyan)]);
         assert_style_from_str("bg:white", vec![Rule::Bg(Color::White)]);
+    }
+
+    #[test]
+    fn style_from_str_with_bright_background_color_test() {
+        assert_style_from_str("bg:bright-black", vec![Rule::Bg(Color::Fixed(8))]);
+        assert_style_from_str("bg:bright-red", vec![Rule::Bg(Color::Fixed(9))]);
+        assert_style_from_str("bg:bright-green", vec![Rule::Bg(Color::Fixed(10))]);
+        assert_style_from_str("bg:bright-yellow", vec![Rule::Bg(Color::Fixed(11))]);
+        assert_style_from_str("bg:bright-blue", vec![Rule::Bg(Color::Fixed(12))]);
+        assert_style_from_str("bg:bright-purple", vec![Rule::Bg(Color::Fixed(13))]);
+        assert_style_from_str("bg:bright-cyan", vec![Rule::Bg(Color::Fixed(14))]);
+        assert_style_from_str("bg:bright-white", vec![Rule::Bg(Color::Fixed(15))]);
     }
 
     #[test]
