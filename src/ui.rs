@@ -1,8 +1,6 @@
 mod components;
 mod convert;
 
-// TODO: Apply global styles
-
 use components::*;
 
 use crate::common::Result;

@@ -31,8 +31,6 @@ impl Default for Mode {
 pub struct ScreenConfig {
     #[serde(default)]
     mode: Mode,
-    #[serde(default)]
-    style: Option<Style>, // global style
     #[serde(default, alias = "columns")]
     width: Option<usize>,
     #[serde(default, alias = "lines")]
@@ -226,7 +224,7 @@ impl SelectionConfig {
     pub fn style_match(&self) -> Style {
         match &self.style_match {
             Some(st) => st.clone(),
-            None => Style::new(vec![Rule::Underline, Rule::Bold]),
+            None => Style::new(vec![Rule::Underline, Rule::Bold, Rule::Reverse]),
         }
     }
 }
