@@ -11,109 +11,67 @@ use std::fmt;
 use termion::clear;
 use unicode_truncate::UnicodeTruncateStr;
 
+#[derive(Debug, Clone, Default)]
+struct ItemStyles {
+    pub width: usize,
+    pub symbol: String,
+    pub style: Style,
+    pub style_match: Style,
+    pub style_symbol: Style,
+}
+
+impl ItemStyles {
+    fn new(
+        width: usize,
+        symbol: String,
+        style: Style,
+        style_match: Style,
+        style_symbol: Style,
+    ) -> Self {
+        Self {
+            width,
+            symbol,
+            style,
+            style_match,
+            style_symbol,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Item {
-    pub candidate: Candidate,
-    pub is_selected: bool,
-    renderer: Arc<ItemRenderer>,
+    candidate: Candidate,
+    styles: Arc<ItemStyles>,
 }
 
 impl Item {
-    pub fn new(candidate: &Candidate, renderer: &Arc<ItemRenderer>, is_selected: bool) -> Self {
+    pub fn new(candidate: &Candidate, styles: &Arc<ItemStyles>) -> Self {
         Self {
             candidate: candidate.clone(),
-            renderer: renderer.clone(),
-            is_selected,
+            styles: styles.clone(),
         }
     }
 }
 
 impl fmt::Display for Item {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.renderer.render(self, f)
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-struct ItemRenderer {
-    width: usize,
-
-    candidate_symbol: String,
-    candidate_style: Style,
-    candidate_style_match: Style,
-    candidate_style_symbol: Style,
-
-    selection_symbol: String,
-    selection_style: Style,
-    selection_style_match: Style,
-    selection_style_symbol: Style,
-}
-
-impl ItemRenderer {
-    fn render(&self, item: &Item, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: Use custom truncate from Text
         // TODO: Remove from width space taken by symbol
-        let (truncated, _) = item.candidate.text.string.unicode_truncate(self.width);
+        let (truncated, _) = self
+            .candidate
+            .text
+            .string
+            .unicode_truncate(self.styles.width);
 
-        let mut symbol = &self.candidate_symbol;
-        let mut style = self.candidate_style;
-        let mut style_match = self.candidate_style_match;
-        let mut style_symbol = self.candidate_style_symbol;
+        // TODO: Use refs as much as possible
+        let symbol = &self.styles.symbol;
+        let style = self.styles.style;
+        // let style_match = self.styles.style_match;
+        let style_symbol = self.styles.style_symbol;
 
-        if item.is_selected {
-            symbol = &self.selection_symbol;
-            style = self.selection_style;
-            style_match = self.selection_style_match;
-            style_symbol = self.selection_style_symbol;
-        }
-
-        let mut strings: Vec<ANSIString<'_>> = vec![style_symbol.paint(symbol)];
-        let mut painted = format_matches(&item.candidate, &truncated, style, style_match);
-        strings.append(&mut painted);
+        let strings: Vec<ANSIString<'_>> = vec![style_symbol.paint(symbol), style.paint(truncated)];
 
         write!(f, "{}{}", clear::CurrentLine, ANSIStrings(&strings))
-    }
-}
-
-fn format_matches<'a>(
-    candidate: &Candidate,
-    string: &'a str,
-    unmatch_style: Style,
-    match_style: Style,
-) -> Vec<ANSIString<'a>> {
-    let mut pieces = Vec::new();
-
-    // TODO: Redo this using new matches
-    pieces.push(unmatch_style.paint(string));
-
-    pieces
-}
-
-impl From<&Config> for ItemRenderer {
-    fn from(config: &Config) -> Self {
-        let width = config.screen.width();
-
-        let candidate_style = config.candidate.style().into();
-        let candidate_style_match = config.candidate.style_match().into();
-        let candidate_symbol = config.candidate.symbol();
-        let candidate_style_symbol = config.candidate.style_symbol().into();
-
-        let selection_style = config.selection.style().into();
-        let selection_style_match = config.selection.style_match().into();
-        let selection_symbol = config.selection.symbol();
-        let selection_style_symbol = config.selection.style_symbol().into();
-
-        Self {
-            width,
-            candidate_style,
-            candidate_style_match,
-            candidate_style_symbol,
-            candidate_symbol,
-            selection_style,
-            selection_style_match,
-            selection_style_symbol,
-            selection_symbol,
-        }
     }
 }
 
@@ -122,7 +80,8 @@ pub struct List {
     height: usize,
     offset: usize,
     items: Vec<Item>,
-    renderer: Arc<ItemRenderer>,
+    candidate_styles: Arc<ItemStyles>,
+    selection_styles: Arc<ItemStyles>,
 }
 
 impl List {
@@ -152,11 +111,28 @@ impl List {
 impl From<&Config> for List {
     fn from(config: &Config) -> Self {
         let height = config.screen.height();
-        let renderer = Arc::new(config.into());
+        let width = config.screen.width();
+
+        let candidate_styles = ItemStyles::new(
+            width,
+            config.candidate.symbol(),
+            config.candidate.style().into(),
+            config.candidate.style_match().into(),
+            config.candidate.style_symbol().into(),
+        );
+
+        let selection_styles = ItemStyles::new(
+            width,
+            config.selection.symbol(),
+            config.selection.style().into(),
+            config.selection.style_match().into(),
+            config.selection.style_symbol().into(),
+        );
 
         Self {
             height,
-            renderer,
+            candidate_styles: Arc::new(candidate_styles),
+            selection_styles: Arc::new(selection_styles),
             ..Default::default()
         }
     }
@@ -173,9 +149,11 @@ impl Component for List {
             .skip(offset)
             .take(lines)
             .map(|(index, candidate)| {
-                let is_selected = index == state.selection_idx();
-
-                Item::new(&candidate, &self.renderer, is_selected)
+                if index == state.selection_idx() {
+                    Item::new(&candidate, &self.selection_styles)
+                } else {
+                    Item::new(&candidate, &self.candidate_styles)
+                }
             })
             .collect();
 
@@ -186,8 +164,9 @@ impl Component for List {
 impl fmt::Display for List {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let len = self.items.len();
+        let last = if len < 1 { 0 } else { len - 1 };
         for (idx, item) in self.items.iter().enumerate() {
-            let eol = if idx == (len - 1) { "" } else { "\n" };
+            let eol = if idx == last { "" } else { "\n" };
             write!(f, "{}{}", item, eol)?;
         }
 

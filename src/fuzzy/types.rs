@@ -96,6 +96,7 @@ impl fmt::Display for Candidate {
     }
 }
 
+// TODO: Do I need Ord and Eq? Maybe with PartialOrd and PartialEq is enough
 impl Ord for Candidate {
     fn cmp(&self, other: &Candidate) -> Ordering {
         match self.partial_cmp(other) {
