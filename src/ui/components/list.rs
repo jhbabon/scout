@@ -9,7 +9,6 @@ use async_std::sync::Arc;
 use std::convert::From;
 use std::fmt;
 use termion::clear;
-use unicode_truncate::UnicodeTruncateStr;
 
 #[derive(Debug, Clone, Default)]
 struct ItemStyles {
@@ -55,22 +54,29 @@ impl Item {
 
 impl fmt::Display for Item {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // TODO: Use custom truncate from Text
-        // TODO: Remove from width space taken by symbol
-        let (truncated, _) = self
-            .candidate
-            .text
-            .string
-            .unicode_truncate(self.styles.width);
-
-        // TODO: Use refs as much as possible
         let symbol = &self.styles.symbol;
-        let style = self.styles.style;
-        // let style_match = self.styles.style_match;
-        let style_symbol = self.styles.style_symbol;
+        let style = &self.styles.style;
+        let style_match = &self.styles.style_match;
+        let style_symbol = &self.styles.style_symbol;
 
-        let strings: Vec<ANSIString<'_>> = vec![style_symbol.paint(symbol), style.paint(truncated)];
+        let mut strings: Vec<ANSIString<'_>> = vec![style_symbol.paint(symbol)];
+        let mut painted: Vec<ANSIString<'_>> = self.candidate
+            .iter()
+            .enumerate()
+            .take(self.styles.width - symbol.len())
+            .map(|(index, grapheme)| {
+                if self.candidate.matches.contains(&index) {
+                    style_match.paint(grapheme)
+                } else {
+                    style.paint(grapheme)
+                }
+            })
+            .collect();
 
+        strings.append(&mut painted);
+
+        // ANSIStrings already takes care of reducing the number of escape
+        // sequences that will be printed to the terminal
         write!(f, "{}{}", clear::CurrentLine, ANSIStrings(&strings))
     }
 }

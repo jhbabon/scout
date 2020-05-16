@@ -24,8 +24,7 @@ impl TextBuilder {
 // to prevent extra copies of Strings
 #[derive(Debug, Clone)]
 pub struct Letters {
-    // TODO: Remove pub and implement a custom truncate method
-    pub string: String,
+    string: String,
     graphemes: Vec<String>,
     graphemes_lw: Vec<String>,
 }
