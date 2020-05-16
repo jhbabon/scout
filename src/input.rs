@@ -27,9 +27,9 @@ where
         search_box = q.into();
 
         conveyor_sender
-            .send(Event::Request(search_box.clone()))
+            .send(Event::Search(search_box.clone()))
             .await;
-        input_sender.send(Event::Request(search_box.clone())).await;
+        input_sender.send(Event::Search(search_box.clone())).await;
     }
 
     'event: loop {
@@ -102,9 +102,9 @@ where
         if query_updated {
             search_box.refresh();
             conveyor_sender
-                .send(Event::Request(search_box.clone()))
+                .send(Event::Search(search_box.clone()))
                 .await;
-            input_sender.send(Event::Request(search_box.clone())).await;
+            input_sender.send(Event::Search(search_box.clone())).await;
         }
     }
 

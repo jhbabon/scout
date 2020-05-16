@@ -18,7 +18,7 @@ where
         .lines()
         .map(|res| res.expect("Error reading from PIPE"))
         .filter(|line| !line.is_empty())
-        .map(|line| Event::Packet(line))
+        .map(|line| Event::NewLine(line))
         .chain(stream::once(Event::EOF));
 
     while let Some(event) = stream.next().await {

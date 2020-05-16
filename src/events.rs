@@ -4,17 +4,16 @@ use std::time::Instant;
 
 #[derive(Clone, Debug)]
 pub enum Event {
-    Packet(String), // New line from main input
-    EOF,            // EOF of main input
-    Up,             // Go up
-    Down,           // Go down
-    Exit,           // Exit without selecting anything
-    Done,           // Exit with selection
-    Ignore,         // NO-OP
+    NewLine(String), // New line from main input
+    EOF,             // EOF of main input
 
-    // TODO: Better names
-    Request(SearchBox),
+    Up,     // Go up
+    Down,   // Go down
+    Exit,   // Exit without selecting anything
+    Done,   // Exit with selection
+    Ignore, // NO-OP
 
-    Search((Vec<Candidate>, usize, Instant)),
-    FlushSearch((Vec<Candidate>, usize)),
+    Search(SearchBox),
+    SearchDone((Vec<Candidate>, usize, Instant)),
+    Flush((Vec<Candidate>, usize)),
 }

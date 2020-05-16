@@ -150,10 +150,10 @@ impl Letters {
         let len = self.len();
 
         if len == 0 {
-            return 0;
+            0
+        } else {
+            len - 1
         }
-
-        len - 1
     }
 
     pub fn grapheme_at(&self, index: usize) -> &'_ str {

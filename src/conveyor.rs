@@ -34,19 +34,20 @@ where
         render = false;
 
         match event {
-            Event::Request(search_box) => {
+            Event::Search(search_box) => {
                 last_timestamp = search_box.timestamp();
                 state.set_search(search_box);
                 render = true;
             }
 
-            Event::FlushSearch((matches, len)) => {
+            Event::Flush((matches, len)) => {
                 // Flush happens when the pool size
                 // changes or the pool is complete
                 state.set_matches((matches, len));
                 render = true;
             }
-            Event::Search((matches, len, timestamp)) => {
+
+            Event::SearchDone((matches, len, timestamp)) => {
                 // Only if the search timestamp is
                 // the same as the last query timestamp
                 // we will update the state. This way

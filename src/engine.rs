@@ -13,6 +13,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::time::Duration;
 
+// TODO: Move limits to Config
 const BUFFER_LIMIT: usize = 5000;
 const POOL_LIMIT: usize = 500000;
 
@@ -30,7 +31,7 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
             if Pin::new(&mut self.delay).poll(cx).is_ready() {
                 let mut result = None;
                 if let Some(search_box) = self.last.take() {
-                    result = Some(Poll::Ready(Some(Event::Request(search_box))));
+                    result = Some(Poll::Ready(Some(Event::Search(search_box))));
                 }
 
                 if let Some(poll) = result {
@@ -41,7 +42,7 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
             match Pin::new(&mut self.stream).poll_next(cx) {
                 Poll::Ready(Some(event)) => {
                     match event {
-                        Event::Request(search_box) => {
+                        Event::Search(search_box) => {
                             self.last = Some(search_box);
                             // TODO: tune up the time
                             self.delay.reset(Duration::from_millis(200));
@@ -85,7 +86,7 @@ pub async fn task(
         debug!("Got event {:?}", event);
 
         let next = match event {
-            Event::Packet(s) => {
+            Event::NewLine(s) => {
                 pool.push_back(TextBuilder::build(&s));
                 count += 1;
 
@@ -96,7 +97,7 @@ pub async fn task(
                 if count > BUFFER_LIMIT {
                     count = 0;
                     let matches = fuzzy::search(&query, &pool);
-                    Some(Event::FlushSearch((matches, pool.len())))
+                    Some(Event::Flush((matches, pool.len())))
                 } else {
                     None
                 }
@@ -104,13 +105,13 @@ pub async fn task(
             Event::EOF => {
                 let matches = fuzzy::search(&query, &pool);
 
-                Some(Event::FlushSearch((matches, pool.len())))
+                Some(Event::Flush((matches, pool.len())))
             }
-            Event::Request(search_box) => {
+            Event::Search(search_box) => {
                 query = search_box.as_string();
                 let matches = fuzzy::search(&query, &pool);
 
-                Some(Event::Search((matches, pool.len(), search_box.timestamp())))
+                Some(Event::SearchDone((matches, pool.len(), search_box.timestamp())))
             }
             Event::Done | Event::Exit => break,
             _ => None,
