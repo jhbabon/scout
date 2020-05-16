@@ -1,9 +1,10 @@
+use crate::common::SearchBox;
 use crate::fuzzy::Candidate;
 use std::time::Instant;
 
 #[derive(Clone, Debug)]
 pub enum Event {
-    Packet(String), // New input from main input
+    Packet(String), // New line from main input
     EOF,            // EOF of main input
     Up,             // Go up
     Down,           // Go down
@@ -11,7 +12,9 @@ pub enum Event {
     Done,           // Exit with selection
     Ignore,         // NO-OP
 
-    Query((String, Instant)),
+    // TODO: Better names
+    Request(SearchBox),
+
     Search((Vec<Candidate>, usize, Instant)),
     FlushSearch((Vec<Candidate>, usize)),
 }

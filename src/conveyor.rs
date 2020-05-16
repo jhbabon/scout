@@ -34,9 +34,9 @@ where
         render = false;
 
         match event {
-            Event::Query((query, timestamp)) => {
-                last_timestamp = timestamp;
-                state.set_query(query);
+            Event::Request(search_box) => {
+                last_timestamp = search_box.timestamp();
+                state.set_search(search_box);
                 render = true;
             }
 

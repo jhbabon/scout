@@ -1,4 +1,4 @@
-use crate::common::{Result, Text, TextBuilder};
+use crate::common::{Result, SearchBox, Text, TextBuilder};
 use crate::config::Config;
 use crate::events::Event;
 use crate::fuzzy;
@@ -11,7 +11,7 @@ use log::debug;
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 const BUFFER_LIMIT: usize = 5000;
 const POOL_LIMIT: usize = 500000;
@@ -20,7 +20,7 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
     struct Debounce<S> {
         stream: S,
         delay: Delay,
-        last: Option<(String, Instant)>,
+        last: Option<SearchBox>,
     };
 
     impl<S: Stream<Item = Event> + Unpin> Stream for Debounce<S> {
@@ -29,12 +29,9 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
         fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             if Pin::new(&mut self.delay).poll(cx).is_ready() {
                 let mut result = None;
-                if let Some((q, ts)) = &self.last {
-                    // TODO: Use a proper Query type: Query = (String, Instant)
-                    result = Some(Poll::Ready(Some(Event::Query((q.to_string(), *ts)))));
+                if let Some(search_box) = self.last.take() {
+                    result = Some(Poll::Ready(Some(Event::Request(search_box))));
                 }
-
-                self.last = None;
 
                 if let Some(poll) = result {
                     return poll;
@@ -44,8 +41,8 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
             match Pin::new(&mut self.stream).poll_next(cx) {
                 Poll::Ready(Some(event)) => {
                     match event {
-                        Event::Query((q, ts)) => {
-                            self.last = Some((q, ts));
+                        Event::Request(search_box) => {
+                            self.last = Some(search_box);
                             // TODO: tune up the time
                             self.delay.reset(Duration::from_millis(200));
 
@@ -109,11 +106,11 @@ pub async fn task(
 
                 Some(Event::FlushSearch((matches, pool.len())))
             }
-            Event::Query((q, ts)) => {
-                query = q;
+            Event::Request(search_box) => {
+                query = search_box.as_string();
                 let matches = fuzzy::search(&query, &pool);
 
-                Some(Event::Search((matches, pool.len(), ts)))
+                Some(Event::Search((matches, pool.len(), search_box.timestamp())))
             }
             Event::Done | Event::Exit => break,
             _ => None,

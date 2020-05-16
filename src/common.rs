@@ -1,9 +1,103 @@
 use async_std::sync::Arc;
 use std::fmt;
 use std::slice::Iter;
+use std::time::Instant;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+#[derive(Debug, Clone)]
+pub struct SearchBox {
+    query: Vec<char>,
+    cursor: usize,
+    timestamp: Instant,
+}
+
+impl SearchBox {
+    pub fn add(&mut self, ch: char) {
+        self.query.insert(self.cursor, ch);
+        self.cursor += 1;
+    }
+
+    pub fn backspace(&mut self) {
+        if self.cursor > 0 {
+            self.cursor -= 1;
+            self.query.remove(self.cursor);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.query.clear();
+        self.cursor = 0;
+    }
+
+    pub fn left(&mut self) {
+        if self.cursor > 0 {
+            self.cursor -= 1;
+        }
+    }
+
+    pub fn right(&mut self) {
+        if self.cursor < self.len() {
+            self.cursor += 1;
+        }
+    }
+
+    pub fn to_end(&mut self) {
+        self.cursor = self.len();
+    }
+
+    pub fn to_start(&mut self) {
+        self.cursor = 0;
+    }
+
+    pub fn cursor_until_end(&self) -> usize {
+        if self.len() < self.cursor {
+            0
+        } else {
+            self.len() - self.cursor
+        }
+    }
+
+    pub fn as_string(&self) -> String {
+        self.query.iter().collect()
+    }
+
+    pub fn timestamp(&self) -> Instant {
+        self.timestamp
+    }
+
+    pub fn len(&self) -> usize {
+        self.query.len()
+    }
+
+    pub fn refresh(&mut self) {
+        self.timestamp = Instant::now();
+    }
+}
+
+impl From<&String> for SearchBox {
+    fn from(string: &String) -> Self {
+        let query = string.chars().collect::<Vec<char>>();
+        let cursor = query.len();
+
+        Self {
+            query,
+            cursor,
+            ..Default::default()
+        }
+    }
+}
+
+impl Default for SearchBox {
+    fn default() -> Self {
+        Self {
+            timestamp: Instant::now(),
+            cursor: 0,
+            query: vec![],
+        }
+    }
+}
 
 // Text: The Arc version of Letters
 pub type Text = Arc<Letters>;

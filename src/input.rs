@@ -1,11 +1,10 @@
-use crate::common::Result;
+use crate::common::{Result, SearchBox};
 use crate::config::Config;
 use crate::events::Event;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::sync::Sender;
 use log::debug;
-use std::time::Instant;
 use termion::event::Key;
 use termion::input::TermRead;
 
@@ -21,16 +20,16 @@ where
     debug!("[task] start");
 
     let mut buffer;
-    // TODO: Use Text here?
-    let mut query: Vec<char> = vec![];
     let mut query_updated: bool;
+    let mut search_box = SearchBox::default();
 
     if let Some(q) = &config.initial_query {
-        let now = Instant::now();
-        query = q.chars().collect();
+        search_box = q.into();
 
-        conveyor_sender.send(Event::Query((q.clone(), now))).await;
-        input_sender.send(Event::Query((q.clone(), now))).await;
+        conveyor_sender
+            .send(Event::Request(search_box.clone()))
+            .await;
+        input_sender.send(Event::Request(search_box.clone())).await;
     }
 
     'event: loop {
@@ -67,15 +66,32 @@ where
                 }
 
                 Key::Ctrl('u') => {
-                    query.clear();
+                    search_box.clear();
                     query_updated = true;
                 }
                 Key::Backspace => {
-                    let _p = query.pop();
+                    search_box.backspace();
                     query_updated = true;
                 }
                 Key::Char(ch) => {
-                    query.push(ch.clone());
+                    search_box.add(ch.clone());
+                    query_updated = true;
+                }
+
+                Key::Left => {
+                    search_box.left();
+                    query_updated = true;
+                }
+                Key::Right => {
+                    search_box.right();
+                    query_updated = true;
+                }
+                Key::Ctrl('a') => {
+                    search_box.to_start();
+                    query_updated = true;
+                }
+                Key::Ctrl('e') => {
+                    search_box.to_end();
                     query_updated = true;
                 }
 
@@ -84,13 +100,11 @@ where
         }
 
         if query_updated {
-            let now = Instant::now();
-            let q: String = query.iter().collect();
-
-            debug!("[task|event loop] sending query {:?}", q);
-
-            conveyor_sender.send(Event::Query((q.clone(), now))).await;
-            input_sender.send(Event::Query((q, now))).await;
+            search_box.refresh();
+            conveyor_sender
+                .send(Event::Request(search_box.clone()))
+                .await;
+            input_sender.send(Event::Request(search_box.clone())).await;
         }
     }
 

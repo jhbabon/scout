@@ -6,9 +6,11 @@ use crate::state::State;
 use ansi_term::Style;
 use std::convert::From;
 use std::fmt;
+use termion::cursor;
 
 #[derive(Debug, Clone, Default)]
 pub struct Prompt {
+    left_moves: u16,
     symbol: String,
     query: String,
     style: Style,
@@ -18,15 +20,14 @@ pub struct Prompt {
 impl From<&Config> for Prompt {
     fn from(config: &Config) -> Self {
         let symbol = config.prompt.symbol();
-        let query = "".into();
         let style = config.prompt.style().into();
         let style_symbol = config.prompt.style_symbol().into();
 
         Self {
             symbol,
-            query,
             style,
             style_symbol,
+            ..Default::default()
         }
     }
 }
@@ -34,6 +35,7 @@ impl From<&Config> for Prompt {
 impl Component for Prompt {
     fn update(&mut self, state: &State) -> Result<()> {
         self.query = state.query();
+        self.left_moves = state.cursor_until_end() as u16;
 
         Ok(())
     }
@@ -41,11 +43,21 @@ impl Component for Prompt {
 
 impl fmt::Display for Prompt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}{}",
-            self.style_symbol.paint(&self.symbol),
-            self.style.paint(&self.query)
-        )
+        if self.left_moves == 0 {
+            write!(
+                f,
+                "{}{}",
+                self.style_symbol.paint(&self.symbol),
+                self.style.paint(&self.query)
+            )
+        } else {
+            write!(
+                f,
+                "{}{}{}",
+                self.style_symbol.paint(&self.symbol),
+                self.style.paint(&self.query),
+                cursor::Left(self.left_moves)
+            )
+        }
     }
 }

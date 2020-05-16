@@ -1,4 +1,4 @@
-use crate::common::Text;
+use crate::common::{SearchBox, Text};
 use crate::fuzzy::Candidate;
 
 // TODO: Review StateUpdates, do I need all of them?
@@ -18,7 +18,7 @@ impl Default for StateUpdate {
 
 #[derive(Debug, Clone, Default)]
 pub struct State {
-    query: String,
+    search: Option<SearchBox>,
     matches: Vec<Candidate>,
     pool_len: usize,
     selection_idx: usize,
@@ -30,13 +30,23 @@ impl State {
         Self::default()
     }
 
-    pub fn set_query(&mut self, q: String) {
-        self.query = q;
+    pub fn set_search(&mut self, search: SearchBox) {
+        self.search = Some(search);
         self.last_update = StateUpdate::Query;
     }
 
     pub fn query(&self) -> String {
-        self.query.clone()
+        match &self.search {
+            Some(sb) => sb.as_string(),
+            None => "".into(),
+        }
+    }
+
+    pub fn cursor_until_end(&self) -> usize {
+        match &self.search {
+            Some(sb) => sb.cursor_until_end(),
+            None => 0,
+        }
     }
 
     pub fn set_matches(&mut self, matches: (Vec<Candidate>, usize)) {

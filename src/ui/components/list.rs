@@ -60,7 +60,8 @@ impl fmt::Display for Item {
         let style_symbol = &self.styles.style_symbol;
 
         let mut strings: Vec<ANSIString<'_>> = vec![style_symbol.paint(symbol)];
-        let mut painted: Vec<ANSIString<'_>> = self.candidate
+        let mut painted: Vec<ANSIString<'_>> = self
+            .candidate
             .iter()
             .enumerate()
             .take(self.styles.width - symbol.len())
