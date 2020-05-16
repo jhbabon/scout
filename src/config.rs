@@ -5,14 +5,18 @@ use components::*;
 
 use async_std::fs;
 use async_std::os::unix::io::AsRawFd;
+use async_std::sync::Arc;
 use clap::{value_t, ArgMatches};
 use serde::Deserialize;
 use toml;
 
 use crate::terminal_size::terminal_size;
 
+// Config is shared among tasks, so it makes sense to put it behind an Arc
+pub type Config = Arc<Cfg>;
+
 #[derive(Deserialize, Clone, Debug, Default)]
-pub struct Config {
+pub struct Cfg {
     #[serde(default)]
     pub screen: ScreenConfig,
     #[serde(default)]
@@ -30,13 +34,13 @@ pub struct Config {
 
 #[derive(Debug)]
 pub struct Configurator {
-    config: Option<Config>,
+    config: Option<Cfg>,
 }
 
 impl Configurator {
     pub fn new() -> Self {
         Self {
-            config: Some(Config::default()),
+            config: Some(Cfg::default()),
         }
     }
 
@@ -81,7 +85,7 @@ impl Configurator {
 
     pub fn build(&mut self) -> Config {
         match self.config.take() {
-            Some(config) => config,
+            Some(config) => Arc::new(config),
             None => Default::default(),
         }
     }

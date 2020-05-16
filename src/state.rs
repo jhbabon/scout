@@ -1,6 +1,7 @@
 use crate::common::Text;
 use crate::fuzzy::Candidate;
 
+// TODO: Review StateUpdates, do I need all of them?
 #[derive(Debug, Clone)]
 pub enum StateUpdate {
     Query,

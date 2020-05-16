@@ -21,15 +21,16 @@ where
     debug!("[task] start");
 
     let mut buffer;
+    // TODO: Use Text here?
     let mut query: Vec<char> = vec![];
     let mut query_updated: bool;
 
-    if let Some(q) = config.initial_query {
+    if let Some(q) = &config.initial_query {
         let now = Instant::now();
         query = q.chars().collect();
 
         conveyor_sender.send(Event::Query((q.clone(), now))).await;
-        input_sender.send(Event::Query((q, now))).await;
+        input_sender.send(Event::Query((q.clone(), now))).await;
     }
 
     'event: loop {
