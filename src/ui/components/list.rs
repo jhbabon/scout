@@ -5,7 +5,6 @@ use crate::config::Config;
 use crate::fuzzy::Candidate;
 use crate::state::State;
 use ansi_term::{ANSIString, ANSIStrings, Style};
-use async_std::sync::Arc;
 use std::convert::From;
 use std::fmt;
 use termion::clear;
@@ -37,58 +36,13 @@ impl ItemStyles {
     }
 }
 
-#[derive(Debug, Clone)]
-struct Item {
-    candidate: Candidate,
-    styles: Arc<ItemStyles>,
-}
-
-impl Item {
-    pub fn new(candidate: &Candidate, styles: &Arc<ItemStyles>) -> Self {
-        Self {
-            candidate: candidate.clone(),
-            styles: styles.clone(),
-        }
-    }
-}
-
-impl fmt::Display for Item {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let symbol = &self.styles.symbol;
-        let style = &self.styles.style;
-        let style_match = &self.styles.style_match;
-        let style_symbol = &self.styles.style_symbol;
-
-        let mut strings: Vec<ANSIString<'_>> = vec![style_symbol.paint(symbol)];
-        let mut painted: Vec<ANSIString<'_>> = self
-            .candidate
-            .iter()
-            .enumerate()
-            .take(self.styles.width - symbol.len())
-            .map(|(index, grapheme)| {
-                if self.candidate.matches.contains(&index) {
-                    style_match.paint(grapheme)
-                } else {
-                    style.paint(grapheme)
-                }
-            })
-            .collect();
-
-        strings.append(&mut painted);
-
-        // ANSIStrings already takes care of reducing the number of escape
-        // sequences that will be printed to the terminal
-        write!(f, "{}{}", clear::CurrentLine, ANSIStrings(&strings))
-    }
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct List {
     height: usize,
     offset: usize,
-    items: Vec<Item>,
-    candidate_styles: Arc<ItemStyles>,
-    selection_styles: Arc<ItemStyles>,
+    items: Vec<(Candidate, bool)>,
+    candidate_styles: ItemStyles,
+    selection_styles: ItemStyles,
 }
 
 impl List {
@@ -138,8 +92,8 @@ impl From<&Config> for List {
 
         Self {
             height,
-            candidate_styles: Arc::new(candidate_styles),
-            selection_styles: Arc::new(selection_styles),
+            candidate_styles,
+            selection_styles,
             ..Default::default()
         }
     }
@@ -157,9 +111,9 @@ impl Component for List {
             .take(lines)
             .map(|(index, candidate)| {
                 if index == state.selection_idx() {
-                    Item::new(&candidate, &self.selection_styles)
+                    (candidate.clone(), true)
                 } else {
-                    Item::new(&candidate, &self.candidate_styles)
+                    (candidate.clone(), false)
                 }
             })
             .collect();
@@ -174,9 +128,38 @@ impl fmt::Display for List {
         let last = if len < 1 { 0 } else { len - 1 };
         for (idx, item) in self.items.iter().enumerate() {
             let eol = if idx == last { "" } else { "\n" };
-            write!(f, "{}{}", item, eol)?;
+            let (candidate, is_selected) = item;
+            let styles = if *is_selected { &self.selection_styles } else { &self.candidate_styles };
+            render_item(candidate, styles, eol, f)?
         }
 
         Ok(())
     }
+}
+
+fn render_item(candidate: &Candidate, styles: &ItemStyles, eol: &str, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let symbol = &styles.symbol;
+    let style = &styles.style;
+    let style_match = &styles.style_match;
+    let style_symbol = &styles.style_symbol;
+
+    let mut strings: Vec<ANSIString<'_>> = vec![style_symbol.paint(symbol)];
+    let mut painted: Vec<ANSIString<'_>> = candidate
+        .iter()
+        .enumerate()
+        .take(styles.width - symbol.len())
+        .map(|(index, grapheme)| {
+            if candidate.matches.contains(&index) {
+                style_match.paint(grapheme)
+            } else {
+                style.paint(grapheme)
+            }
+        })
+    .collect();
+
+    strings.append(&mut painted);
+
+    // ANSIStrings already takes care of reducing the number of escape
+    // sequences that will be printed to the terminal
+    write!(f, "{}{}{}", clear::CurrentLine, ANSIStrings(&strings), eol)
 }
