@@ -49,13 +49,13 @@ impl Mode {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Canvas<W: io::Write + Send + Unpin + 'static> {
     mode: Mode,
     writer: W,
-    prompt: Prompt,
-    gauge: Gauge,
-    list: List,
+    prompt: PromptComponent,
+    gauge: GaugeComponent,
+    list: ListComponent,
 }
 
 impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
@@ -89,17 +89,14 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
     pub async fn render(&mut self, state: &State) -> Result<()> {
         match state.last_update() {
             StateUpdate::Query => {
-                self.prompt.update(state)?;
-
-                let display = format!("{}\r{}", clear::CurrentLine, self.prompt);
+                let display = format!("{}\r{}", clear::CurrentLine, self.prompt.render(state));
                 self.write(&display).await?;
             }
             _ => {
-                self.prompt.update(state)?;
-                self.gauge.update(state)?;
-                self.list.update(state)?;
+                self.list.scroll(state);
 
-                let list_len = self.list.len() as u16;
+                let list_renderer = self.list.render(state);
+                let list_len = list_renderer.len() as u16;
 
                 // Only add a new line if we are going to print items
                 let gauge_separator = if list_len == 0 { "" } else { "\n" };
@@ -108,16 +105,16 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
                     "{}{}\r{}{}{}{}{}{}\r{}",
                     cursor::Down(1),
                     clear::CurrentLine,
-                    self.gauge,
+                    self.gauge.render(state),
                     gauge_separator,
-                    self.list,
+                    list_renderer,
                     clear::AfterCursor,
                     // We always need to reprint the prompt after
                     // going up to set the cursor in the last
                     // position
                     cursor::Up(list_len + 1),
                     clear::CurrentLine,
-                    self.prompt,
+                    self.prompt.render(state),
                 );
 
                 self.write(&display).await?;
