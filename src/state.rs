@@ -1,4 +1,4 @@
-use crate::common::{SearchBox, Text};
+use crate::common::{Prompt, Text};
 use crate::fuzzy::Candidate;
 
 // TODO: Review StateUpdates, do I need all of them?
@@ -18,7 +18,7 @@ impl Default for StateUpdate {
 
 #[derive(Debug, Clone, Default)]
 pub struct State {
-    search: Option<SearchBox>,
+    search: Option<Prompt>,
     matches: Vec<Candidate>,
     pool_len: usize,
     selection_idx: usize,
@@ -30,7 +30,7 @@ impl State {
         Self::default()
     }
 
-    pub fn set_search(&mut self, search: SearchBox) {
+    pub fn set_search(&mut self, search: Prompt) {
         self.search = Some(search);
         self.last_update = StateUpdate::Query;
     }

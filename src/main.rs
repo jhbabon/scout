@@ -20,7 +20,7 @@ use scout::supervisor;
 fn main() {
     env_logger::init();
 
-    debug!("[main] start");
+    trace!("starting main program");
 
     let args = App::new("scout")
         .version(crate_version!())
@@ -28,7 +28,7 @@ fn main() {
             Arg::with_name("inline")
                 .short("i")
                 .long("inline")
-                .help("show finder under the current line"),
+                .help("Show fuzzy finder under the current line"),
         )
         .arg(
             Arg::with_name("lines")
@@ -46,10 +46,9 @@ fn main() {
         )
         .get_matches();
 
-    debug!("args: {:?}", args);
+    trace!("got args: {:?}", args);
 
     let res: Result<Option<Text>> = task::block_on(async {
-        // We only need to set up the ptty into noncanonical mode once
         let tty = get_ptty().await?;
 
         let mut configurator = Configurator::new();
@@ -63,8 +62,9 @@ fn main() {
 
         let config = configurator.from_ptty(&tty).from_args(&args).build();
 
-        debug!("config: {:?}", config);
+        trace!("built config: {:?}", config);
 
+        // We only need to set up the ptty into noncanonical mode once
         let ptty = PTTY::try_from(tty.as_raw_fd())?;
         ptty.noncanonical_mode()?;
 
@@ -75,7 +75,7 @@ fn main() {
         supervisor::run(config, stdin, pttyin, pttyout).await
     });
 
-    debug!("[main] end: {:?}", res);
+    trace!("program ended with {:?}", res);
 
     match res {
         Ok(Some(selection)) => println!("{}", selection),

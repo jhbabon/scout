@@ -1,11 +1,11 @@
 use crate::common::Result;
 use async_std::fs;
 use async_std::os::unix::io::RawFd;
-use log::trace;
+use log;
 use std::convert::TryFrom;
 use termios::{self, Termios};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PTTY {
     fd: RawFd,
     termios: Termios,
@@ -35,7 +35,7 @@ impl TryFrom<RawFd> for PTTY {
 
 impl Drop for PTTY {
     fn drop(&mut self) {
-        trace!("Dropping: {:?}", self);
+        log::trace!("dropping: {:?}", self);
 
         let _r = termios::tcsetattr(self.fd, termios::TCSANOW, &self.termios);
     }

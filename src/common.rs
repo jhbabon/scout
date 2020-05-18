@@ -7,13 +7,13 @@ use unicode_segmentation::UnicodeSegmentation;
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[derive(Debug, Clone)]
-pub struct SearchBox {
+pub struct Prompt {
     query: Vec<char>,
     cursor: usize,
     timestamp: Instant,
 }
 
-impl SearchBox {
+impl Prompt {
     pub fn add(&mut self, ch: char) {
         self.query.insert(self.cursor, ch);
         self.cursor += 1;
@@ -76,7 +76,7 @@ impl SearchBox {
     }
 }
 
-impl From<&String> for SearchBox {
+impl From<&String> for Prompt {
     fn from(string: &String) -> Self {
         let query = string.chars().collect::<Vec<char>>();
         let cursor = query.len();
@@ -89,7 +89,7 @@ impl From<&String> for SearchBox {
     }
 }
 
-impl Default for SearchBox {
+impl Default for Prompt {
     fn default() -> Self {
         Self {
             timestamp: Instant::now(),

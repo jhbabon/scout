@@ -1,24 +1,17 @@
 use crate::common::{Result, Text};
 use crate::config::Config;
-use crate::conveyor;
+use crate::screen;
 use crate::engine;
 use crate::events::Event;
-use crate::input;
-use crate::pipe;
+use crate::person_input;
+use crate::data_input;
 use async_std::io;
 use async_std::sync::{channel, Receiver, Sender};
 use async_std::task;
 
 const CHANNEL_SIZE: usize = 1024;
 
-//*********************************************************************
-// Four main tasks:
-//
-// * pipe: Gets the strings for the search pool
-// * input: User input
-// * conveyor: How to print the screen
-// * engine: Search engine
-//*********************************************************************
+/// Setup and run the four main tasks that compose the program
 pub async fn run<R, I, W>(
     config: Config,
     pipein: R,
@@ -31,24 +24,23 @@ where
     W: io::Write + Send + Unpin + 'static,
 {
     // wires
-    let (input_sender, input_recv) = wires();
-    let (output_sender, output_recv) = wires();
+    let (input_sender, input_recv) = wire();
+    let (output_sender, output_recv) = wire();
 
-    let pipe_task = task::spawn(pipe::task(config.clone(), pipein, input_sender.clone()));
-    let input_task = task::spawn(input::task(config.clone(), inbound, input_sender));
-    let engine_task = task::spawn(engine::task(config.clone(), input_recv, output_sender));
-    let conveyor_task = task::spawn(conveyor::task(config, outbound, output_recv));
+    let data_task = task::spawn(data_input::task(pipein, input_sender.clone()));
+    let person_task = task::spawn(person_input::task(config.clone(), inbound, input_sender, output_sender.clone()));
+    let engine_task = task::spawn(engine::task(input_recv, output_sender));
+    let screen_task = task::spawn(screen::task(config, outbound, output_recv));
 
-    let result = conveyor_task.await;
+    let selection = screen_task.await;
 
-    // TODO: Review drop usage, I don't think I need it so much
-    drop(pipe_task);
-    drop(input_task);
+    drop(data_task);
+    drop(person_task);
     drop(engine_task);
 
-    result
+    selection
 }
 
-fn wires() -> (Sender<Event>, Receiver<Event>) {
+fn wire() -> (Sender<Event>, Receiver<Event>) {
     channel::<Event>(CHANNEL_SIZE)
 }

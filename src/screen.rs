@@ -6,18 +6,14 @@ use crate::ui::Canvas;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::sync::Receiver;
-use log::debug;
+use log;
 use std::time::Instant;
 
-pub async fn task<W>(
-    config: Config,
-    outbound: W,
-    mut conveyor_recv: Receiver<Event>,
-) -> Result<Option<Text>>
+pub async fn task<W>(config: Config, outbound: W, mut recv: Receiver<Event>) -> Result<Option<Text>>
 where
     W: io::Write + Send + Unpin + 'static,
 {
-    debug!("[task] start");
+    log::trace!("starting screen");
 
     let mut last_timestamp = Instant::now();
     let mut render: bool;
@@ -28,19 +24,21 @@ where
 
     canvas.render(&state).await?;
 
-    while let Some(event) = conveyor_recv.next().await {
-        debug!("Got event {:?}", event);
-
+    while let Some(event) = recv.next().await {
         render = false;
 
         match event {
-            Event::Search(search_box) => {
-                last_timestamp = search_box.timestamp();
-                state.set_search(search_box);
+            Event::Search(prompt) => {
+                log::trace!("printing prompt: {:?}", prompt);
+
+                last_timestamp = prompt.timestamp();
+                state.set_search(prompt);
                 render = true;
             }
 
             Event::Flush((matches, len)) => {
+                log::trace!("flushing matches");
+
                 // Flush happens when the pool size
                 // changes or the pool is complete
                 state.set_matches((matches, len));
@@ -56,16 +54,22 @@ where
                 // TODO: Remove this check? With debounced searches
                 // it might not be necessary
                 if timestamp >= last_timestamp {
+                    log::trace!("printing new search results");
+
                     state.set_matches((matches, len));
                     render = true;
                 }
             }
 
             Event::Up => {
+                log::trace!("moving selection up");
+
                 state.select_up();
                 render = true;
             }
             Event::Down => {
+                log::trace!("moving selection down");
+
                 state.select_down();
                 render = true;
             }
@@ -84,9 +88,7 @@ where
         }
     }
 
-    drop(conveyor_recv);
-
-    debug!("[task] end");
+    log::trace!("screen done");
 
     Ok(selection)
 }

@@ -1,4 +1,4 @@
-use crate::common::SearchBox;
+use crate::common::Prompt;
 use crate::fuzzy::Candidate;
 use std::time::Instant;
 
@@ -13,7 +13,7 @@ pub enum Event {
     Done,   // Exit with selection
     Ignore, // NO-OP
 
-    Search(SearchBox),
+    Search(Prompt),
     SearchDone((Vec<Candidate>, usize, Instant)),
     Flush((Vec<Candidate>, usize)),
 }
