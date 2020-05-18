@@ -16,7 +16,7 @@ const CHANNEL_SIZE: usize = 1024;
 //
 // * pipe: Gets the strings for the search pool
 // * input: User input
-// * conveyor: How to print the conveyor
+// * conveyor: How to print the screen
 // * engine: Search engine
 //*********************************************************************
 pub async fn run<R, I, W>(
@@ -31,27 +31,17 @@ where
     W: io::Write + Send + Unpin + 'static,
 {
     // wires
-    let (pipe_sender, pipe_recv) = wires();
     let (input_sender, input_recv) = wires();
-    let (conveyor_sender, conveyor_recv) = wires();
+    let (output_sender, output_recv) = wires();
 
-    let pipe_task = task::spawn(pipe::task(config.clone(), pipein, pipe_sender));
-    let input_task = task::spawn(input::task(
-        config.clone(),
-        inbound,
-        input_sender,
-        conveyor_sender.clone(),
-    ));
-    let engine_task = task::spawn(engine::task(
-        config.clone(),
-        pipe_recv,
-        input_recv,
-        conveyor_sender,
-    ));
-    let conveyor_task = task::spawn(conveyor::task(config.clone(), outbound, conveyor_recv));
+    let pipe_task = task::spawn(pipe::task(config.clone(), pipein, input_sender.clone()));
+    let input_task = task::spawn(input::task(config.clone(), inbound, input_sender));
+    let engine_task = task::spawn(engine::task(config.clone(), input_recv, output_sender));
+    let conveyor_task = task::spawn(conveyor::task(config, outbound, output_recv));
 
     let result = conveyor_task.await;
 
+    // TODO: Review drop usage, I don't think I need it so much
     drop(pipe_task);
     drop(input_task);
     drop(engine_task);

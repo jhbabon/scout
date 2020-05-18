@@ -69,9 +69,8 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
 
 pub async fn task(
     _config: Config,
-    pipe_recv: Receiver<Event>,
     input_recv: Receiver<Event>,
-    conveyor_sender: Sender<Event>,
+    output_sender: Sender<Event>,
 ) -> Result<()> {
     debug!("[task] start");
 
@@ -79,13 +78,13 @@ pub async fn task(
     let mut count = 0;
     let mut query = String::from("");
 
-    // let mut incoming = debounce(select(input_recv, pipe_recv));
-    let mut incoming = select(input_recv, pipe_recv);
+    // let mut incoming = debounce(input_recv);
+    let mut incoming = input_recv;
 
     while let Some(event) = incoming.next().await {
         debug!("Got event {:?}", event);
 
-        let next = match event {
+        match event {
             Event::NewLine(s) => {
                 pool.push_back(TextBuilder::build(&s));
                 count += 1;
@@ -97,32 +96,35 @@ pub async fn task(
                 if count > BUFFER_LIMIT {
                     count = 0;
                     let matches = fuzzy::search(&query, &pool);
-                    Some(Event::Flush((matches, pool.len())))
-                } else {
-                    None
+                    output_sender
+                        .send(Event::Flush((matches, pool.len())))
+                        .await;
                 }
             }
             Event::EOF => {
                 let matches = fuzzy::search(&query, &pool);
-
-                Some(Event::Flush((matches, pool.len())))
+                output_sender
+                    .send(Event::Flush((matches, pool.len())))
+                    .await;
             }
             Event::Search(search_box) => {
+                output_sender.send(Event::Search(search_box.clone())).await;
+
                 query = search_box.as_string();
                 let matches = fuzzy::search(&query, &pool);
+                let results = Event::SearchDone((matches, pool.len(), search_box.timestamp()));
 
-                Some(Event::SearchDone((matches, pool.len(), search_box.timestamp())))
+                output_sender.send(results).await;
             }
-            Event::Done | Event::Exit => break,
-            _ => None,
-        };
+            Event::Done | Event::Exit => {
+                output_sender.send(event).await;
 
-        if let Some(forward) = next {
-            conveyor_sender.send(forward).await
-        }
+                break;
+            }
+            _ => output_sender.send(event).await,
+        };
     }
 
-    drop(conveyor_sender);
     drop(incoming);
 
     debug!("[task] end");

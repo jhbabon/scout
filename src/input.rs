@@ -12,7 +12,6 @@ pub async fn task<R>(
     config: Config,
     mut inbound: R,
     input_sender: Sender<Event>,
-    conveyor_sender: Sender<Event>,
 ) -> Result<()>
 where
     R: io::Read + Unpin + Send + 'static,
@@ -26,9 +25,6 @@ where
     if let Some(q) = &config.initial_query {
         search_box = q.into();
 
-        conveyor_sender
-            .send(Event::Search(search_box.clone()))
-            .await;
         input_sender.send(Event::Search(search_box.clone())).await;
     }
 
@@ -46,21 +42,19 @@ where
         while let Some(key) = keys.next() {
             match key {
                 Key::Ctrl('p') | Key::Up => {
-                    conveyor_sender.send(Event::Up).await;
+                    input_sender.send(Event::Up).await;
                 }
                 Key::Ctrl('n') | Key::Down => {
-                    conveyor_sender.send(Event::Down).await;
+                    input_sender.send(Event::Down).await;
                 }
 
                 Key::Esc | Key::Alt('\u{0}') => {
                     input_sender.send(Event::Exit).await;
-                    conveyor_sender.send(Event::Exit).await;
 
                     break 'event;
                 }
                 Key::Char('\n') => {
                     input_sender.send(Event::Done).await;
-                    conveyor_sender.send(Event::Done).await;
 
                     break 'event;
                 }
@@ -101,15 +95,11 @@ where
 
         if query_updated {
             search_box.refresh();
-            conveyor_sender
-                .send(Event::Search(search_box.clone()))
-                .await;
             input_sender.send(Event::Search(search_box.clone())).await;
         }
     }
 
     drop(input_sender);
-    drop(conveyor_sender);
 
     debug!("[task] end");
 
