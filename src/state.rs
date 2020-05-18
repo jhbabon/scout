@@ -52,7 +52,11 @@ impl State {
     pub fn set_matches(&mut self, matches: (Vec<Candidate>, usize)) {
         self.matches = matches.0;
         self.pool_len = matches.1;
-        self.selection_idx = 0;
+
+        if self.selection_idx >= self.max_selection() {
+            self.selection_idx = self.max_selection();
+        }
+
         self.last_update = StateUpdate::Matches;
     }
 
