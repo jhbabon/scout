@@ -1,10 +1,10 @@
 use crate::common::{Result, Text};
 use crate::config::Config;
-use crate::screen;
+use crate::data_input;
 use crate::engine;
 use crate::events::Event;
 use crate::person_input;
-use crate::data_input;
+use crate::screen;
 use async_std::io;
 use async_std::sync::{channel, Receiver, Sender};
 use async_std::task;
@@ -28,7 +28,12 @@ where
     let (output_sender, output_recv) = wire();
 
     let data_task = task::spawn(data_input::task(pipein, input_sender.clone()));
-    let person_task = task::spawn(person_input::task(config.clone(), inbound, input_sender, output_sender.clone()));
+    let person_task = task::spawn(person_input::task(
+        config.clone(),
+        inbound,
+        input_sender,
+        output_sender.clone(),
+    ));
     let engine_task = task::spawn(engine::task(input_recv, output_sender));
     let screen_task = task::spawn(screen::task(config, outbound, output_recv));
 

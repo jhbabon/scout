@@ -35,7 +35,10 @@ pub async fn task(input_recv: Receiver<Event>, output_sender: Sender<Event>) -> 
                 count += 1;
 
                 if pool.len() > POOL_LIMIT {
-                    log::trace!("pool limit ({:?}) exceeded, dropping first line", POOL_LIMIT);
+                    log::trace!(
+                        "pool limit ({:?}) exceeded, dropping first line",
+                        POOL_LIMIT
+                    );
                     let _f = pool.pop_front();
                 }
 

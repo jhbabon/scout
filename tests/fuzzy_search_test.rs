@@ -51,10 +51,7 @@ fn search_when_there_are_no_results_test() {
 
 #[test]
 fn search_using_fancy_letters_test() {
-    let cases = vec![
-        "Markdown Preview: Copy Html",
-        "Y̆xxxxxxx公xxxxxxxxxxxx🍣.js",
-    ];
+    let cases = vec!["Markdown Preview: Copy Html", "Y̆xxxxxxx公xxxxxxxxxxxx🍣.js"];
 
     let results = perform_search("y̆公🍣", &cases);
 
@@ -489,10 +486,7 @@ fn search_allows_to_select_between_snake_case_and_camel_case_using_case_of_query
 
 #[test]
 fn search_prefers_camel_case_that_happens_sooner_test() {
-    let cases = vec![
-        "anotherCamelCase",
-        "thisCamelCase000",
-    ];
+    let cases = vec!["anotherCamelCase", "thisCamelCase000"];
 
     assert_best_match("CC", &cases, cases[1]);
     assert_best_match("CCs", &cases, cases[1]);
@@ -500,10 +494,7 @@ fn search_prefers_camel_case_that_happens_sooner_test() {
 
 #[test]
 fn search_prefers_camel_case_in_shorter_haystacks_test() {
-    let cases = vec![
-        "CamelCase0",
-        "CamelCase",
-    ];
+    let cases = vec!["CamelCase0", "CamelCase"];
 
     assert_best_match("CC", &cases, cases[1]);
     assert_best_match("CCs", &cases, cases[1]);
@@ -511,10 +502,7 @@ fn search_prefers_camel_case_in_shorter_haystacks_test() {
 
 #[test]
 fn search_allows_camel_case_to_match_across_words_test() {
-    let cases = vec![
-        "Gallas",
-        "Git Plus: Add All",
-    ];
+    let cases = vec!["Gallas", "Git Plus: Add All"];
 
     assert_best_match("gaa", &cases, cases[1]);
 }
@@ -546,19 +534,13 @@ fn search_allows_camel_case_to_match_even_outside_of_acronym_prefix_test() {
 
 #[test]
 fn search_accounts_for_match_structure_in_camel_case_vs_substring_matches_test() {
-    let cases = vec![
-        "Input: Select All",
-        "Application: Install",
-    ];
+    let cases = vec!["Input: Select All", "Application: Install"];
 
     assert_best_match("install", &cases, cases[1]);
     assert_best_match("isa", &cases, cases[0]);
     assert_best_match("isall", &cases, cases[0]);
 
-    let cases = vec![
-        "Git Plus: Stage Hunk",
-        "Git Plus: Push",
-    ];
+    let cases = vec!["Git Plus: Stage Hunk", "Git Plus: Push"];
 
     assert_best_match("push", &cases, cases[1]);
     assert_best_match("git push", &cases, cases[1]);
@@ -567,10 +549,7 @@ fn search_accounts_for_match_structure_in_camel_case_vs_substring_matches_test()
 
 #[test]
 fn search_accounts_for_case_in_camel_case_vs_substring_matches_test() {
-    let cases = vec![
-        "CamelCaseClass.js",
-        "cccManagerUI.java",
-    ];
+    let cases = vec!["CamelCaseClass.js", "cccManagerUI.java"];
 
     // extact acronym
     assert_best_match("CCC", &cases, cases[0]);
@@ -583,26 +562,15 @@ fn search_accounts_for_case_in_camel_case_vs_substring_matches_test() {
 
 #[test]
 fn search_prefers_acronym_matches_that_correspond_to_the_full_candidate_acronym_test() {
-    let cases = vec![
-        "JaVaScript",
-        "JavaScript",
-    ];
+    let cases = vec!["JaVaScript", "JavaScript"];
 
     assert_best_match("js", &cases, cases[1]);
 
-    let cases = vec![
-        "JSON",
-        "J.S.O.N.",
-        "JavaScript",
-    ];
+    let cases = vec!["JSON", "J.S.O.N.", "JavaScript"];
 
     assert_best_match("js", &cases, cases[2]);
 
-    let cases = vec![
-        "CSON",
-        "C.S.O.N.",
-        "CoffeeScript",
-    ];
+    let cases = vec!["CSON", "C.S.O.N.", "CoffeeScript"];
 
     assert_best_match("cs", &cases, cases[2]);
 }
