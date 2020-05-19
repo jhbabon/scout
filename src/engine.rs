@@ -4,7 +4,6 @@ use crate::fuzzy;
 use async_std::prelude::*;
 use async_std::sync::{Receiver, Sender};
 use async_std::task::{Context, Poll};
-use futures::stream::select;
 use futures_timer::Delay;
 use log;
 use std::collections::VecDeque;
@@ -22,9 +21,7 @@ pub async fn task(input_recv: Receiver<Event>, output_sender: Sender<Event>) -> 
     let mut pool: VecDeque<Text> = VecDeque::new();
     let mut count = 0;
     let mut query = String::from("");
-
-    // let mut incoming = debounce(input_recv);
-    let mut incoming = input_recv;
+    let mut incoming = debounce(input_recv);
 
     while let Some(event) = incoming.next().await {
         match event {
@@ -80,6 +77,7 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
     struct Debounce<S> {
         stream: S,
         delay: Delay,
+        is_delayed: bool,
         last: Option<Prompt>,
     };
 
@@ -88,13 +86,9 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
 
         fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             if Pin::new(&mut self.delay).poll(cx).is_ready() {
-                let mut result = None;
+                self.is_delayed = false;
                 if let Some(prompt) = self.last.take() {
-                    result = Some(Poll::Ready(Some(Event::Search(prompt))));
-                }
-
-                if let Some(poll) = result {
-                    return poll;
+                    return Poll::Ready(Some(Event::Search(prompt)));
                 }
             };
 
@@ -103,11 +97,16 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
                     match event {
                         Event::Search(prompt) => {
                             self.last = Some(prompt);
-                            // TODO: tune up the time
-                            self.delay.reset(Duration::from_millis(200));
+                            if !self.is_delayed {
+                                // Only reset the delay if it wasn't delayed
+                                // before. If it was delayed (a new search query started)
+                                // then wait for the delay to finish before resetting it
+                                self.delay.reset(Duration::from_millis(150));
+                                self.is_delayed = true;
+                            }
 
                             // We have to return Ready if we want to collect all
-                            // the query events from the original stream
+                            // the events from the original stream
                             Poll::Ready(Some(Event::Ignore))
                         }
                         _ => Poll::Ready(Some(event)),
@@ -122,6 +121,7 @@ fn debounce(s: impl Stream<Item = Event> + Unpin) -> impl Stream<Item = Event> +
     Debounce {
         stream: s,
         delay: Delay::new(Duration::from_secs(0)),
+        is_delayed: false,
         last: Default::default(),
     }
 }
