@@ -3,9 +3,7 @@ extern crate log;
 #[macro_use]
 extern crate clap;
 
-use async_std::fs;
 use async_std::io;
-use async_std::io::prelude::*;
 use async_std::os::unix::io::AsRawFd;
 use async_std::task;
 use clap::{App, Arg};
@@ -31,9 +29,16 @@ fn main() {
                 .help("Show fuzzy finder under the current line"),
         )
         .arg(
+            Arg::with_name("full-screen")
+                .short("f")
+                .long("full-screen")
+                .help("Show fuzzy finder in full screen (default)"),
+        )
+        .arg(
             Arg::with_name("lines")
                 .short("l")
                 .long("lines")
+                .value_name("LINES")
                 .takes_value(true)
                 .help("Number of lines to display in inline mode, including prompt"),
         )
@@ -41,8 +46,17 @@ fn main() {
             Arg::with_name("search")
                 .short("s")
                 .long("search")
+                .value_name("QUERY")
                 .takes_value(true)
-                .help("Initial search"),
+                .help("Start searching with the given query"),
+        )
+        .arg(
+            Arg::with_name("config")
+                .short("c")
+                .long("config")
+                .value_name("FILE")
+                .takes_value(true)
+                .help("Sets a custom config file"),
         )
         .get_matches();
 
@@ -53,16 +67,14 @@ fn main() {
 
         let mut configurator = Configurator::new();
 
-        // TODO: Use $HOME/.scout.toml (or similar) path or pass it through args
-        if let Ok(mut config_file) = fs::File::open("./config.toml").await {
-            let mut contents = String::new();
-            config_file.read_to_string(&mut contents).await?;
-            configurator.from_toml(&contents);
-        }
+        match args.value_of("config") {
+            Some(config_path) => configurator.from_file(config_path),
+            None => configurator.from_default_file(),
+        };
 
         let config = configurator.from_ptty(&tty).from_args(&args).build();
 
-        trace!("built config: {:?}", config);
+        trace!("generated config: {:?}", config);
 
         // We only need to set up the ptty into noncanonical mode once
         let ptty = PTTY::try_from(tty.as_raw_fd())?;
