@@ -1,4 +1,4 @@
-//! Collection of predicate functions over Query and Text structs
+//! Collection of shared predicate functions used through scoring functions
 
 use super::types::*;
 use crate::common::Text;

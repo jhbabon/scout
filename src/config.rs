@@ -1,3 +1,5 @@
+//! Create and define the main configuration through toml files and command line args
+
 pub mod components;
 pub mod styling;
 
@@ -17,9 +19,10 @@ use toml;
 
 use crate::terminal_size::terminal_size;
 
-// Config is shared among tasks, so it makes sense to put it behind an Arc
+/// Arc version of Cfg
 pub type Config = Arc<Cfg>;
 
+/// Main configuration structure
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct Cfg {
     #[serde(default)]
@@ -37,6 +40,7 @@ pub struct Cfg {
     pub selection: SelectionConfig,
 }
 
+/// Configuration constructor
 #[derive(Debug)]
 pub struct Configurator {
     config: Option<Cfg>,
@@ -49,7 +53,7 @@ impl Configurator {
         }
     }
 
-    // Read configuration from default $HOME/.config/scout.toml file
+    /// Read configuration from default `$HOME/.config/scout.toml` file
     pub fn from_default_file<'a>(&'a mut self) -> &'a mut Self {
         if let Some(home) = dirs::home_dir() {
             let file_path = home.join(".config/scout.toml");
@@ -67,7 +71,7 @@ impl Configurator {
         self
     }
 
-    // Read configuration from the given path
+    /// Read configuration from the given path
     pub fn from_file<'a>(&'a mut self, file_path: &str) -> &'a mut Self {
         match self.read_file(file_path) {
             Ok(contents) => self.from_toml(&contents),
@@ -75,21 +79,13 @@ impl Configurator {
         }
     }
 
-    fn read_file(&self, file_path: &str) -> Result<String> {
-        let mut file = File::open(file_path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-
-        Ok(contents)
-    }
-
-    // Parse toml configuration
+    /// Parse toml configuration
     pub fn from_toml<'a>(&'a mut self, contents: &str) -> &'a mut Self {
         self.config = toml::from_str(contents).ok();
         self
     }
 
-    // Set screen full size from PTTY
+    /// Set screen configuration size from PTTY
     pub fn from_ptty<'a>(&'a mut self, ptty: &fs::File) -> &'a mut Self {
         if let Some(mut config) = self.config.take() {
             let (cols, rows) =
@@ -102,7 +98,7 @@ impl Configurator {
         self
     }
 
-    // Set configuration options from command line args
+    /// Set configuration options from command line args
     pub fn from_args<'a>(&'a mut self, args: &ArgMatches) -> &'a mut Self {
         if let Some(mut config) = self.config.take() {
             if args.is_present("full-screen") {
@@ -126,10 +122,19 @@ impl Configurator {
         self
     }
 
+    /// Generate the final Config instance
     pub fn build(&mut self) -> Config {
         match self.config.take() {
             Some(config) => Arc::new(config),
             None => Default::default(),
         }
+    }
+
+    fn read_file(&self, file_path: &str) -> Result<String> {
+        let mut file = File::open(file_path)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+
+        Ok(contents)
     }
 }

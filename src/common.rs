@@ -1,3 +1,5 @@
+//! Set of common types used through the app
+
 use async_std::sync::Arc;
 use std::fmt;
 use std::slice::Iter;
@@ -6,6 +8,10 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
+/// The Prompt represents the current query and the cursor position in that query
+///
+/// When the query in the prompt changes the timestamp is updated to control what
+/// data needs to be printed in the screen.
 #[derive(Debug, Clone)]
 pub struct Prompt {
     query: Vec<char>,
@@ -99,9 +105,10 @@ impl Default for Prompt {
     }
 }
 
-// Text: The Arc version of Letters
+/// The Arc version of Letters
 pub type Text = Arc<Letters>;
 
+/// Text type builder
 #[derive(Debug, Clone)]
 pub struct TextBuilder;
 
@@ -113,9 +120,13 @@ impl TextBuilder {
     }
 }
 
-// Letters: The collection of letters (Graphemes) of a string
-// This is really private, the idea is to use Text to use Arc
-// to prevent extra copies of Strings
+/// The collection of letters (Graphemes) of a string.
+///
+/// These letters are the core part of the fuzzy matching algorithm.
+///
+/// This type is not used directly but through the Text type,
+/// which is an Arc wrapper around this type. We use Arc to reduce
+/// the String allocations between tasks as much as possible.
 #[derive(Debug, Clone)]
 pub struct Letters {
     string: String,

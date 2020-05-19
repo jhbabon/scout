@@ -1,3 +1,20 @@
+//! Set of types that define how to create styles for UI components
+//!
+//! The idea is that you can define styles using a single string with rules and it will be then
+//! deserialized in a proper data structure
+//!
+//! For example, a component with a style config field can use this syntax to define the styles
+//! applied to it:
+//!
+//! ```text
+//! # toml file
+//! [prompt]
+//! style = "bold underline fg:green bg:#ffbbcc"
+//! ```
+//!
+//! That single string will be transformed into a `Style` struct with a list of `Rule` structs and
+//! `Color` definitions.
+
 use core::convert::Infallible;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -28,6 +45,9 @@ impl fmt::Display for ParseRuleError {
 
 impl Error for ParseRuleError {}
 
+/// Color definitions
+///
+/// This is based on `ansi_term::Color`.
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     Black,
@@ -38,7 +58,9 @@ pub enum Color {
     Purple,
     Cyan,
     White,
+    /// [ANSI color number](https://i.stack.imgur.com/KTSQa.png)
     Fixed(u8),
+    /// RGB Color, if the terminal supports it
     RGB(u8, u8, u8),
 }
 
@@ -79,8 +101,10 @@ impl FromStr for Color {
     }
 }
 
+/// Style rules
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Rule {
+    /// Clean up previous rules
     Reset,
     Underline,
     Strikethrough,
@@ -88,7 +112,9 @@ pub enum Rule {
     Bold,
     Italic,
     Dimmed,
+    /// Foreground text color
     Fg(Color),
+    /// Background color
     Bg(Color),
 }
 
@@ -125,6 +151,9 @@ impl FromStr for Rule {
     }
 }
 
+/// Definition of how UI components should look like
+///
+/// A `Style` is just a collection of `Rule`s
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Style {
     rules: Vec<Rule>,

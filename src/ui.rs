@@ -1,3 +1,5 @@
+//! User Interface rendering logic and components
+
 mod components;
 mod convert;
 
@@ -21,6 +23,11 @@ enum Mode {
 }
 
 impl Mode {
+    // Depending on the mode (full or inline) we want to setup the screen in different ways:
+    //
+    // * In full screen we want to go to an "Alternate screen". Basically the terminal changes to
+    //   another clean "window".
+    // * In inline mode we want to make enough room to be able to print lines under the cursor
     pub fn setup(&self) -> Option<String> {
         let setup = match self {
             Self::Full => format!("{}{}", ALTERNATE_SCREEN, cursor::Goto(1, 1)),
@@ -39,6 +46,10 @@ impl Mode {
         Some(setup)
     }
 
+    // After finishing with the program we want to restore the screen
+    //
+    // * In full mode that means going back to the main screen, with no changes
+    // * In inline mode that means cleaning the last line to print the result
     pub fn teardown(&self) -> Option<String> {
         let teardown = match self {
             Self::Full => MAIN_SCREEN.to_string(),
@@ -49,6 +60,7 @@ impl Mode {
     }
 }
 
+/// This type represents the screen and how to draw each UI element on it
 #[derive(Debug)]
 pub struct Canvas<W: io::Write + Send + Unpin + 'static> {
     mode: Mode,
@@ -86,6 +98,10 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
         Ok(canvas)
     }
 
+    /// Update the UI with the given State
+    ///
+    /// Printing to the terminal is quite expensive, so the whole system tries to reduce
+    /// the number of prints and to allocate a few String as possible
     pub async fn render(&mut self, state: &State) -> Result<()> {
         match state.last_update() {
             StateUpdate::Query => {

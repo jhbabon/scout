@@ -1,3 +1,31 @@
+//! Read the input from the person using the program
+//!
+//! The input can be:
+//! * New characters for the search query
+//! * Control sequences to move around the list
+//! * Control sequences to move around the prompt
+//! * Signals to cancel and exit
+//! * Signals to select a candidate from the list
+//!
+//! All of these actions are processed and sent as events to
+//! the rest of tasks.
+//!
+//! ### Moving around the list
+//!
+//! * You can use `Up` and `Down` keys to move through the list of candidates
+//! * `<C-p>` does the same the Up key and `<C-n>` as the Down key
+//! * `Backspace` will remove the character behind the cursor
+//!
+//! ### Moving around the prompt
+//!
+//! * You can use the `Left` and `Right` keys to move the cursor in the prompt
+//! * `<C-e>` will go to the end of the prompt and `<C-a>` to the beginning
+//! * `<C-u>` clears the current query
+//!
+//! ### Selecting a candidate and exiting the program
+//! * `Enter` will select the current candidate
+//! * `Esc` will exit the program without making a selection
+
 use crate::common::{Prompt, Result};
 use crate::config::Config;
 use crate::events::Event;
@@ -8,6 +36,7 @@ use log;
 use termion::event::Key;
 use termion::input::TermRead;
 
+/// Run the person's input task
 pub async fn task<R>(
     config: Config,
     mut input: R,
@@ -97,6 +126,7 @@ where
         }
 
         if query_updated {
+            // Update Prompt's timestamp to indicate this is a fresh new query
             prompt.refresh();
             screen_sender.send(Event::Search(prompt.clone())).await;
             engine_sender.send(Event::Search(prompt.clone())).await;

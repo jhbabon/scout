@@ -1,3 +1,15 @@
+//! Fuzzy matching magic
+//!
+//! The algorithm is a custom port of the `fuzzaldrin-plus` algorithm.
+//! This is a package used in Atom editor.
+//!
+//! NOTE: The only part missing (I think) from the original algorithm
+//!   is the path score bonus
+//!
+//! ### References
+//!   * [jeancroy/fuzz-aldrin-plus/src/scorer.coffee#L83](https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/scorer.coffee#L83)
+//!   * [jeancroy/fuzz-aldrin-plus/src/matcher.coffee#L172](https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/matcher.coffee#L172)
+
 mod predicates;
 mod scoring;
 mod types;
@@ -42,17 +54,7 @@ pub fn search<'pool>(
     matches
 }
 
-/// Custom port of the fuzzaldrin-plus algorithm used in Atom editor.
-///
-/// This function will return a Candidate with the computed score and
-/// matches.
-///
-/// NOTE: The only part missing (I think) from the original algorithm
-///   is the path score bonus
-///
-/// Links:
-///   * https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/scorer.coffee#L83
-///   * https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/matcher.coffee#L172
+/// This function will return a Candidate with the computed score and matches.
 fn compute_match(query: &Query, subject: &Text) -> Option<Candidate> {
     if query.is_empty() {
         return None;

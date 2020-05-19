@@ -1,3 +1,5 @@
+//! Individual components configuration
+
 use super::styling::{Rule, Style};
 use serde::Deserialize;
 
@@ -27,6 +29,7 @@ impl Default for Mode {
     }
 }
 
+/// Main screen configuration options
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct ScreenConfig {
     #[serde(default)]
@@ -92,15 +95,18 @@ impl ScreenConfig {
     }
 }
 
+/// Prompt UI component configuration options
+///
+/// The prompt is where you write the search query
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct PromptConfig {
     symbol: Option<String>,
     style: Option<Style>,
     style_symbol: Option<Style>,
-    // TODO: Add separator (?)
 }
 
 impl PromptConfig {
+    /// Symbol used before the query
     pub fn symbol(&self) -> String {
         match &self.symbol {
             Some(sym) => sym.clone(),
@@ -108,6 +114,7 @@ impl PromptConfig {
         }
     }
 
+    /// Query styles
     pub fn style(&self) -> Style {
         match &self.style {
             Some(st) => st.clone(),
@@ -115,6 +122,7 @@ impl PromptConfig {
         }
     }
 
+    /// Symbol styles
     pub fn style_symbol(&self) -> Style {
         match &self.style_symbol {
             Some(st) => st.clone(),
@@ -123,6 +131,9 @@ impl PromptConfig {
     }
 }
 
+/// Gauge UI component configuration options
+///
+/// The gauge indicates the number of matched strings vs total
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct GaugeConfig {
     prefix: Option<String>,
@@ -131,6 +142,7 @@ pub struct GaugeConfig {
 }
 
 impl GaugeConfig {
+    /// Symbol used to separate current vs total numbers
     pub fn symbol(&self) -> String {
         match &self.symbol {
             Some(sym) => sym.clone(),
@@ -138,6 +150,7 @@ impl GaugeConfig {
         }
     }
 
+    /// Text used before the numbers
     pub fn prefix(&self) -> String {
         match &self.prefix {
             Some(pref) => pref.clone(),
@@ -145,6 +158,7 @@ impl GaugeConfig {
         }
     }
 
+    /// Style for the gauge
     pub fn style(&self) -> Style {
         match &self.style {
             Some(st) => st.clone(),
@@ -153,6 +167,9 @@ impl GaugeConfig {
     }
 }
 
+/// UI options for each candidate in the list
+///
+/// A candidate is a string not selected
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct CandidateConfig {
     symbol: Option<String>,
@@ -162,6 +179,7 @@ pub struct CandidateConfig {
 }
 
 impl CandidateConfig {
+    /// Symbol shown before the candidate's string
     pub fn symbol(&self) -> String {
         match &self.symbol {
             Some(sym) => sym.clone(),
@@ -169,6 +187,7 @@ impl CandidateConfig {
         }
     }
 
+    /// Style for the whole string
     pub fn style(&self) -> Style {
         match &self.style {
             Some(st) => st.clone(),
@@ -176,6 +195,7 @@ impl CandidateConfig {
         }
     }
 
+    /// Style for the symbol
     pub fn style_symbol(&self) -> Style {
         match &self.style_symbol {
             Some(st) => st.clone(),
@@ -183,6 +203,7 @@ impl CandidateConfig {
         }
     }
 
+    /// Style for the matches inside the candidate
     pub fn style_match(&self) -> Style {
         match &self.style_match {
             Some(st) => st.clone(),
@@ -191,6 +212,7 @@ impl CandidateConfig {
     }
 }
 
+/// UI options for the selected candidate in the list
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct SelectionConfig {
     symbol: Option<String>,
@@ -200,6 +222,7 @@ pub struct SelectionConfig {
 }
 
 impl SelectionConfig {
+    /// Symbol shown before the candidate's string
     pub fn symbol(&self) -> String {
         match &self.symbol {
             Some(sym) => sym.clone(),
@@ -207,6 +230,7 @@ impl SelectionConfig {
         }
     }
 
+    /// Style for the whole string
     pub fn style(&self) -> Style {
         match &self.style {
             Some(st) => st.clone(),
@@ -214,6 +238,7 @@ impl SelectionConfig {
         }
     }
 
+    /// Style for the symbol
     pub fn style_symbol(&self) -> Style {
         match &self.style_symbol {
             Some(st) => st.clone(),
@@ -221,6 +246,7 @@ impl SelectionConfig {
         }
     }
 
+    /// Style for the matches inside the candidate
     pub fn style_match(&self) -> Style {
         match &self.style_match {
             Some(st) => st.clone(),

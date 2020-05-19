@@ -1,12 +1,15 @@
+//! The state of the program including interactions (moving around), last query, search
+//! results and current selection
+
 use crate::common::{Prompt, Text};
 use crate::fuzzy::Candidate;
 
-// TODO: Review StateUpdates, do I need all of them?
+/// Possible updates done to the State
 #[derive(Debug, Clone)]
 pub enum StateUpdate {
+    /// The query has changed
     Query,
-    Matches,
-    Selection,
+    /// Any other update
     All,
 }
 
@@ -16,6 +19,7 @@ impl Default for StateUpdate {
     }
 }
 
+/// Current state of the program
 #[derive(Debug, Clone, Default)]
 pub struct State {
     search: Option<Prompt>,
@@ -57,7 +61,7 @@ impl State {
             self.selection_idx = self.max_selection();
         }
 
-        self.last_update = StateUpdate::Matches;
+        self.last_update = StateUpdate::All;
     }
 
     pub fn matches(&self) -> &Vec<Candidate> {
@@ -78,7 +82,7 @@ impl State {
         } else {
             self.selection_idx -= 1;
         }
-        self.last_update = StateUpdate::Selection;
+        self.last_update = StateUpdate::All;
     }
 
     pub fn select_down(&mut self) {
@@ -87,7 +91,7 @@ impl State {
         } else {
             self.selection_idx += 1;
         }
-        self.last_update = StateUpdate::Selection;
+        self.last_update = StateUpdate::All;
     }
 
     pub fn selection_idx(&self) -> usize {

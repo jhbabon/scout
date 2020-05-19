@@ -1,3 +1,14 @@
+//! UI Component definitions
+//!
+//! A Component is basically a type that has all the styling and basic information to print to the
+//! screen correctly, but it doesn't have the actual data to print, just how it should look.
+//! It will then delegate the actual printing to a Renderer, a type that given
+//! the component styling information and the current `State` will know how to print to the screen.
+//! A Renderer only needs to implement the `fmt::Display` trait.
+//!
+//! This two steps process for printing is done so we only need the state information while
+//! printing and not before, which means we can use references to get the data and prevent any
+//! extra data allocation from the state to the components.
 use crate::config::Config;
 use crate::fuzzy::Candidate;
 use crate::state::State;

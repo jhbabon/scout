@@ -1,9 +1,14 @@
+//! Basic types used through scoring functions
+
 use crate::common::{Text, TextBuilder};
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::fmt;
 use std::ops::Deref;
 
+/// Search query representation.
+///
+/// This is what we want to fuzzy-match against the list of candidates.
 #[derive(Debug, Clone)]
 pub struct Query {
     text: Text,
@@ -53,6 +58,7 @@ impl fmt::Display for Query {
     }
 }
 
+/// A string that fuzzy-matches a query.
 #[derive(Debug, Clone)]
 pub struct Candidate {
     pub text: Text,
@@ -122,7 +128,7 @@ impl PartialEq for Candidate {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AcronymResult {
     pub score: f32,
     pub position: f32,
@@ -141,7 +147,7 @@ impl AcronymResult {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ExactMatchResult {
     pub score: f32,
     pub matches: Vec<usize>,
@@ -161,7 +167,8 @@ enum Movement {
     Stop,
 }
 
-#[derive(Debug, Clone)]
+/// Keep track of the best query matches and get the best matches positions
+#[derive(Debug)]
 pub struct TraceMatrix {
     columns: usize,
     matrix: Vec<Movement>,

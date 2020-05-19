@@ -1,3 +1,11 @@
+//! Print the program's interface and keep track of the selection state
+//!
+//! The selection state is done here because this task receives both the person's interactions and
+//! the results from the search engine. That is, it "knows" what the person sees and why they are
+//! moving, typing, etc.
+//!
+//! When the program finishes this is the task that will return the final person's selection.
+
 use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::events::Event;
@@ -9,6 +17,7 @@ use async_std::sync::Receiver;
 use log;
 use std::time::Instant;
 
+/// Run the screen's task
 pub async fn task<W>(config: Config, outbound: W, mut recv: Receiver<Event>) -> Result<Option<Text>>
 where
     W: io::Write + Send + Unpin + 'static,
@@ -51,8 +60,6 @@ where
                 // we will update the state. This way
                 // we will drop any intermediate search
                 // and reduce the number of renders
-                // TODO: Remove this check? With debounced searches
-                // it might not be necessary
                 if timestamp >= last_timestamp {
                     log::trace!("printing new search results");
 

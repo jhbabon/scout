@@ -1,3 +1,5 @@
+//! Convert config defined styles into actual ANSI styles
+
 use crate::config::styling;
 use ansi_term::{Color, Style};
 
