@@ -6,11 +6,10 @@ use predicates::*;
 use scoring::*;
 use types::*;
 
+pub use types::{Candidate, Query};
+
 use crate::common::Text;
 use rayon::prelude::*;
-use std::collections::VecDeque;
-
-pub use types::{Candidate, Query};
 
 // Max number missed consecutive hit = ceil(MISS_COEFF * query.len()) + 5
 const MISS_COEFF: f32 = 0.75;
@@ -20,13 +19,16 @@ const MISS_COEFF: f32 = 0.75;
 /// * If the query is empty it just returns the same pool of candidates
 /// * Otherwise it will try to compute the best match for each candidate
 ///   and then sort them from higher score to lower
-pub fn search(q: &str, pool: &VecDeque<Text>) -> Vec<Candidate> {
+pub fn search<'pool>(
+    q: &str,
+    pool: &'pool impl IntoParallelRefIterator<'pool, Item = &'pool Text>,
+) -> Vec<Candidate> {
     let mut matches: Vec<Candidate>;
-    let query: Query = q.into();
 
-    if query.is_empty() {
+    if q.is_empty() {
         matches = pool.par_iter().map(|txt| txt.into()).collect();
     } else {
+        let query: Query = q.into();
         matches = pool
             .par_iter()
             .map(|c| compute_match(&query, &c))

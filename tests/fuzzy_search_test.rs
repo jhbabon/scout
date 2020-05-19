@@ -1,8 +1,7 @@
 use scout::common::{Text, TextBuilder};
 use scout::fuzzy::*;
-use std::collections::VecDeque;
 
-fn as_pool(subjects: &Vec<&str>) -> VecDeque<Text> {
+fn as_pool(subjects: &Vec<&str>) -> Vec<Text> {
     subjects
         .into_iter()
         .map(|s| TextBuilder::build(s))
