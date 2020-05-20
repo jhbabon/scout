@@ -1,7 +1,7 @@
 //! Get the current size of the terminal
 //!
 //! NOTE: This is a copy and adaptation of the original mod `size` from the crate `termion`.
-//! 
+//!
 //! The original `termion::terminal_size` function only checks the size against `STDOUT`,
 //! but to interact with the user we use a custom tty (`/dev/tty` to be precise), so we need
 //! to use a different file descriptor.
