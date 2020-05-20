@@ -1,10 +1,11 @@
-//! All tasks communicate between them using events
+//! Represent what is happening in the program.
+//!
+//! All tasks communicate between them using events.
 
 use crate::common::Prompt;
 use crate::fuzzy::Candidate;
 use std::time::Instant;
 
-/// What is happening in the program among tasks
 #[derive(Clone, Debug)]
 pub enum Event {
     /// New line from STDIN

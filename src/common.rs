@@ -8,10 +8,11 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-/// The Prompt represents the current query and the cursor position in that query
+/// The Prompt represents the current query, the cursor position in that query and when it was
+/// updated.
 ///
-/// When the query in the prompt changes the timestamp is updated to control what
-/// data needs to be printed in the screen.
+/// When the query in the prompt changes the timestamp is updated to reflect that is a fresh query.
+/// This is then used to print to the UI only latest changes.
 #[derive(Debug, Clone)]
 pub struct Prompt {
     query: Vec<char>,
@@ -23,18 +24,25 @@ impl Prompt {
     pub fn add(&mut self, ch: char) {
         self.query.insert(self.cursor, ch);
         self.cursor += 1;
+        self.refresh();
     }
 
-    pub fn backspace(&mut self) {
+    pub fn backspace(&mut self) -> bool {
         if self.cursor > 0 {
             self.cursor -= 1;
             self.query.remove(self.cursor);
+            self.refresh();
+
+            return true;
         }
+
+        false
     }
 
     pub fn clear(&mut self) {
         self.query.clear();
         self.cursor = 0;
+        self.refresh();
     }
 
     pub fn left(&mut self) {

@@ -86,15 +86,15 @@ fn main() {
 
         // The architecture of the app is async, one task (a future) will
         // read from the PTTY while another task will write to it. We can't
-        // have one single mutable PTTY reference across these task because
-        // locking to read would mean blocking the screen when printing.
+        // have one single mutable PTTY reference across these tasks because
+        // locking to read would mean blocking printing to the screen.
         // To overcome this we create two different references to the
         // system's PTTY, one for reading and one for writting.
         //
         // Even though the path to the PTTY is the same, reading from and
         // writting to it are fundamentally two different and independent steps.
         //
-        // Is this a hack? Most probably. Does it work? Yes.
+        // Is this a hack? Most probably, yes. Does it work? Also yes.
         let pttyin = get_ptty().await?; // to read person's input
         let pttyout = get_ptty().await?; // to print programs interface
 

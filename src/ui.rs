@@ -101,7 +101,7 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
     /// Update the UI with the given State
     ///
     /// Printing to the terminal is quite expensive, so the whole system tries to reduce
-    /// the number of prints and to allocate a few String as possible
+    /// the number of prints and allocates a few Strings as possible
     pub async fn render(&mut self, state: &State) -> Result<()> {
         match state.last_update() {
             StateUpdate::Query => {
@@ -125,9 +125,8 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
                     gauge_separator,
                     list_renderer,
                     clear::AfterCursor,
-                    // We always need to reprint the prompt after
-                    // going up to set the cursor in the last
-                    // position
+                    // We always need to reprint the prompt after going up to set the cursor
+                    // in the last position
                     cursor::Up(list_len + 1),
                     clear::CurrentLine,
                     self.prompt.render(state),

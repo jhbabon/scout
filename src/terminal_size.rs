@@ -1,12 +1,10 @@
 //! Get the current size of the terminal
 //!
-//! NOTE: This is a copy and adaptation of the original mod `size` from
-//! the crate `termion`.
+//! NOTE: This is a copy and adaptation of the original mod `size` from the crate `termion`.
 //! 
-//! The original `termion::terminal_size` function only checks the size
-//! against `STDOUT`, but to interact with the user we use a custom
-//! tty (`/dev/tty` to be precise), so we need to use a different file
-//! descriptor.
+//! The original `termion::terminal_size` function only checks the size against `STDOUT`,
+//! but to interact with the user we use a custom tty (`/dev/tty` to be precise), so we need
+//! to use a different file descriptor.
 use libc::{c_int, c_ushort};
 use std::io;
 
@@ -39,7 +37,7 @@ fn tiocgwinsz() -> u32 {
     TIOCGWINSZ as u32
 }
 
-/// Get the size of the terminal.
+/// Get the size of the terminal for the given file descriptor
 pub fn terminal_size(fileno: c_int) -> io::Result<(u16, u16)> {
     use libc::ioctl;
     use std::mem;

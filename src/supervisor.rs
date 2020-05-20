@@ -11,20 +11,24 @@
 //! as you can see in the following diagram:
 //!
 //! ```text
-//! +--------------+                                   +--------+
-//! | person_input +---------------------------------->+ screen |
-//! +------+-------+                                   +---+----+
-//!        |                                               ^
-//!        +----------------------+                        |
-//!                               |                        |
-//!                               v                        |
-//! +------------+           +----+-----+                  |
-//! | data_input +---------->+  engine  +------------------+
-//! +------------+           +----------+
+//! +--------------+                    +--------+
+//! | person_input +---------+--------->+ screen |
+//! +------+-------+         ^          +--------+
+//!        |                 |
+//!        v             +---+----+
+//!        +------------>+ engine |
+//!        ^             +--------+
+//!        |
+//! +------+-----+
+//! | data_input |
+//! +------------+
 //! ```
 //!
-//! The person's input is delivered to the engine and the screen at the same time
-//! to make the screen as responsive as possible.
+//! The input from the person using the program is delivered to both the engine and the screen in
+//! two different channels. There are some interactions (like moving through the list) that are
+//! only relevant to the screen. Others, like new queries, are relevant for both. Using these two
+//! channels also makes the screen more responsive to interactions since it doesn't have to wait
+//! for the engine to finish searching in order to update the prompt, for example.
 
 use crate::common::{Result, Text};
 use crate::config::Config;

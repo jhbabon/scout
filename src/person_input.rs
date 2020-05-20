@@ -96,8 +96,7 @@ where
                     query_updated = true;
                 }
                 Key::Backspace => {
-                    prompt.backspace();
-                    query_updated = true;
+                    query_updated = prompt.backspace();
                 }
                 Key::Char(ch) => {
                     prompt.add(ch.clone());
@@ -126,8 +125,6 @@ where
         }
 
         if query_updated {
-            // Update Prompt's timestamp to indicate this is a fresh new query
-            prompt.refresh();
             screen_sender.send(Event::Search(prompt.clone())).await;
             engine_sender.send(Event::Search(prompt.clone())).await;
         }

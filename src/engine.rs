@@ -16,9 +16,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::time::Duration;
 
-// TODO: Move limits to Config
 const BUFFER_LIMIT: usize = 5000;
-const POOL_LIMIT: usize = 500000;
+const POOL_LIMIT: usize = 50000;
 
 /// Run the search engine task
 pub async fn task(input_recv: Receiver<Event>, output_sender: Sender<Event>) -> Result<()> {
@@ -88,9 +87,10 @@ pub async fn task(input_recv: Receiver<Event>, output_sender: Sender<Event>) -> 
 /// the program to search over each one of the characters but only over all of them.
 /// This function tries to prevent that scenario where each character performs a search.
 ///
-/// Whenever a new character is added to the search query, this stream waits a little bit to see
-/// if a new character arrives. If a character arrives before the time limit, it will send the
-/// search with the new character ignoring the previous incomplete search request.
+/// Whenever a new character is added to the search query, this stream awaits a little bit to see
+/// if a new character arrives. If a character arrives before the time limit, it will added to the
+/// search query ignoring the previous incomplete search request. Once the time limit ends the
+/// final search query will be sent.
 ///
 /// Note that given this is time based, and async, it's not exact and some intermediate search will
 /// go through. It really depends on how fast you type. Let's say it's good enough.

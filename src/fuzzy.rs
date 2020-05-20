@@ -1,14 +1,15 @@
 //! Fuzzy matching magic
 //!
-//! The algorithm is a custom port of the `fuzzaldrin-plus` algorithm.
+//! The algorithm is a custom port of the [`fuzzaldrin-plus`][fuzzaldrinplus] algorithm.
 //! This is a package used in Atom editor.
 //!
-//! NOTE: The only part missing (I think) from the original algorithm
-//!   is the path score bonus
+//! NOTE: The only part missing (I think) from the original algorithm is the path score bonus
 //!
 //! ### References
 //!   * [jeancroy/fuzz-aldrin-plus/src/scorer.coffee#L83](https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/scorer.coffee#L83)
 //!   * [jeancroy/fuzz-aldrin-plus/src/matcher.coffee#L172](https://github.com/jeancroy/fuzz-aldrin-plus/blob/84eac1d73bacbbd11978e6960f4aa89f8396c540/src/matcher.coffee#L172)
+//!
+//! [fuzzaldrinplus]: https://github.com/jeancroy/fuzz-aldrin-plus
 
 mod predicates;
 mod scoring;

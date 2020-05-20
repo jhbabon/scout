@@ -55,10 +55,8 @@ where
             }
 
             Event::SearchDone((matches, len, timestamp)) => {
-                // Only if the search timestamp is
-                // the same as the last query timestamp
-                // we will update the state. This way
-                // we will drop any intermediate search
+                // Only if the search timestamp is the same as the last query timestamp
+                // we will update the state. This way we will drop any intermediate search
                 // and reduce the number of renders
                 if timestamp >= last_timestamp {
                     log::trace!("printing new search results");

@@ -14,6 +14,10 @@
 //!
 //! That single string will be transformed into a `Style` struct with a list of `Rule` structs and
 //! `Color` definitions.
+//!
+//! This syntax is a shameless copy from [Starship.rs][starship] config system.
+//!
+//! [starship]: https://starship.rs/
 
 use core::convert::Infallible;
 use serde::de::{self, Visitor};
@@ -233,6 +237,11 @@ mod tests {
         let actual = Style::from_str(string);
 
         assert_eq!(actual, Ok(expected));
+    }
+
+    #[test]
+    fn style_from_str_with_unknown_rules_test() {
+        assert_style_from_str("unknown foo", vec![]);
     }
 
     #[test]
