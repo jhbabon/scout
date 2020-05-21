@@ -15,6 +15,29 @@ use scout::config::Configurator;
 use scout::ptty::{self, PTTY};
 use scout::supervisor;
 
+const EXTENDED_HELP: &'static str = r#"SUPPORTED KEYS:
+    - Enter to select the current highlighted match and print it to STDOUT
+    - ^u to clear the prompt
+    - ^n or Down arrow key to select the next match
+    - ^p or Up arrow key to select the previous match
+    - ^e to go to the end of the prompt
+    - ^a to go to the beginning of the prompt
+    - Left arrow key to move the cursor to the left in the prompt
+    - Right arrow key to move the cursor to the right in the prompt
+    - ESC to quit without selecting a match
+
+EXAMPLES:
+    $ find * -type f | scout
+
+    # Pass an initial query to start filtering right away
+    $ find * -type f | scout --search=foo
+
+    # Use a custom config file
+    $ find * -type f | scout --config="./config.toml"
+
+    # Select a git branch and check it out with an inline menu
+    $ git branch | cut -c 3- | scout -i | xargs git checkout"#;
+
 fn main() {
     env_logger::init();
 
@@ -22,17 +45,19 @@ fn main() {
 
     let args = App::new("scout")
         .version(crate_version!())
+        .about("Your friendly fuzzy finder")
+        .after_help(EXTENDED_HELP)
         .arg(
             Arg::with_name("full-screen")
                 .short("f")
                 .long("full-screen")
-                .help("Show fuzzy finder in full screen (default)"),
+                .help("Show scout in full screen (default)"),
         )
         .arg(
             Arg::with_name("inline")
                 .short("i")
                 .long("inline")
-                .help("Show fuzzy finder under the current line"),
+                .help("Show scout under the current line"),
         )
         .arg(
             Arg::with_name("lines")
@@ -56,7 +81,7 @@ fn main() {
                 .long("config")
                 .value_name("FILE")
                 .takes_value(true)
-                .help("Sets a custom config file"),
+                .help("Uses a custom config file"),
         )
         .get_matches();
 
