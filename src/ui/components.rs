@@ -32,14 +32,16 @@ pub struct PromptRenderer<'r> {
 
 impl<'r> fmt::Display for PromptRenderer<'r> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let symbol = self.prompt.style_symbol.paint(&self.prompt.symbol);
-        let query = self.prompt.style.paint(self.state.query());
+        let strings: Vec<ANSIString<'_>> = vec![
+            self.prompt.style_symbol.paint(&self.prompt.symbol),
+            self.prompt.style.paint(self.state.query()),
+        ];
         let left_moves = self.state.cursor_until_end() as u16;
 
         if left_moves == 0 {
-            write!(f, "{}{}", symbol, query)
+            write!(f, "{}", ANSIStrings(&strings))
         } else {
-            write!(f, "{}{}{}", symbol, query, cursor::Left(left_moves))
+            write!(f, "{}{}", ANSIStrings(&strings), cursor::Left(left_moves))
         }
     }
 }

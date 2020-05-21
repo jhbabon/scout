@@ -112,24 +112,22 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
                 self.list.scroll(state);
 
                 let list_renderer = self.list.render(state);
-                let list_len = list_renderer.len() as u16;
+                let list_len = list_renderer.len();
 
                 // Only add a new line if we are going to print items
                 let gauge_separator = if list_len == 0 { "" } else { "\n" };
 
                 let display = format!(
-                    "{}{}\r{}{}{}{}{}{}\r{}",
-                    cursor::Down(1),
-                    clear::CurrentLine,
-                    self.gauge.render(state),
-                    gauge_separator,
-                    list_renderer,
-                    clear::AfterCursor,
-                    // We always need to reprint the prompt after going up to set the cursor
-                    // in the last position
-                    cursor::Up(list_len + 1),
-                    clear::CurrentLine,
-                    self.prompt.render(state),
+                    "{clrl}\r{prompt}{save}{down}{clrl}\r{gauge}{gauge_sep}{list}{clra}{restore}",
+                    clrl = clear::CurrentLine,
+                    prompt = self.prompt.render(state),
+                    save = cursor::Save,
+                    down = cursor::Down(1),
+                    gauge = self.gauge.render(state),
+                    gauge_sep = gauge_separator,
+                    list = list_renderer,
+                    clra = clear::AfterCursor,
+                    restore = cursor::Restore,
                 );
 
                 self.write(&display).await?;
