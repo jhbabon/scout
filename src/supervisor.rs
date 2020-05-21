@@ -54,15 +54,15 @@ where
     let (input_sender, input_recv) = channel();
     let (output_sender, output_recv) = channel();
 
-    let data_task = task::spawn(data_input::task(stdin, input_sender.clone()));
+    let screen_task = task::spawn(screen::task(config.clone(), outbox, output_recv));
     let person_task = task::spawn(person_input::task(
-        config.clone(),
+        config,
         inbox,
-        input_sender,
+        input_sender.clone(),
         output_sender.clone(),
     ));
     let engine_task = task::spawn(engine::task(input_recv, output_sender));
-    let screen_task = task::spawn(screen::task(config, outbox, output_recv));
+    let data_task = task::spawn(data_input::task(stdin, input_sender));
 
     let selection = screen_task.await;
 
