@@ -65,8 +65,7 @@ where
         buffer = vec![0; 10];
         query_updated = false;
 
-        let fut = input.read(&mut buffer);
-        let num = fut.await?;
+        let num = input.read(&mut buffer).await?;
         let keys = keys(&mut buffer, num);
 
         for key in keys {
