@@ -118,16 +118,17 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
                 let gauge_separator = if list_len == 0 { "" } else { "\n" };
 
                 let display = format!(
-                    "{clrl}\r{prompt}{save}{down}{clrl}\r{gauge}{gauge_sep}{list}{clra}{restore}",
+                    "{down}{clrl}\r{gauge}{gauge_sep}{list}{clra}{up}{clrl}\r{prompt}",
                     clrl = clear::CurrentLine,
-                    prompt = self.prompt.render(state),
-                    save = cursor::Save,
                     down = cursor::Down(1),
                     gauge = self.gauge.render(state),
                     gauge_sep = gauge_separator,
                     list = list_renderer,
                     clra = clear::AfterCursor,
-                    restore = cursor::Restore,
+                    // By going up and printing as the last element the prompt we ensure the cursor
+                    // is in the right position
+                    up = cursor::Up((list_len + 1) as u16),
+                    prompt = self.prompt.render(state),
                 );
 
                 self.write(&display).await?;
