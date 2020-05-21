@@ -12,7 +12,7 @@ use std::process;
 
 use scout::common::{Result, Text};
 use scout::config::Configurator;
-use scout::ptty::{get_ptty, PTTY};
+use scout::ptty::{self, PTTY};
 use scout::supervisor;
 
 fn main() {
@@ -71,7 +71,7 @@ fn main() {
         };
 
         // PTTY = Pseudo Terminal
-        let tty = get_ptty().await?;
+        let tty = ptty::file().await?;
         let config = configurator.from_ptty(&tty).from_args(&args).build();
 
         trace!("generated config: {:?}", config);
@@ -95,8 +95,8 @@ fn main() {
         // writting to it are fundamentally two different and independent steps.
         //
         // Is this a hack? Most probably, yes. Does it work? Also yes.
-        let pttyin = get_ptty().await?; // to read person's input
-        let pttyout = get_ptty().await?; // to print programs interface
+        let pttyin = ptty::reader().await?; // to read person's input
+        let pttyout = ptty::writer().await?; // to print programs interface
 
         // The main program's thread will block until the supervisor's task finishes
         // thanks to the `task::block_on` call

@@ -56,11 +56,26 @@ impl Drop for PTTY {
     }
 }
 
+/// Get PTTY file with full access
+pub async fn file() -> Result<fs::File> {
+    get(true, true).await
+}
+
+/// Get PTTY file reader
+pub async fn reader() -> Result<fs::File> {
+    get(true, false).await
+}
+
+/// Get PTTY file writer
+pub async fn writer() -> Result<fs::File> {
+    get(false, true).await
+}
+
 /// Get PTTY file representation
-pub async fn get_ptty() -> Result<fs::File> {
+pub async fn get(read: bool, write: bool) -> Result<fs::File> {
     let tty = fs::OpenOptions::new()
-        .read(true)
-        .write(true)
+        .read(read)
+        .write(write)
         .open("/dev/tty")
         .await?;
 
