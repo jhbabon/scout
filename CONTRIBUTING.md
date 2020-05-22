@@ -56,3 +56,4 @@ $ cargo fmt
 [issues]: https://github.com/jhbabon/scout/issues
 [docs]: ./README.md
 [rustup]: https://rustup.rs/
+[rustfmt]: https://github.com/rust-lang/rustfmt
