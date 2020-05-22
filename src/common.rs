@@ -148,10 +148,7 @@ pub struct Letters {
 
 impl Letters {
     pub fn new(string: String) -> Self {
-        let graphemes = string
-            .graphemes(true)
-            .map(String::from)
-            .collect::<Vec<_>>();
+        let graphemes = string.graphemes(true).map(String::from).collect::<Vec<_>>();
 
         let graphemes_lw = graphemes
             .iter()
