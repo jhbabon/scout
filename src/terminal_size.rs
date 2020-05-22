@@ -55,15 +55,3 @@ pub fn terminal_size(fileno: c_int) -> io::Result<(u16, u16)> {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_size() {
-        use libc::STDOUT_FILENO;
-
-        assert!(terminal_size(STDOUT_FILENO).is_ok());
-    }
-}
