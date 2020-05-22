@@ -4,11 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [v2.0.0] 2020-05-22
 ### Changed
 - Complete rewrite using [`async-std`](https://async.rs/) to build an async architecture.
 - The program doesn't wait for the `STDIN` to finish anymore, it can accept an infinte
   stream (although it's not recommended).
+- New fuzzy algorithm based on [`fuzzaldrin-plus`](https://github.com/jeancroy/fuzz-aldrin-plus)
 
 ### Added
 - `--inline` option to display scout UI under the current line in the terminal.
