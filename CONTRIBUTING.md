@@ -42,13 +42,29 @@ You can run tests with the standard `cargo` command:
 $ cargo test
 ```
 
-### Linter
+### Formatter
 
-Use [`rustfmt`][rustfmt] as the default linter:
+Use [`rustfmt`][rustfmt] as the default code formatter:
 
 ```
 $ rustup compose add rustfmt
 $ cargo fmt
+```
+
+### Linter
+
+Use [`clippy`][clippy] as the default linter:
+
+```
+$ rustup compose add clippy
+$ cargo clippy -- -D warnings
+```
+
+If nothing happens, try to clean the previous build and run `clippy` again
+
+```
+$ cargo clean
+$ cargo clippy -- -D warnings
 ```
 
 [coc]: ./CODE_OF_CONDUCT.md
@@ -57,3 +73,4 @@ $ cargo fmt
 [docs]: ./README.md
 [rustup]: https://rustup.rs/
 [rustfmt]: https://github.com/rust-lang/rustfmt
+[clippy]: https://github.com/rust-lang/rust-clippy
