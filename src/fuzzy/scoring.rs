@@ -50,11 +50,11 @@ pub fn score_acronyms(query: &Query, subject: &Text) -> Option<AcronymResult> {
     let mut sum_position = 0;
     let mut same_case = 0;
 
-    let mut query_iter = query.lowercase_iter().enumerate();
+    let query_iter = query.lowercase_iter().enumerate();
     let mut subject_iter = subject.lowercase_iter().enumerate();
 
     let mut progress = 0;
-    'query_loop: while let Some((qindex, query_grapheme)) = query_iter.next() {
+    'query_loop: for (qindex, query_grapheme) in query_iter {
         if progress == subject.len() {
             // The subject text has been consumed, we can stop
             break 'query_loop;
@@ -94,12 +94,13 @@ pub fn score_acronyms(query: &Query, subject: &Text) -> Option<AcronymResult> {
         return None;
     }
 
-    let mut full_world = false;
-    if count == query.len() {
+    let full_world = if count == query.len() {
         // the query doesn't have any separator so it might be
         // the unique acronym inside subject
-        full_world = is_a_unique_acronym(subject, count);
-    }
+        is_a_unique_acronym(subject, count)
+    } else {
+        false
+    };
     let score = score_pattern(count, query.len(), same_case, true, full_world);
 
     if score <= 0.0 {
@@ -210,12 +211,11 @@ pub fn score_consecutives(
     let query_left = query.len() - query_position;
     let subject_left = subject.len() - subject_position;
 
-    let left;
-    if subject_left < query_left {
-        left = subject_left;
+    let left = if subject_left < query_left {
+        subject_left
     } else {
-        left = query_left;
-    }
+        query_left
+    };
 
     let mut same_case = 0;
     let mut sz = 1;
@@ -224,7 +224,7 @@ pub fn score_consecutives(
         same_case += 1;
     }
 
-    let mut query_iter = query.lowercase_iter().enumerate().skip(query_position + 1);
+    let query_iter = query.lowercase_iter().enumerate().skip(query_position + 1);
     let mut subject_iter = subject
         .lowercase_iter()
         .enumerate()
@@ -232,7 +232,7 @@ pub fn score_consecutives(
 
     let mut subject_cursor = subject_position;
 
-    while let Some((qindex, query_grapheme)) = query_iter.next() {
+    for (qindex, query_grapheme) in query_iter {
         if let Some((index, subject_grapheme)) = subject_iter.next() {
             if query_grapheme == subject_grapheme {
                 subject_cursor = index;
@@ -261,9 +261,8 @@ pub fn score_consecutives(
     }
 
     let is_end = is_end_of_word(subject, subject_cursor);
-    let score = score_pattern(sz, query.len(), same_case, is_start, is_end);
 
-    score
+    score_pattern(sz, query.len(), same_case, is_start, is_end)
 }
 
 /// Calculate the score of a character based on its position and calculated

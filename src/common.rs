@@ -57,11 +57,11 @@ impl Prompt {
         }
     }
 
-    pub fn to_end(&mut self) {
+    pub fn cursor_at_end(&mut self) {
         self.cursor = self.len();
     }
 
-    pub fn to_start(&mut self) {
+    pub fn cursor_at_start(&mut self) {
         self.cursor = 0;
     }
 
@@ -83,6 +83,10 @@ impl Prompt {
 
     pub fn len(&self) -> usize {
         self.query.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.query.is_empty()
     }
 
     pub fn refresh(&mut self) {
@@ -144,10 +148,7 @@ pub struct Letters {
 
 impl Letters {
     pub fn new(string: String) -> Self {
-        let graphemes = string
-            .graphemes(true)
-            .map(|s| String::from(s))
-            .collect::<Vec<_>>();
+        let graphemes = string.graphemes(true).map(String::from).collect::<Vec<_>>();
 
         let graphemes_lw = graphemes
             .iter()

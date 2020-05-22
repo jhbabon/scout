@@ -18,7 +18,7 @@ pub struct Query {
 impl Query {
     pub fn new(text: &Text) -> Self {
         let text = text.clone();
-        let set = text.lowercase_iter().map(|s| s.clone()).collect();
+        let set = text.lowercase_iter().cloned().collect();
 
         Self { text, set }
     }
