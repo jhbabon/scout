@@ -23,8 +23,36 @@ If you are going to report a bug these would be some good things to put in your 
 * How did you install the package (from source, from a package manager)
 * Rust version
 
+## Development
+
+The code base runs against Rust stable. You'll need Rust `v1.43` or higher.
+
+To install Rust it's better if you checkout [`rustup`][rustup].
+
+If you make any change and you want to manually check the changes, you can use `cargo run`:
+
+```
+# use -- to pass options to the program
+$ ls | cargo run -- --inline
+```
+
+You can run tests with the standard `cargo` command:
+
+```
+$ cargo test
+```
+
+### Linter
+
+Use [`rustfmt`][rustfmt] as the default linter:
+
+```
+$ rustup compose add rustfmt
+$ cargo fmt
+```
 
 [coc]: ./CODE_OF_CONDUCT.md
 [pulls]: https://github.com/jhbabon/scout/pulls
 [issues]: https://github.com/jhbabon/scout/issues
 [docs]: ./README.md
+[rustup]: https://rustup.rs/

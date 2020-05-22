@@ -214,22 +214,7 @@ From all the algorithms for fuzzy matching out there this is one of the most com
 
 ## Development
 
-The code base runs against Rust stable. You'll need Rust  `v1.43` or higher.
-
-You can run tests with the standard `cargo` command:
-
-```
-$ cargo test
-```
-
-### Linter
-
-Use [`rustfmt`][rustfmt] as the default linter:
-
-```
-$ rustup compose add rustfmt
-$ cargo fmt
-```
+Check the [contributing][contributing] guidelines.
 
 ## Neovim integration
 
@@ -250,7 +235,6 @@ I don't know, I haven't run any benchmark, to be honest. It is fast enough for m
 Yes.
 
 
-
 [rustlang]: https://www.rust-lang.org/
 [selecta]: https://github.com/garybernhardt/selecta
 [fzf]: https://github.com/junegunn/fzf
@@ -264,3 +248,4 @@ Yes.
 [rustfmt]: https://github.com/rust-lang/rustfmt
 [scoutvim]: https://github.com/jhbabon/scout.vim
 [Neovim]: https://neovim.io/
+[contributing]: ./CONTRIBUTING.md
