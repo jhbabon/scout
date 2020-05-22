@@ -125,8 +125,8 @@ fn compute_match(query: &Query, subject: &Text) -> Option<Candidate> {
     //    t | ^ | ^ | d |
     //    x | ^ | ^ | ^ |
     //   ----------------
-    let mut subject_iter = subject.lowercase_iter().enumerate();
-    'subject_loop: while let Some((subject_index, subject_grapheme)) = subject_iter.next() {
+    let subject_iter = subject.lowercase_iter().enumerate();
+    'subject_loop: for (subject_index, subject_grapheme) in subject_iter {
         // for every letter in the subject we move one row in the matrix
 
         if !query.contains(subject_grapheme) {
@@ -149,8 +149,8 @@ fn compute_match(query: &Query, subject: &Text) -> Option<Candidate> {
         let mut record_miss = true;
         should_rebuild = true;
 
-        let mut query_iter = query.lowercase_iter().enumerate();
-        while let Some((query_index, query_grapheme)) = query_iter.next() {
+        let query_iter = query.lowercase_iter().enumerate();
+        for (query_index, query_grapheme) in query_iter {
             // for every letter in the query we move one column in the matrix
 
             let mut consecutive_score = 0.0;

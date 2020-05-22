@@ -99,7 +99,7 @@ impl State {
     }
 
     pub fn selection(&self) -> Option<Text> {
-        match self.matches.iter().nth(self.selection_idx) {
+        match self.matches.get(self.selection_idx) {
             Some(candidate) => Some(candidate.text.clone()),
             None => None,
         }

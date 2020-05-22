@@ -14,7 +14,6 @@ use crate::ui::Canvas;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::sync::Receiver;
-use log;
 use std::time::Instant;
 
 /// Run the screen's task

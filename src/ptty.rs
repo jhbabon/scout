@@ -3,7 +3,6 @@
 use crate::common::Result;
 use async_std::fs;
 use async_std::os::unix::io::RawFd;
-use log;
 use std::convert::TryFrom;
 use termios::{self, Termios};
 
@@ -27,7 +26,7 @@ impl PTTY {
     ///
     /// [termios]: https://linux.die.net/man/3/termios
     pub fn noncanonical_mode(&self) -> Result<()> {
-        let mut raw_tty = self.termios.clone();
+        let mut raw_tty = self.termios;
         raw_tty.c_lflag &= !(termios::ICANON | termios::ECHO | termios::ECHONL | termios::IEXTEN);
 
         termios::tcsetattr(self.fd, termios::TCSANOW, &raw_tty)?;

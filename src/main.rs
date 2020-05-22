@@ -15,7 +15,7 @@ use scout::config::Configurator;
 use scout::ptty::{self, PTTY};
 use scout::supervisor;
 
-const EXTENDED_HELP: &'static str = r#"SUPPORTED KEYS:
+const EXTENDED_HELP: &str = r#"SUPPORTED KEYS:
     - Enter to select the current highlighted match and print it to STDOUT
     - ^u to clear the prompt
     - ^n or Down arrow key to select the next match

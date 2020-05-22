@@ -2,7 +2,6 @@
 
 use super::types::*;
 use crate::common::Text;
-use lazy_static;
 use std::collections::HashSet;
 
 const ACRONYM_FREQUENCY: usize = 12;
@@ -37,13 +36,13 @@ lazy_static! {
 
 /// Check whether a query is inside a subject or not
 pub fn is_match(query: &Query, subject: &Text) -> bool {
-    let mut query_iter = query.lowercase_iter().filter(|g| !is_optional(&g));
+    let query_iter = query.lowercase_iter().filter(|g| !is_optional(&g));
     let mut subject_iter = subject.lowercase_iter();
 
     let mut query_count = 0;
     let mut subject_count = 0;
     let mut matching = 0;
-    'query_loop: while let Some(query_grapheme) = query_iter.next() {
+    'query_loop: for query_grapheme in query_iter {
         query_count += 1;
 
         if subject_count == subject.len() {

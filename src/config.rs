@@ -10,12 +10,9 @@ use async_std::fs;
 use async_std::os::unix::io::AsRawFd;
 use async_std::sync::Arc;
 use clap::{value_t, ArgMatches};
-use dirs;
-use log;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
-use toml;
 
 use crate::terminal_size::terminal_size;
 
@@ -41,7 +38,7 @@ pub struct Cfg {
 }
 
 /// Configuration constructor
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Configurator {
     config: Option<Cfg>,
 }
@@ -54,12 +51,12 @@ impl Configurator {
     }
 
     /// Read configuration from default `$HOME/.config/scout.toml` file
-    pub fn from_default_file<'a>(&'a mut self) -> &'a mut Self {
+    pub fn from_default_file(&mut self) -> &mut Self {
         if let Some(home) = dirs::home_dir() {
             let file_path = home.join(".config/scout.toml");
             let file_path = file_path.to_str();
-            if file_path.is_some() {
-                match self.read_file(&file_path.unwrap()) {
+            if let Some(path) = file_path {
+                match self.read_file(&path) {
                     Ok(contents) => {
                         self.from_toml(&contents);
                     }
@@ -75,7 +72,7 @@ impl Configurator {
     pub fn from_file<'a>(&'a mut self, file_path: &str) -> &'a mut Self {
         match self.read_file(file_path) {
             Ok(contents) => self.from_toml(&contents),
-            Err(_) => panic!("Failed to read file {:?}", file_path),
+            Err(err) => panic!("Failed to read file {:?}. Error {:?}", file_path, err),
         }
     }
 

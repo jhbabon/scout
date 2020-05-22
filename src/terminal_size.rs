@@ -12,7 +12,7 @@ use std::io;
 pub const TIOCGWINSZ: usize = 0x0000_5413;
 
 #[cfg(not(target_os = "linux"))]
-pub const TIOCGWINSZ: usize = 0x40087468;
+pub const TIOCGWINSZ: usize = 0x4008_7468;
 
 #[repr(C)]
 struct TermSize {

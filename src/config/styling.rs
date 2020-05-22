@@ -99,7 +99,7 @@ impl FromStr for Color {
             "bright-white" => Ok(Self::Fixed(15)),
             maybe_fixed => maybe_fixed
                 .parse::<u8>()
-                .map(|f| Self::Fixed(f))
+                .map(Self::Fixed)
                 .map_err(|_| ParseColorError),
         }
     }
@@ -130,7 +130,7 @@ impl FromStr for Rule {
             return s
                 .trim_start_matches("fg:")
                 .parse()
-                .map(|c| Self::Fg(c))
+                .map(Self::Fg)
                 .map_err(|_| ParseRuleError);
         };
 
@@ -138,7 +138,7 @@ impl FromStr for Rule {
             return s
                 .trim_start_matches("bg:")
                 .parse()
-                .map(|c| Self::Bg(c))
+                .map(Self::Bg)
                 .map_err(|_| ParseRuleError);
         };
 
@@ -175,9 +175,9 @@ impl FromStr for Style {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut rules: Vec<Rule> = vec![];
 
-        let mut iter = s.split_whitespace();
+        let iter = s.split_whitespace();
 
-        while let Some(s) = iter.next() {
+        for s in iter {
             match s.parse() {
                 Ok(Rule::Reset) => {
                     rules = vec![Rule::Reset];

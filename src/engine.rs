@@ -10,7 +10,6 @@ use async_std::prelude::*;
 use async_std::sync::{Receiver, Sender};
 use async_std::task::{Context, Poll};
 use futures_timer::Delay;
-use log;
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;

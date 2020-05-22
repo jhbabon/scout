@@ -13,8 +13,8 @@ use async_std::prelude::*;
 use async_std::task;
 use termion::{clear, cursor};
 
-const ALTERNATE_SCREEN: &'static str = csi!("?1049h");
-const MAIN_SCREEN: &'static str = csi!("?1049l");
+const ALTERNATE_SCREEN: &str = csi!("?1049h");
+const MAIN_SCREEN: &str = csi!("?1049l");
 
 #[derive(Debug, Clone)]
 enum Mode {

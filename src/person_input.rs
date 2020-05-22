@@ -32,7 +32,6 @@ use crate::events::Event;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::sync::Sender;
-use log;
 use termion::event::Key;
 use termion::input::TermRead;
 
@@ -111,11 +110,11 @@ where
                     screen_sender.send(Event::Search(prompt.clone())).await;
                 }
                 Key::Ctrl('a') => {
-                    prompt.to_start();
+                    prompt.cursor_at_start();
                     screen_sender.send(Event::Search(prompt.clone())).await;
                 }
                 Key::Ctrl('e') => {
-                    prompt.to_end();
+                    prompt.cursor_at_end();
                     screen_sender.send(Event::Search(prompt.clone())).await;
                 }
 
@@ -135,7 +134,7 @@ where
 }
 
 fn keys(buffer: &mut Vec<u8>, num: usize) -> Vec<Key> {
-    let tmp: Vec<u8> = buffer.iter().take(num).map(|i| *i).collect();
+    let tmp: Vec<u8> = buffer.iter().take(num).copied().collect();
 
     tmp.keys()
         .filter(|k| k.is_ok())

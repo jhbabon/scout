@@ -6,7 +6,6 @@ use async_std::io;
 use async_std::prelude::*;
 use async_std::stream;
 use async_std::sync::Sender;
-use log;
 
 /// Run the data input task
 pub async fn task<R>(stdin: R, sender: Sender<Event>) -> Result<()>
@@ -20,7 +19,7 @@ where
         .lines()
         .map(|res| res.expect("Error reading from STDIN"))
         .filter(|line| !line.is_empty())
-        .map(|line| Event::NewLine(line))
+        .map(Event::NewLine)
         .chain(stream::once(Event::EOF));
 
     while let Some(event) = stream.next().await {
