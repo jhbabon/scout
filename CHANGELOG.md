@@ -5,9 +5,23 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Changed
+- Complete rewrite using [`async-std`](https://async.rs/) to build an async architecture.
+- The program doesn't wait for the `STDIN` to finish anymore, it can accept an infinte
+  stream (although it's not recommended).
+
 ### Added
+- `--inline` option to display scout UI under the current line in the terminal.
+- `--full-screen` option to display scout UI in full screen mode (default).
+- Fully customizable UI with a config file. By default in `$HOME/.config/scout.toml`.
+- `--config` option to use a custom configuration file path.
+- New supported keys: `^e`, `^a` and arrow keys to move around the prompt.
 - You can install `scout` using [homebrew](https://brew.sh) with a custom tap
   repository.
+- GitHub actions integration.
+
+### Removed
+- Travis CI integration.
 
 ## [v1.3.0] 2018-01-14
 ### Changed
