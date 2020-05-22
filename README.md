@@ -4,7 +4,9 @@
 
 Scout is a small fuzzy finder for your terminal built in [Rust][rustlang].
 
-<img src="media/demo.gif" style="max-width=100%" alt="scout demo" />
+<p style="display:flex; justify-content:center">
+  <img src="media/demo.gif" style="max-width=100%" alt="scout demo" />
+</p>
 
 It is heavily inspired by other tools like [selecta][selecta] and the omnipresent [fzf][fzf].
 
