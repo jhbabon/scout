@@ -9,6 +9,10 @@ readme = "README.md"
 keywords = ["scout", "fuzzy", "fuzzyfinder", "cli", "async"]
 license = "MIT"
 edition = "2018"
+exclude = [
+  "media/*",
+  ".github/*",
+]
 
 [lib]
 name = "scout"
