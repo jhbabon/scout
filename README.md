@@ -1,6 +1,6 @@
 # Scout
 
-[![Build Status](https://travis-ci.org/jhbabon/scout.svg?branch=master)](https://travis-ci.org/jhbabon/scout)
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fjhbabon%2Fscout%2Fbadge&style=flat)](https://actions-badge.atrox.dev/jhbabon/scout/goto)
 
 Scout is a small fuzzy finder for your terminal built in [Rust][rustlang].
 
