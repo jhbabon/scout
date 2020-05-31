@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+### Changed
+- Update `async-std` to `v1.6`.
+- Use `smol::block_on` to clean up the screen after the program finishes.
+
 ## [v2.0.0] 2020-05-22
 ### Changed
 - Complete rewrite using [`async-std`](https://async.rs/) to build an async architecture.

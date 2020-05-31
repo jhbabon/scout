@@ -2,7 +2,7 @@
 name = "scout"
 version = "2.0.0"
 authors = ["Juan Hernández <juan.hernandez.babon@gmail.com>"]
-description = "Small fuzzy finder for the command line"
+description = "Friendly fuzzy finder for the command line"
 homepage = "https://github.com/jhbabon/scout"
 repository = "https://github.com/jhbabon/scout"
 readme = "README.md"
@@ -26,7 +26,8 @@ test = false
 
 [dependencies]
 futures = { version = "0.3", features = ["async-await"] }
-async-std = { version = "1.5", features = ["unstable"] }
+async-std = { version = "1.6", features = ["unstable"] }
+smol = "0.1"
 futures-timer = "3.0.2"
 termios = "0.3.1"
 termion = "1.5.3"
