@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased] 2020-08-29
+### Changed
+- Update dependencies
+- Update `dirs` to `v3`
+- Update `smol` to `0.4`
+
 ## [v2.0.1] 2020-05-31
 ### Changed
 - Update `async-std` to `v1.6`.
