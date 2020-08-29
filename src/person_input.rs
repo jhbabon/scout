@@ -97,7 +97,7 @@ where
                     query_updated = prompt.backspace();
                 }
                 Key::Char(ch) => {
-                    prompt.add(ch.clone());
+                    prompt.add(ch);
                     query_updated = true;
                 }
 

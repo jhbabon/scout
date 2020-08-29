@@ -27,7 +27,7 @@ test = false
 [dependencies]
 futures = { version = "0.3", features = ["async-await"] }
 async-std = { version = "1.6", features = ["unstable"] }
-smol = "0.1"
+smol = "0.4"
 futures-timer = "3.0.2"
 termios = "0.3.1"
 termion = "1.5.3"
@@ -41,4 +41,4 @@ ansi_term = "0.12.1"
 lazy_static = "1.4.0"
 toml = "0.5.5"
 unicode-segmentation = "1.6.0"
-dirs = "2.0.2"
+dirs = "3.0.1"
