@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased] 2020-08-29
+## [Unreleased]
+
+## [v2.2.0] 2020-08-29
 ### Changed
 - Update dependencies
 - Update `dirs` to `v3`
@@ -13,7 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 - Debounce behavior in the search engine. All characters will trigger a search.
 
-## [v2.0.1] 2020-05-31
+## [v2.1.0] 2020-05-31
 ### Changed
 - Update `async-std` to `v1.6`.
 - Use `smol::block_on` to clean up the screen after the program finishes.
@@ -120,7 +122,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v2.2.0...HEAD
+[v2.2.0]: https://github.com/jhbabon/scout/compare/v2.1.0...v2.2.0
 [v2.1.0]: https://github.com/jhbabon/scout/compare/v2.0.0...v2.1.0
 [v2.0.0]: https://github.com/jhbabon/scout/compare/v1.3.0...v2.0.0
 [v1.3.0]: https://github.com/jhbabon/scout/compare/v1.2.0...v1.3.0
