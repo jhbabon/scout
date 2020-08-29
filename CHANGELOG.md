@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Update `dirs` to `v3`
 - Update `smol` to `0.4`
 
+### Removed
+- Debounce behavior in the search engine. All characters will trigger a search.
+
 ## [v2.0.1] 2020-05-31
 ### Changed
 - Update `async-std` to `v1.6`.
