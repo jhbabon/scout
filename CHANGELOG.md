@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [v2.3.0] 2021-03-13
 ### Changed
 - Update `async-std` from `v1.6.3` to `v1.9.0`
 - Update `futures` from `v0.3.5` to `v0.3.13`
@@ -137,7 +139,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v2.3.0...HEAD
+[v2.3.0]: https://github.com/jhbabon/scout/compare/v2.2.0...v2.3.0
 [v2.2.0]: https://github.com/jhbabon/scout/compare/v2.1.0...v2.2.0
 [v2.1.0]: https://github.com/jhbabon/scout/compare/v2.0.0...v2.1.0
 [v2.0.0]: https://github.com/jhbabon/scout/compare/v1.3.0...v2.0.0
