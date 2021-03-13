@@ -16,10 +16,7 @@ enum Mode {
 
 impl Mode {
     pub fn is_full(&self) -> bool {
-        match self {
-            Mode::Full => true,
-            _ => false,
-        }
+        matches!(self, Mode::Full)
     }
 }
 
