@@ -5,6 +5,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Changed
+- Update `async-std` from `v1.6.3` to `v1.9.0`
+- Update `futures` from `v0.3.5` to `v0.3.13`
+- Update `libc` from `v0.2.76` to `v0.2.88`
+- Update `log` from `v0.4.11` to `v0.4.14`
+- Update `rayon` from `v1.4.0` to `v1.5.0`
+- Update `serde` from `v1.0.115` to `v1.0.124`
+- Update `termion` from `v1.5.5` to `v1.5.6`
+- Update `termios` from `v0.3.2` to `v0.3.3`
+- Update `toml` from `v0.5.6` to `v0.5.8`
+- Update `unicode-segmentation` from `v1.6.0` to `v1.7.1`
+- Update `env_logger` from `v0.7.1` to `v0.8.3`
+
+### Removed
+- `smol` dependency
 
 ## [v2.2.0] 2020-08-29
 ### Changed
