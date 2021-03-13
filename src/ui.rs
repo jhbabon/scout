@@ -10,6 +10,7 @@ use crate::config::Config;
 use crate::state::{State, StateUpdate};
 use async_std::io;
 use async_std::prelude::*;
+use async_std::task;
 use termion::{clear, cursor};
 
 const ALTERNATE_SCREEN: &str = csi!("?1049h");
@@ -147,7 +148,7 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
 
 impl<W: io::Write + Send + Unpin + 'static> Drop for Canvas<W> {
     fn drop(&mut self) {
-        smol::block_on(async {
+        task::block_on(async {
             if let Some(teardown) = self.mode.teardown() {
                 self.write(&teardown)
                     .await

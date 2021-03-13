@@ -13,7 +13,7 @@ use crate::state::State;
 use crate::ui::Canvas;
 use async_std::io;
 use async_std::prelude::*;
-use async_std::sync::Receiver;
+use async_std::channel::Receiver;
 use std::time::Instant;
 
 /// Run the screen's task

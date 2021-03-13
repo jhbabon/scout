@@ -38,7 +38,7 @@ use crate::events::Event;
 use crate::person_input;
 use crate::screen;
 use async_std::io;
-use async_std::sync::{self, Receiver, Sender};
+use async_std::channel::{self, Receiver, Sender};
 use async_std::task;
 
 const CHANNEL_SIZE: usize = 1024;
@@ -75,5 +75,5 @@ where
 }
 
 fn channel() -> (Sender<Event>, Receiver<Event>) {
-    sync::channel::<Event>(CHANNEL_SIZE)
+    channel::bounded::<Event>(CHANNEL_SIZE)
 }

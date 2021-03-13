@@ -7,7 +7,7 @@ use crate::common::{Result, Text, TextBuilder};
 use crate::events::Event;
 use crate::fuzzy;
 use async_std::prelude::*;
-use async_std::sync::{Receiver, Sender};
+use async_std::channel::{Receiver, Sender};
 use std::collections::VecDeque;
 
 const BUFFER_LIMIT: usize = 5000;
@@ -47,7 +47,7 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
                     let matches = fuzzy::search(&query, &pool);
                     output_sender
                         .send(Event::Flush((matches, pool.len())))
-                        .await;
+                        .await?;
                 }
             }
             Event::EOF => {
@@ -55,7 +55,7 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
                 let matches = fuzzy::search(&query, &pool);
                 output_sender
                     .send(Event::Flush((matches, pool.len())))
-                    .await;
+                    .await?;
             }
             Event::Search(prompt) => {
                 query = prompt.as_string();
@@ -64,7 +64,7 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
                 let matches = fuzzy::search(&query, &pool);
                 let results = Event::SearchDone((matches, pool.len(), prompt.timestamp()));
 
-                output_sender.send(results).await;
+                output_sender.send(results).await?;
             }
             Event::Done | Event::Exit => break,
             _ => (),

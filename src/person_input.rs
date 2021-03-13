@@ -31,7 +31,7 @@ use crate::config::Config;
 use crate::events::Event;
 use async_std::io;
 use async_std::prelude::*;
-use async_std::sync::Sender;
+use async_std::channel::Sender;
 use termion::event::Key;
 use termion::input::TermRead;
 
@@ -54,8 +54,8 @@ where
     if let Some(q) = &config.initial_query {
         prompt = q.into();
 
-        engine_sender.send(Event::Search(prompt.clone())).await;
-        screen_sender.send(Event::Search(prompt.clone())).await;
+        engine_sender.send(Event::Search(prompt.clone())).await?;
+        screen_sender.send(Event::Search(prompt.clone())).await?;
     } else {
         prompt = Default::default();
     }
@@ -70,21 +70,21 @@ where
         for key in keys {
             match key {
                 Key::Ctrl('p') | Key::Up => {
-                    screen_sender.send(Event::Up).await;
+                    screen_sender.send(Event::Up).await?;
                 }
                 Key::Ctrl('n') | Key::Down => {
-                    screen_sender.send(Event::Down).await;
+                    screen_sender.send(Event::Down).await?;
                 }
 
                 Key::Esc | Key::Alt('\u{0}') => {
-                    screen_sender.send(Event::Exit).await;
-                    engine_sender.send(Event::Exit).await;
+                    screen_sender.send(Event::Exit).await?;
+                    engine_sender.send(Event::Exit).await?;
 
                     break 'event;
                 }
                 Key::Char('\n') => {
-                    screen_sender.send(Event::Done).await;
-                    engine_sender.send(Event::Done).await;
+                    screen_sender.send(Event::Done).await?;
+                    engine_sender.send(Event::Done).await?;
 
                     break 'event;
                 }
@@ -103,19 +103,19 @@ where
 
                 Key::Left => {
                     prompt.left();
-                    screen_sender.send(Event::Search(prompt.clone())).await;
+                    screen_sender.send(Event::Search(prompt.clone())).await?;
                 }
                 Key::Right => {
                     prompt.right();
-                    screen_sender.send(Event::Search(prompt.clone())).await;
+                    screen_sender.send(Event::Search(prompt.clone())).await?;
                 }
                 Key::Ctrl('a') => {
                     prompt.cursor_at_start();
-                    screen_sender.send(Event::Search(prompt.clone())).await;
+                    screen_sender.send(Event::Search(prompt.clone())).await?;
                 }
                 Key::Ctrl('e') => {
                     prompt.cursor_at_end();
-                    screen_sender.send(Event::Search(prompt.clone())).await;
+                    screen_sender.send(Event::Search(prompt.clone())).await?;
                 }
 
                 _ => (),
@@ -123,8 +123,8 @@ where
         }
 
         if query_updated {
-            screen_sender.send(Event::Search(prompt.clone())).await;
-            engine_sender.send(Event::Search(prompt.clone())).await;
+            screen_sender.send(Event::Search(prompt.clone())).await?;
+            engine_sender.send(Event::Search(prompt.clone())).await?;
         }
     }
 

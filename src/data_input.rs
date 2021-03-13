@@ -5,7 +5,7 @@ use crate::events::Event;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::stream;
-use async_std::sync::Sender;
+use async_std::channel::Sender;
 
 /// Run the data input task
 pub async fn task<R>(stdin: R, sender: Sender<Event>) -> Result<()>
@@ -23,7 +23,7 @@ where
         .chain(stream::once(Event::EOF));
 
     while let Some(event) = stream.next().await {
-        sender.send(event).await;
+        sender.send(event).await?;
     }
 
     log::trace!("input data done");
