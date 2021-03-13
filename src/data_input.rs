@@ -2,10 +2,10 @@
 
 use crate::common::Result;
 use crate::events::Event;
+use async_std::channel::Sender;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::stream;
-use async_std::channel::Sender;
 
 /// Run the data input task
 pub async fn task<R>(stdin: R, sender: Sender<Event>) -> Result<()>

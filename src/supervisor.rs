@@ -37,8 +37,8 @@ use crate::engine;
 use crate::events::Event;
 use crate::person_input;
 use crate::screen;
-use async_std::io;
 use async_std::channel::{self, Receiver, Sender};
+use async_std::io;
 use async_std::task;
 
 const CHANNEL_SIZE: usize = 1024;

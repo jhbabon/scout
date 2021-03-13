@@ -29,9 +29,9 @@
 use crate::common::{Prompt, Result};
 use crate::config::Config;
 use crate::events::Event;
+use async_std::channel::Sender;
 use async_std::io;
 use async_std::prelude::*;
-use async_std::channel::Sender;
 use termion::event::Key;
 use termion::input::TermRead;
 

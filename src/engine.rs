@@ -6,8 +6,8 @@
 use crate::common::{Result, Text, TextBuilder};
 use crate::events::Event;
 use crate::fuzzy;
-use async_std::prelude::*;
 use async_std::channel::{Receiver, Sender};
+use async_std::prelude::*;
 use std::collections::VecDeque;
 
 const BUFFER_LIMIT: usize = 5000;
