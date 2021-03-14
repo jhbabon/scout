@@ -10,7 +10,7 @@ use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::events::Event;
 use crate::state::State;
-use crate::ui::Canvas;
+use crate::ui::Painter;
 use async_std::channel::Receiver;
 use async_std::io;
 use async_std::prelude::*;
@@ -28,7 +28,7 @@ where
     let mut selection = None;
 
     let mut state = State::new();
-    let mut canvas = Canvas::new(&config, outbound).await?;
+    let mut canvas = Painter::new(&config, outbound).await?;
 
     canvas.render(&state).await?;
 

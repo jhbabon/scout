@@ -8,13 +8,188 @@ use components::*;
 use crate::common::Result;
 use crate::config::Config;
 use crate::state::{State, StateUpdate};
+use ansi_term::Style;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::task;
+use std::fmt;
 use termion::{clear, cursor};
 
 const ALTERNATE_SCREEN: &str = csi!("?1049h");
 const MAIN_SCREEN: &str = csi!("?1049l");
+
+#[derive(Debug, Clone)]
+enum Tile {
+    Empty,
+    Filled { grapheme: char, style: Style },
+}
+
+#[derive(Debug)]
+struct Canvas {
+    tiles: Vec<Vec<Tile>>,
+    width: usize,
+    height: usize,
+    cursor: (usize, usize),
+}
+
+impl Canvas {
+    fn new(width: usize, height: usize) -> Self {
+        let tiles = vec![vec![Tile::Empty; width]; height];
+        let cursor = (0, 0);
+        Self {
+            tiles,
+            width,
+            height,
+            cursor,
+        }
+    }
+
+    pub fn width(self) -> usize {
+        return self.width;
+    }
+
+    pub fn height(self) -> usize {
+        return self.height;
+    }
+
+    pub fn draw_at(
+        &mut self,
+        row: usize,
+        column: usize,
+        grapheme: char,
+        style: Style,
+    ) -> Result<()> {
+        // TODO: verify coordinates
+        let tile = Tile::Filled { grapheme, style };
+        self.tiles[row][column] = tile;
+
+        Ok(())
+    }
+
+    pub fn empty_at(&mut self, row: usize, column: usize) -> Result<()> {
+        // TODO: verify coordinates
+        let tile = Tile::Empty;
+        self.tiles[row][column] = tile;
+
+        Ok(())
+    }
+
+    pub fn cursor_at(&mut self, row: usize, column: usize) -> Result<()> {
+        // TODO: Error if out of boundaries
+        self.cursor = (row, column);
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for Canvas {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", cursor::Hide)?;
+
+        for (row, columns) in self.tiles.iter().enumerate() {
+            for (column, tile) in columns.iter().enumerate() {
+                match tile {
+                    Tile::Filled { grapheme, style } => {
+                        write!(
+                            f,
+                            "{}{}",
+                            cursor::Goto(column as u16 + 1, row as u16 + 1),
+                            style.paint(String::from(*grapheme))
+                        )?;
+                    }
+                    _ => {
+                        write!(
+                            f,
+                            "{}{}",
+                            cursor::Goto(column as u16 + 1, row as u16 + 1),
+                            Style::default().paint(" ")
+                        )?;
+                    }
+                }
+            }
+        }
+
+        let (r, c) = self.cursor;
+        write!(
+            f,
+            "{}{}",
+            cursor::Goto(c as u16 + 1, r as u16 + 1),
+            cursor::Show
+        )?;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct Brush<'c> {
+    canvas: &'c mut Canvas,
+    current_row: usize,
+    current_column: usize,
+}
+
+impl<'c> Brush<'c> {
+    fn new(canvas: &'c mut Canvas) -> Self {
+        Self {
+            canvas,
+            current_row: 0,
+            current_column: 0,
+        }
+    }
+
+    pub fn draw(&mut self, grapheme: char, style: Style) -> Result<()> {
+        // TODO: verify position
+        self.canvas
+            .draw_at(self.current_row, self.current_column, grapheme, style)?;
+
+        // TODO: Move to next row if out of boundaries
+        self.current_column += 1;
+
+        Ok(())
+    }
+
+    pub fn empty(&mut self) -> Result<()> {
+        // TODO: verify position
+        self.canvas
+            .empty_at(self.current_row, self.current_column)?;
+
+        // TODO: Move to next row if out of boundaries
+        self.current_column += 1;
+
+        Ok(())
+    }
+
+    pub fn set_cursor(&mut self) -> Result<()> {
+        self.canvas.cursor_at(self.current_row, self.current_column)
+    }
+
+    pub fn up(&mut self) -> Result<()> {
+        // TODO: error if out of boundaries (?)
+        if self.current_row > 0 {
+            self.current_row -= 1;
+        }
+        Ok(())
+    }
+
+    pub fn down(&mut self) -> Result<()> {
+        // TODO: error if out of boundaries (?)
+        self.current_row += 1;
+        Ok(())
+    }
+
+    pub fn go_to(&mut self, row: usize, column: usize) -> Result<()> {
+        // TODO: verify coordinates
+        self.current_row = row;
+        self.current_column = column;
+
+        Ok(())
+    }
+
+    pub fn reset(&mut self) {
+        self.current_row = 0;
+        self.current_column = 0;
+    }
+}
 
 #[derive(Debug, Clone)]
 enum Mode {
@@ -60,9 +235,20 @@ impl Mode {
     }
 }
 
+impl From<&Config> for Mode {
+    fn from(config: &Config) -> Self {
+        if config.screen.is_full() {
+            Self::Full
+        } else {
+            let height = config.screen.height();
+            Self::Inline(height)
+        }
+    }
+}
+
 /// This type represents the screen and how to draw each UI element on it
 #[derive(Debug)]
-pub struct Canvas<W: io::Write + Send + Unpin + 'static> {
+pub struct Painter<W: io::Write + Send + Unpin + 'static> {
     mode: Mode,
     writer: W,
     prompt: PromptComponent,
@@ -70,15 +256,9 @@ pub struct Canvas<W: io::Write + Send + Unpin + 'static> {
     list: ListComponent,
 }
 
-impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
+impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
     pub async fn new(config: &Config, writer: W) -> Result<Self> {
-        let mode = if config.screen.is_full() {
-            Mode::Full
-        } else {
-            let height = config.screen.height();
-            Mode::Inline(height)
-        };
-
+        let mode = config.into();
         let prompt = config.into();
         let gauge = config.into();
         let list = config.into();
@@ -105,33 +285,49 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
     pub async fn render(&mut self, state: &State) -> Result<()> {
         match state.last_update() {
             StateUpdate::Query => {
-                let display = format!("{}\r{}", clear::CurrentLine, self.prompt.render(state));
+                let mut canvas = Canvas::new(50, 50);
+                let mut brush = Brush::new(&mut canvas);
+                // TODO: Maybe use `std::io::Cursor` instead of String?
+                // let display = format!("{}\r{}", clear::CurrentLine, self.prompt.render(state));
+                let mut count = 0;
+                for ch in state.query().chars() {
+                    brush.draw(ch, Style::default())?;
+                    brush.set_cursor()?;
+                    count += 1;
+                }
+                if count < 50 {
+                    let left = 50 - count;
+                    for _ in std::iter::repeat(()).take(left) {
+                        brush.empty()?;
+                    }
+                }
+                let display = format!("{}", canvas);
                 self.write(&display).await?;
             }
             _ => {
-                self.list.scroll(state);
+                // self.list.scroll(state);
 
-                let list_renderer = self.list.render(state);
-                let list_len = list_renderer.len();
+                // let list_renderer = self.list.render(state);
+                // let list_len = list_renderer.len();
 
-                // Only add a new line if we are going to print items
-                let gauge_separator = if list_len == 0 { "" } else { "\n" };
+                // // Only add a new line if we are going to print items
+                // let gauge_separator = if list_len == 0 { "" } else { "\n" };
 
-                let display = format!(
-                    "{down}{clrl}\r{gauge}{gauge_sep}{list}{clra}{up}{clrl}\r{prompt}",
-                    clrl = clear::CurrentLine,
-                    down = cursor::Down(1),
-                    gauge = self.gauge.render(state),
-                    gauge_sep = gauge_separator,
-                    list = list_renderer,
-                    clra = clear::AfterCursor,
-                    // By going up and printing as the last element the prompt we ensure the cursor
-                    // is in the right position
-                    up = cursor::Up((list_len + 1) as u16),
-                    prompt = self.prompt.render(state),
-                );
+                // let display = format!(
+                //     "{down}{clrl}\r{gauge}{gauge_sep}{list}{clra}{up}{clrl}\r{prompt}",
+                //     clrl = clear::CurrentLine,
+                //     down = cursor::Down(1),
+                //     gauge = self.gauge.render(state),
+                //     gauge_sep = gauge_separator,
+                //     list = list_renderer,
+                //     clra = clear::AfterCursor,
+                //     // By going up and printing as the last element the prompt we ensure the cursor
+                //     // is in the right position
+                //     up = cursor::Up((list_len + 1) as u16),
+                //     prompt = self.prompt.render(state),
+                // );
 
-                self.write(&display).await?;
+                // self.write(&display).await?;
             }
         }
 
@@ -146,7 +342,7 @@ impl<W: io::Write + Send + Unpin + 'static> Canvas<W> {
     }
 }
 
-impl<W: io::Write + Send + Unpin + 'static> Drop for Canvas<W> {
+impl<W: io::Write + Send + Unpin + 'static> Drop for Painter<W> {
     fn drop(&mut self) {
         task::block_on(async {
             if let Some(teardown) = self.mode.teardown() {
