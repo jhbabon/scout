@@ -1,21 +1,35 @@
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate clap;
 
 use async_std::io;
 use async_std::os::unix::io::AsRawFd;
 use async_std::task;
-use clap::{App, Arg};
 use std::convert::TryFrom;
 use std::process;
 
 use scout::common::{Result, Text};
-use scout::config::Configurator;
+use scout::config::{Args, Configurator};
 use scout::ptty::{self, PTTY};
 use scout::supervisor;
 
-const EXTENDED_HELP: &str = r#"SUPPORTED KEYS:
+const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
+const HELP: &str = r#"Your friendly fuzzy finder
+
+USAGE:
+    scout [FLAGS] [OPTIONS]
+
+FLAGS:
+    -f, --full-screen    Show scout in full screen (default)
+    -h, --help           Prints help information
+    -i, --inline         Show scout under the current line
+    -V, --version        Prints version information
+
+OPTIONS:
+    -c, --config <FILE>     Uses a custom config file
+    -l, --lines <LINES>     Number of lines to display in inline mode, including prompt
+    -s, --search <QUERY>    Start searching with the given query
+
+SUPPORTED KEYS:
     - Enter to select the current highlighted match and print it to STDOUT
     - ^u to clear the prompt
     - ^n or Down arrow key to select the next match
@@ -43,54 +57,20 @@ fn main() {
 
     trace!("starting main program");
 
-    let args = App::new("scout")
-        .version(crate_version!())
-        .about("Your friendly fuzzy finder")
-        .after_help(EXTENDED_HELP)
-        .arg(
-            Arg::with_name("full-screen")
-                .short("f")
-                .long("full-screen")
-                .help("Show scout in full screen (default)"),
-        )
-        .arg(
-            Arg::with_name("inline")
-                .short("i")
-                .long("inline")
-                .help("Show scout under the current line"),
-        )
-        .arg(
-            Arg::with_name("lines")
-                .short("l")
-                .long("lines")
-                .value_name("LINES")
-                .takes_value(true)
-                .help("Number of lines to display in inline mode, including prompt"),
-        )
-        .arg(
-            Arg::with_name("search")
-                .short("s")
-                .long("search")
-                .value_name("QUERY")
-                .takes_value(true)
-                .help("Start searching with the given query"),
-        )
-        .arg(
-            Arg::with_name("config")
-                .short("c")
-                .long("config")
-                .value_name("FILE")
-                .takes_value(true)
-                .help("Uses a custom config file"),
-        )
-        .get_matches();
+    let args = match parse_args() {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("Error: {}.", e);
+            process::exit(3);
+        }
+    };
 
     trace!("got args: {:?}", args);
 
     let res: Result<Option<Text>> = task::block_on(async {
         let mut configurator = Configurator::new();
 
-        match args.value_of("config") {
+        match &args.config {
             Some(config_path) => configurator.from_file(config_path),
             None => configurator.from_default_file(),
         };
@@ -138,4 +118,38 @@ fn main() {
             process::exit(1);
         }
     }
+}
+
+fn parse_args() -> Result<Args> {
+    let mut pargs = pico_args::Arguments::from_env();
+
+    if pargs.contains(["-h", "--help"]) {
+        println!("scout {}", VERSION.unwrap_or("unknown"));
+        println!("{}", HELP);
+        process::exit(0);
+    }
+
+    if pargs.contains(["-v", "--version"]) {
+        println!("scout {}", VERSION.unwrap_or("unknown"));
+        process::exit(0);
+    }
+
+    let args = Args {
+        // flags
+        full_screen: pargs.contains(["-f", "--full-screen"]),
+        inline: pargs.contains(["-i", "--inline"]),
+
+        // options
+        lines: pargs.opt_value_from_str(["-l", "--lines"])?,
+        config: pargs.opt_value_from_str(["-c", "--config"])?,
+        search: pargs.opt_value_from_str(["-s", "--search"])?,
+    };
+
+    let remaining = pargs.finish();
+    if !remaining.is_empty() {
+        eprintln!("Error: unknown command line arguments: {:?}.", remaining);
+        process::exit(2);
+    }
+
+    Ok(args)
 }

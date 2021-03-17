@@ -9,12 +9,23 @@ use crate::common::Result;
 use async_std::fs;
 use async_std::os::unix::io::AsRawFd;
 use async_std::sync::Arc;
-use clap::{value_t, ArgMatches};
 use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
 
 use crate::terminal_size::terminal_size;
+
+#[derive(Debug, Default)]
+pub struct Args {
+    // flags
+    pub full_screen: bool,
+    pub inline: bool,
+
+    // options
+    pub lines: Option<usize>,
+    pub config: Option<String>,
+    pub search: Option<String>,
+}
 
 /// Arc version of Cfg
 pub type Config = Arc<Cfg>;
@@ -96,19 +107,19 @@ impl Configurator {
     }
 
     /// Set configuration options from command line args
-    pub fn from_args<'a>(&'a mut self, args: &ArgMatches) -> &'a mut Self {
+    pub fn from_args<'a>(&'a mut self, args: &Args) -> &'a mut Self {
         if let Some(mut config) = self.config.take() {
-            if args.is_present("full-screen") {
+            if args.full_screen {
                 config.screen.full_mode();
             }
 
-            if args.is_present("inline") {
+            if args.inline {
                 config.screen.inline_mode();
-                let given = value_t!(args, "lines", usize).unwrap_or(6);
+                let given = args.lines.unwrap_or(6);
                 config.screen.set_height(given);
             }
 
-            if let Some(q) = args.value_of("search") {
+            if let Some(q) = &args.search {
                 let q = q.to_string();
                 config.initial_query = Some(q);
             }
