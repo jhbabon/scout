@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Changed
+- Reduced binary size from 3.1M to 2.1M (aprox)
+- Replace `clap` with `pico_args`
 
 ## [v2.3.0] 2021-03-13
 ### Changed
