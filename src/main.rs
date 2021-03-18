@@ -120,7 +120,7 @@ fn main() {
     }
 }
 
-fn parse_args() -> Result<Args> {
+fn parse_args() -> std::result::Result<Args, pico_args::Error> {
     let mut pargs = pico_args::Arguments::from_env();
 
     if pargs.contains(["-h", "--help"]) {
@@ -134,15 +134,30 @@ fn parse_args() -> Result<Args> {
         process::exit(0);
     }
 
+    let search = match pargs.opt_value_from_str(["-s", "--search"]) {
+        Ok(s) => s,
+        Err(e) => {
+            match e {
+                // Allow empty string arguments like --search="" or -s ""
+                pico_args::Error::OptionWithoutAValue(_) => {
+                    // Ensure the flags -s= and --search= are removed from the list
+                    let _ = pargs.contains(["-s=", "--search="]);
+                    None
+                }
+                _ => return Err(e),
+            }
+        }
+    };
+
     let args = Args {
         // flags
         full_screen: pargs.contains(["-f", "--full-screen"]),
         inline: pargs.contains(["-i", "--inline"]),
 
         // options
+        search,
         lines: pargs.opt_value_from_str(["-l", "--lines"])?,
         config: pargs.opt_value_from_str(["-c", "--config"])?,
-        search: pargs.opt_value_from_str(["-s", "--search"])?,
     };
 
     let remaining = pargs.finish();
