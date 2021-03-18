@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [v2.4.1] 2021-03-18
 ### Fixed
 - Allow empty strings when using the search command line option. For example `--search=""` or `-s=""`
 
@@ -146,7 +148,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v2.4.1...HEAD
+[v2.4.1]: https://github.com/jhbabon/scout/compare/v2.4.0...v2.4.1
 [v2.4.0]: https://github.com/jhbabon/scout/compare/v2.3.0...v2.4.0
 [v2.3.0]: https://github.com/jhbabon/scout/compare/v2.2.0...v2.3.0
 [v2.2.0]: https://github.com/jhbabon/scout/compare/v2.1.0...v2.2.0
