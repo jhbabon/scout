@@ -9,9 +9,11 @@
 //! This two steps process for printing is done so we only need the state information while
 //! printing and not before, which means we can use references to get the data and prevent any
 //! extra data allocation from the state to the components.
+use crate::common::Result;
 use crate::config::Config;
 use crate::fuzzy::Candidate;
 use crate::state::State;
+use crate::ui::painting::Brush;
 use ansi_term::{ANSIString, ANSIStrings, Style};
 use std::convert::From;
 use std::fmt;
@@ -51,6 +53,23 @@ pub struct PromptComponent {
     pub symbol: String,
     pub style: Style,
     pub style_symbol: Style,
+}
+
+impl PromptComponent {
+    pub fn draw(&self, state: &State, brush: &mut Brush) -> Result<()> {
+        // TODO: Let's try not to transform chars into strings all the time
+        // TODO: Maybe use generic fmt::Display in Tile::Filled?
+        for ch in self.symbol.chars() {
+            brush.draw(ch.into(), self.style_symbol)?;
+        }
+        for ch in state.query().chars() {
+            brush.draw(ch.into(), self.style)?;
+        }
+        brush.set_cursor()?;
+        brush.clear_until_eol()?;
+
+        Ok(())
+    }
 }
 
 impl<'r> Render<'r, PromptRenderer<'r>> for PromptComponent {
@@ -102,6 +121,34 @@ pub struct GaugeComponent {
     pub prefix: String,
     pub style: Style,
 }
+
+impl GaugeComponent {
+    pub fn draw(&self, state: &State, brush: &mut Brush) -> Result<()> {
+        let current = format!("{}", state.matches().len());
+        let total = format!("{}", state.pool_len());
+
+        for ch in self.prefix.chars() {
+            brush.draw(ch.into(), self.style)?;
+        }
+
+        for ch in current.chars() {
+            brush.draw(ch.into(), self.style)?;
+        }
+
+        for ch in self.symbol.chars() {
+            brush.draw(ch.into(), self.style)?;
+        }
+
+        for ch in total.chars() {
+            brush.draw(ch.into(), self.style)?;
+        }
+
+        brush.clear_until_eol()?;
+
+        Ok(())
+    }
+}
+
 
 impl From<&Config> for GaugeComponent {
     fn from(config: &Config) -> Self {

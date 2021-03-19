@@ -28,9 +28,9 @@ where
     let mut selection = None;
 
     let mut state = State::new();
-    let mut canvas = Painter::new(&config, outbound).await?;
+    let mut painter = Painter::new(&config, outbound).await?;
 
-    canvas.render(&state).await?;
+    painter.render(&state).await?;
 
     while let Some(event) = recv.next().await {
         render = false;
@@ -88,7 +88,7 @@ where
         };
 
         if render {
-            canvas.render(&state).await?;
+            painter.render(&state).await?;
         }
     }
 

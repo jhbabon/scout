@@ -2,194 +2,21 @@
 
 mod components;
 mod convert;
+mod painting;
 
 use components::*;
+use painting::*;
 
 use crate::common::Result;
 use crate::config::Config;
 use crate::state::{State, StateUpdate};
-use ansi_term::Style;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::task;
-use std::fmt;
 use termion::{clear, cursor};
 
 const ALTERNATE_SCREEN: &str = csi!("?1049h");
 const MAIN_SCREEN: &str = csi!("?1049l");
-
-#[derive(Debug, Clone)]
-enum Tile {
-    Empty,
-    Filled { grapheme: char, style: Style },
-}
-
-#[derive(Debug)]
-struct Canvas {
-    tiles: Vec<Vec<Tile>>,
-    width: usize,
-    height: usize,
-    cursor: (usize, usize),
-}
-
-impl Canvas {
-    fn new(width: usize, height: usize) -> Self {
-        let tiles = vec![vec![Tile::Empty; width]; height];
-        let cursor = (0, 0);
-        Self {
-            tiles,
-            width,
-            height,
-            cursor,
-        }
-    }
-
-    pub fn width(self) -> usize {
-        return self.width;
-    }
-
-    pub fn height(self) -> usize {
-        return self.height;
-    }
-
-    pub fn draw_at(
-        &mut self,
-        row: usize,
-        column: usize,
-        grapheme: char,
-        style: Style,
-    ) -> Result<()> {
-        // TODO: verify coordinates
-        let tile = Tile::Filled { grapheme, style };
-        self.tiles[row][column] = tile;
-
-        Ok(())
-    }
-
-    pub fn empty_at(&mut self, row: usize, column: usize) -> Result<()> {
-        // TODO: verify coordinates
-        let tile = Tile::Empty;
-        self.tiles[row][column] = tile;
-
-        Ok(())
-    }
-
-    pub fn cursor_at(&mut self, row: usize, column: usize) -> Result<()> {
-        // TODO: Error if out of boundaries
-        self.cursor = (row, column);
-
-        Ok(())
-    }
-}
-
-impl fmt::Display for Canvas {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", cursor::Hide)?;
-
-        for (row, columns) in self.tiles.iter().enumerate() {
-            for (column, tile) in columns.iter().enumerate() {
-                match tile {
-                    Tile::Filled { grapheme, style } => {
-                        write!(
-                            f,
-                            "{}{}",
-                            cursor::Goto(column as u16 + 1, row as u16 + 1),
-                            style.paint(String::from(*grapheme))
-                        )?;
-                    }
-                    _ => {
-                        write!(
-                            f,
-                            "{}{}",
-                            cursor::Goto(column as u16 + 1, row as u16 + 1),
-                            Style::default().paint(" ")
-                        )?;
-                    }
-                }
-            }
-        }
-
-        let (r, c) = self.cursor;
-        write!(
-            f,
-            "{}{}",
-            cursor::Goto(c as u16 + 1, r as u16 + 1),
-            cursor::Show
-        )?;
-
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-struct Brush<'c> {
-    canvas: &'c mut Canvas,
-    current_row: usize,
-    current_column: usize,
-}
-
-impl<'c> Brush<'c> {
-    fn new(canvas: &'c mut Canvas) -> Self {
-        Self {
-            canvas,
-            current_row: 0,
-            current_column: 0,
-        }
-    }
-
-    pub fn draw(&mut self, grapheme: char, style: Style) -> Result<()> {
-        // TODO: verify position
-        self.canvas
-            .draw_at(self.current_row, self.current_column, grapheme, style)?;
-
-        // TODO: Move to next row if out of boundaries
-        self.current_column += 1;
-
-        Ok(())
-    }
-
-    pub fn empty(&mut self) -> Result<()> {
-        // TODO: verify position
-        self.canvas
-            .empty_at(self.current_row, self.current_column)?;
-
-        // TODO: Move to next row if out of boundaries
-        self.current_column += 1;
-
-        Ok(())
-    }
-
-    pub fn set_cursor(&mut self) -> Result<()> {
-        self.canvas.cursor_at(self.current_row, self.current_column)
-    }
-
-    pub fn up(&mut self) -> Result<()> {
-        // TODO: error if out of boundaries (?)
-        if self.current_row > 0 {
-            self.current_row -= 1;
-        }
-        Ok(())
-    }
-
-    pub fn down(&mut self) -> Result<()> {
-        // TODO: error if out of boundaries (?)
-        self.current_row += 1;
-        Ok(())
-    }
-
-    pub fn go_to(&mut self, row: usize, column: usize) -> Result<()> {
-        // TODO: verify coordinates
-        self.current_row = row;
-        self.current_column = column;
-
-        Ok(())
-    }
-
-    pub fn reset(&mut self) {
-        self.current_row = 0;
-        self.current_column = 0;
-    }
-}
 
 #[derive(Debug, Clone)]
 enum Mode {
@@ -251,6 +78,7 @@ impl From<&Config> for Mode {
 pub struct Painter<W: io::Write + Send + Unpin + 'static> {
     mode: Mode,
     writer: W,
+    canvas: Canvas,
     prompt: PromptComponent,
     gauge: GaugeComponent,
     list: ListComponent,
@@ -259,12 +87,14 @@ pub struct Painter<W: io::Write + Send + Unpin + 'static> {
 impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
     pub async fn new(config: &Config, writer: W) -> Result<Self> {
         let mode = config.into();
+        let canvas = config.into();
         let prompt = config.into();
         let gauge = config.into();
         let list = config.into();
 
         let mut canvas = Self {
             mode,
+            canvas,
             writer,
             prompt,
             gauge,
@@ -283,28 +113,24 @@ impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
     /// Printing to the terminal is quite expensive, so the whole system tries to reduce
     /// the number of prints and allocates a few Strings as possible
     pub async fn render(&mut self, state: &State) -> Result<()> {
+        let mut brush = Brush::new(&mut self.canvas);
         match state.last_update() {
             StateUpdate::Query => {
-                let mut canvas = Canvas::new(50, 50);
-                let mut brush = Brush::new(&mut canvas);
+                self.prompt.draw(state, &mut brush)?;
+                let display = format!("{}", self.canvas);
                 // TODO: Maybe use `std::io::Cursor` instead of String?
                 // let display = format!("{}\r{}", clear::CurrentLine, self.prompt.render(state));
-                let mut count = 0;
-                for ch in state.query().chars() {
-                    brush.draw(ch, Style::default())?;
-                    brush.set_cursor()?;
-                    count += 1;
-                }
-                if count < 50 {
-                    let left = 50 - count;
-                    for _ in std::iter::repeat(()).take(left) {
-                        brush.empty()?;
-                    }
-                }
-                let display = format!("{}", canvas);
                 self.write(&display).await?;
             }
+            // TODO: more fine grained status
             _ => {
+                self.prompt.draw(state, &mut brush)?;
+                brush.new_line()?;
+                self.gauge.draw(state, &mut brush)?;
+
+                let display = format!("{}", self.canvas);
+                self.write(&display).await?;
+
                 // self.list.scroll(state);
 
                 // let list_renderer = self.list.render(state);
