@@ -118,45 +118,91 @@ impl fmt::Display for Canvas {
 }
 
 #[derive(Debug)]
+pub struct Projector {
+    origin: (usize, usize),
+    width: usize,
+    height: usize,
+}
+
+impl Projector {
+    pub fn new(origin: (usize, usize), width: usize, height: usize) -> Self {
+        Self {
+            origin,
+            width,
+            height,
+        }
+    }
+
+    pub fn project_row(&self, relative: usize) -> usize {
+        let (_, y) = self.origin;
+
+        relative + y
+    }
+
+    pub fn project_column(&self, relative: usize) -> usize {
+        let (x, _) = self.origin;
+
+        relative + x
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+}
+
+#[derive(Debug)]
 pub struct Brush<'c> {
     canvas: &'c mut Canvas,
+    projector: &'c Projector,
     current_row: usize,
     current_column: usize,
 }
 
 impl<'c> Brush<'c> {
-    pub fn new(canvas: &'c mut Canvas) -> Self {
+    pub fn new(canvas: &'c mut Canvas, projector: &'c Projector) -> Self {
         Self {
             canvas,
+            projector,
             current_row: 0,
             current_column: 0,
         }
     }
 
     pub fn width(&self) -> usize {
-        self.canvas.width()
+        self.projector.width()
     }
 
     pub fn height(&self) -> usize {
-        self.canvas.height()
+        self.projector.height()
     }
 
-    pub fn draw(&mut self, grapheme: String, style: Style) -> Result<()> {
-        // TODO: verify position
-        self.canvas
-            .draw_at(self.current_row, self.current_column, grapheme, style)?;
+    fn projected_row(&self) -> usize {
+        self.projector.project_row(self.current_row)
+    }
 
-        // TODO: Move to next row if out of boundaries
-        self.right()?;
-
-        Ok(())
+    fn projected_column(&self) -> usize {
+        self.projector.project_column(self.current_column)
     }
 
     pub fn clear_until_eol(&mut self) -> Result<()> {
         while self.current_column < self.last_column() {
             self.empty()?;
-        };
+        }
         self.empty()?; // clear last column
+
+        Ok(())
+    }
+
+    pub fn clear_until_eof(&mut self) -> Result<()> {
+        while self.current_row < self.last_row() {
+            self.clear_until_eol()?;
+            self.new_line()?;
+        }
+        self.clear_until_eol()?; // clear last row
 
         Ok(())
     }
@@ -169,10 +215,25 @@ impl<'c> Brush<'c> {
         self.width() - 1
     }
 
+    pub fn draw(&mut self, grapheme: String, style: Style) -> Result<()> {
+        // TODO: verify position
+        self.canvas.draw_at(
+            self.projected_row(),
+            self.projected_column(),
+            grapheme,
+            style,
+        )?;
+
+        // TODO: Move to next row if out of boundaries
+        self.right()?;
+
+        Ok(())
+    }
+
     pub fn empty(&mut self) -> Result<()> {
         // TODO: verify position
         self.canvas
-            .empty_at(self.current_row, self.current_column)?;
+            .empty_at(self.projected_row(), self.projected_column())?;
 
         // TODO: Move to next row if out of boundaries
         self.right()?;
@@ -181,7 +242,8 @@ impl<'c> Brush<'c> {
     }
 
     pub fn set_cursor(&mut self) -> Result<()> {
-        self.canvas.cursor_at(self.current_row, self.current_column)
+        self.canvas
+            .cursor_at(self.projected_row(), self.projected_column())
     }
 
     pub fn left(&mut self) -> Result<()> {

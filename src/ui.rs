@@ -1,5 +1,13 @@
 //! User Interface rendering logic and components
 
+// FIXME: The new render system based on a matrix doesn't work on inline mode. It uses absolute
+// coordinates and in inline mode these are relative to the position where the command was invoked
+//
+// In order to get the inline coordinates the program has to print the sequence "\x1B[6n" to the current
+// pttyout and wait to read the bytes printed to pttyin
+// see https://gitlab.redox-os.org/redox-os/termion/-/blob/master/src/cursor.rs#L139-183
+
+
 mod components;
 mod convert;
 mod painting;
@@ -113,10 +121,9 @@ impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
     /// Printing to the terminal is quite expensive, so the whole system tries to reduce
     /// the number of prints and allocates a few Strings as possible
     pub async fn render(&mut self, state: &State) -> Result<()> {
-        let mut brush = Brush::new(&mut self.canvas);
         match state.last_update() {
             StateUpdate::Query => {
-                self.prompt.draw(state, &mut brush)?;
+                self.prompt.render(state, &mut self.canvas)?;
                 let display = format!("{}", self.canvas);
                 // TODO: Maybe use `std::io::Cursor` instead of String?
                 // let display = format!("{}\r{}", clear::CurrentLine, self.prompt.render(state));
@@ -124,9 +131,12 @@ impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
             }
             // TODO: more fine grained status
             _ => {
-                self.prompt.draw(state, &mut brush)?;
-                brush.new_line()?;
-                self.gauge.draw(state, &mut brush)?;
+                self.prompt.render(state, &mut self.canvas)?;
+                self.gauge.render(state, &mut self.canvas)?;
+
+                // TODO: Move scroll inside #draw
+                self.list.scroll(state);
+                self.list.render(state, &mut self.canvas)?;
 
                 let display = format!("{}", self.canvas);
                 self.write(&display).await?;

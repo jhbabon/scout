@@ -1,62 +1,25 @@
 //! UI Component definitions
-//!
-//! A Component is basically a type that has all the styling and basic information to print to the
-//! screen correctly, but it doesn't have the actual data to print, just how it should look.
-//! It will then delegate the actual printing to a Renderer, a type that given
-//! the component styling information and the current `State` will know how to print to the screen.
-//! A Renderer only needs to implement the `fmt::Display` trait.
-//!
-//! This two steps process for printing is done so we only need the state information while
-//! printing and not before, which means we can use references to get the data and prevent any
-//! extra data allocation from the state to the components.
 use crate::common::Result;
 use crate::config::Config;
 use crate::fuzzy::Candidate;
 use crate::state::State;
-use crate::ui::painting::Brush;
+use crate::ui::painting::{Brush, Canvas, Projector};
 use ansi_term::{ANSIString, ANSIStrings, Style};
 use std::convert::From;
 use std::fmt;
 use termion::{clear, cursor};
-
-pub trait Render<'r, R>
-where
-    R: fmt::Display + 'r,
-{
-    fn render(&'r self, state: &'r State) -> R;
-}
-
-#[derive(Debug)]
-pub struct PromptRenderer<'r> {
-    prompt: &'r PromptComponent,
-    state: &'r State,
-}
-
-impl<'r> fmt::Display for PromptRenderer<'r> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let strings: Vec<ANSIString<'_>> = vec![
-            self.prompt.style_symbol.paint(&self.prompt.symbol),
-            self.prompt.style.paint(self.state.query()),
-        ];
-        let left_moves = self.state.cursor_until_end() as u16;
-
-        if left_moves == 0 {
-            write!(f, "{}", ANSIStrings(&strings))
-        } else {
-            write!(f, "{}{}", ANSIStrings(&strings), cursor::Left(left_moves))
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct PromptComponent {
     pub symbol: String,
     pub style: Style,
     pub style_symbol: Style,
+    projector: Projector,
 }
 
 impl PromptComponent {
-    pub fn draw(&self, state: &State, brush: &mut Brush) -> Result<()> {
+    pub fn render(&self, state: &State, canvas: &mut Canvas) -> Result<()> {
+        let mut brush = Brush::new(canvas, &self.projector);
         // TODO: Let's try not to transform chars into strings all the time
         // TODO: Maybe use generic fmt::Display in Tile::Filled?
         for ch in self.symbol.chars() {
@@ -72,46 +35,16 @@ impl PromptComponent {
     }
 }
 
-impl<'r> Render<'r, PromptRenderer<'r>> for PromptComponent {
-    fn render(&'r self, state: &'r State) -> PromptRenderer<'r> {
-        PromptRenderer {
-            prompt: self,
-            state,
-        }
-    }
-}
-
 impl From<&Config> for PromptComponent {
     fn from(config: &Config) -> Self {
+        // FIXME: The coordinates don't work on inline mode
+        let projector = Projector::new((0, 0), config.screen.width(), 1);
         Self {
             symbol: config.prompt.symbol(),
             style: config.prompt.style().into(),
             style_symbol: config.prompt.style_symbol().into(),
+            projector,
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct GaugeRenderer<'r> {
-    gauge: &'r GaugeComponent,
-    state: &'r State,
-}
-
-impl<'r> fmt::Display for GaugeRenderer<'r> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let current = self.state.matches().len();
-        let total = self.state.pool_len();
-
-        write!(
-            f,
-            "{}{}{}{}{}{}",
-            self.gauge.style.prefix(),
-            self.gauge.prefix,
-            current,
-            self.gauge.symbol,
-            total,
-            self.gauge.style.suffix()
-        )
     }
 }
 
@@ -120,10 +53,12 @@ pub struct GaugeComponent {
     pub symbol: String,
     pub prefix: String,
     pub style: Style,
+    projector: Projector,
 }
 
 impl GaugeComponent {
-    pub fn draw(&self, state: &State, brush: &mut Brush) -> Result<()> {
+    pub fn render(&self, state: &State, canvas: &mut Canvas) -> Result<()> {
+        let mut brush = Brush::new(canvas, &self.projector);
         let current = format!("{}", state.matches().len());
         let total = format!("{}", state.pool_len());
 
@@ -149,20 +84,15 @@ impl GaugeComponent {
     }
 }
 
-
 impl From<&Config> for GaugeComponent {
     fn from(config: &Config) -> Self {
+        let projector = Projector::new((0, 1), config.screen.width(), 1);
         Self {
             style: config.gauge.style().into(),
             symbol: config.gauge.symbol(),
             prefix: config.gauge.prefix(),
+            projector,
         }
-    }
-}
-
-impl<'r> Render<'r, GaugeRenderer<'r>> for GaugeComponent {
-    fn render(&'r self, state: &'r State) -> GaugeRenderer<'r> {
-        GaugeRenderer { gauge: self, state }
     }
 }
 
@@ -194,104 +124,62 @@ impl ItemStyles {
 }
 
 #[derive(Debug)]
-pub struct ListRenderer<'r> {
-    list: &'r ListComponent,
-    state: &'r State,
-}
-
-impl<'r> ListRenderer<'r> {
-    pub fn len(&'r self) -> usize {
-        let len;
-        let lines = self.list.height - 2;
-        let matches_len = self.state.matches().len();
-
-        if matches_len >= self.list.offset {
-            len = matches_len - self.list.offset;
-        } else {
-            len = self.list.offset - matches_len;
-        }
-
-        if len >= lines {
-            lines
-        } else {
-            len
-        }
-    }
-}
-
-impl<'r> fmt::Display for ListRenderer<'r> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let lines = self.list.height - 2;
-
-        let mut items = self
-            .state
-            .matches()
-            .iter()
-            .enumerate()
-            .skip(self.list.offset)
-            .take(lines)
-            .peekable();
-
-        while let Some((idx, candidate)) = items.next() {
-            let eol = if items.peek().is_none() { "" } else { "\n" };
-
-            let styles = if idx == self.state.selection_idx() {
-                &self.list.selection_styles
-            } else {
-                &self.list.candidate_styles
-            };
-
-            render_item(f, candidate, styles, eol)?
-        }
-
-        Ok(())
-    }
-}
-
-fn render_item(
-    f: &mut fmt::Formatter<'_>,
-    candidate: &Candidate,
-    styles: &ItemStyles,
-    eol: &str,
-) -> fmt::Result {
-    let symbol = &styles.symbol;
-    let style = &styles.style;
-    let style_match = &styles.style_match;
-    let style_symbol = &styles.style_symbol;
-
-    let mut strings: Vec<ANSIString<'_>> = vec![style_symbol.paint(symbol)];
-    let mut painted: Vec<ANSIString<'_>> = candidate
-        .iter()
-        .enumerate()
-        .take(styles.width - symbol.len())
-        .map(|(index, grapheme)| {
-            if candidate.matches.contains(&index) {
-                style_match.paint(grapheme)
-            } else {
-                style.paint(grapheme)
-            }
-        })
-        .collect();
-
-    strings.append(&mut painted);
-
-    // ANSIStrings already takes care of reducing the number of escape
-    // sequences that will be printed to the terminal
-    write!(f, "{}{}{}", clear::CurrentLine, ANSIStrings(&strings), eol)
-}
-
-#[derive(Debug)]
 pub struct ListComponent {
     pub height: usize,
     pub offset: usize,
     pub candidate_styles: ItemStyles,
     pub selection_styles: ItemStyles,
+    projector: Projector,
 }
 
 impl ListComponent {
-    pub fn scroll(&mut self, state: &State) {
-        let len = self.height - 2;
+    // TODO: Render Trait
+    pub fn render(&self, state: &State, canvas: &mut Canvas) -> Result<()> {
+        let mut brush = Brush::new(canvas, &self.projector);
+        let lines = self.projector.height();
 
+        let mut items = state
+            .matches()
+            .iter()
+            .enumerate()
+            .skip(self.offset)
+            .take(lines)
+            .peekable();
+
+        while let Some((idx, candidate)) = items.next() {
+            let styles = if idx == state.selection_idx() {
+                &self.selection_styles
+            } else {
+                &self.candidate_styles
+            };
+
+            for ch in styles.symbol.chars() {
+                brush.draw(ch.into(), styles.style_symbol)?;
+            }
+
+            for (index, grapheme) in candidate
+                .iter()
+                .enumerate()
+                .take(self.projector.width() - styles.symbol.len())
+            {
+                if candidate.matches.contains(&index) {
+                    brush.draw(grapheme.into(), styles.style_match)?;
+                } else {
+                    brush.draw(grapheme.into(), styles.style)?;
+                }
+            }
+
+            brush.clear_until_eol()?;
+            brush.new_line()?;
+        }
+
+        brush.clear_until_eof()?;
+
+        Ok(())
+    }
+
+    pub fn scroll(&mut self, state: &State) {
+        let len = self.projector.height();
         let selection = state.selection_idx();
 
         let top_position = self.offset;
@@ -328,17 +216,13 @@ impl From<&Config> for ListComponent {
             config.selection.style_symbol().into(),
         );
 
+        let projector = Projector::new((0, 2), width, height - 2);
         Self {
             height,
             offset,
             candidate_styles,
             selection_styles,
+            projector,
         }
-    }
-}
-
-impl<'r> Render<'r, ListRenderer<'r>> for ListComponent {
-    fn render(&'r self, state: &'r State) -> ListRenderer<'r> {
-        ListRenderer { list: self, state }
     }
 }
