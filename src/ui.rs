@@ -100,7 +100,7 @@ impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
         let gauge = config.into();
         let list = config.into();
 
-        let mut canvas = Self {
+        let mut painter = Self {
             mode,
             canvas,
             writer,
@@ -109,11 +109,11 @@ impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
             list,
         };
 
-        if let Some(setup) = canvas.mode.setup() {
-            canvas.write(&setup).await?;
+        if let Some(setup) = painter.mode.setup() {
+            painter.write(&setup).await?;
         }
 
-        Ok(canvas)
+        Ok(painter)
     }
 
     /// Update the UI with the given State
@@ -121,16 +121,12 @@ impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
     /// Printing to the terminal is quite expensive, so the whole system tries to reduce
     /// the number of prints and allocates a few Strings as possible
     pub async fn render(&mut self, state: &State) -> Result<()> {
+        log::debug!("{:?}", state.last_update());
         match state.last_update() {
-            StateUpdate::Query => {
-                self.prompt.render(state, &mut self.canvas)?;
-                let display = format!("{}", self.canvas);
-                // TODO: Maybe use `std::io::Cursor` instead of String?
-                // let display = format!("{}\r{}", clear::CurrentLine, self.prompt.render(state));
-                self.write(&display).await?;
-            }
-            // TODO: more fine grained status
-            _ => {
+            StateUpdate::Init => {
+                // clean the screen
+                self.write_canvas().await?;
+
                 self.prompt.render(state, &mut self.canvas)?;
                 self.gauge.render(state, &mut self.canvas)?;
 
@@ -138,34 +134,35 @@ impl<W: io::Write + Send + Unpin + 'static> Painter<W> {
                 self.list.scroll(state);
                 self.list.render(state, &mut self.canvas)?;
 
-                let display = format!("{}", self.canvas);
-                self.write(&display).await?;
+                self.write_canvas().await?;
+            }
+            StateUpdate::Query => {
+                self.prompt.render(state, &mut self.canvas)?;
+                // TODO: Maybe use `std::io::Cursor` instead of String?
+                // let display = format!("{}\r{}", clear::CurrentLine, self.prompt.render(state));
+                self.write_canvas().await?;
+            }
+            // TODO: more fine grained status
+            _ => {
+                // self.prompt.render(state, &mut self.canvas)?;
+                self.gauge.render(state, &mut self.canvas)?;
 
-                // self.list.scroll(state);
+                // TODO: Move scroll inside #draw
+                self.list.scroll(state);
+                self.list.render(state, &mut self.canvas)?;
 
-                // let list_renderer = self.list.render(state);
-                // let list_len = list_renderer.len();
-
-                // // Only add a new line if we are going to print items
-                // let gauge_separator = if list_len == 0 { "" } else { "\n" };
-
-                // let display = format!(
-                //     "{down}{clrl}\r{gauge}{gauge_sep}{list}{clra}{up}{clrl}\r{prompt}",
-                //     clrl = clear::CurrentLine,
-                //     down = cursor::Down(1),
-                //     gauge = self.gauge.render(state),
-                //     gauge_sep = gauge_separator,
-                //     list = list_renderer,
-                //     clra = clear::AfterCursor,
-                //     // By going up and printing as the last element the prompt we ensure the cursor
-                //     // is in the right position
-                //     up = cursor::Up((list_len + 1) as u16),
-                //     prompt = self.prompt.render(state),
-                // );
-
-                // self.write(&display).await?;
+                self.write_canvas().await?;
             }
         }
+
+        Ok(())
+    }
+
+    async fn write_canvas(&mut self) -> Result<()> {
+        let display = format!("{}", self.canvas);
+        self.write(&display).await?;
+
+        self.canvas.flush();
 
         Ok(())
     }

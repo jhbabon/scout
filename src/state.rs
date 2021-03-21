@@ -7,6 +7,8 @@ use crate::fuzzy::Candidate;
 /// Possible updates done to the State
 #[derive(Debug, Clone)]
 pub enum StateUpdate {
+    /// Initial
+    Init,
     /// The query has changed
     Query,
     /// Any other update
@@ -15,7 +17,7 @@ pub enum StateUpdate {
 
 impl Default for StateUpdate {
     fn default() -> Self {
-        Self::All
+        Self::Init
     }
 }
 

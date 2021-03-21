@@ -4,7 +4,7 @@ use ansi_term::Style;
 use std::fmt;
 use termion::cursor;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum Tile {
     Empty,
     Filled { grapheme: String, style: Style },
@@ -12,7 +12,8 @@ enum Tile {
 
 #[derive(Debug)]
 pub struct Canvas {
-    tiles: Vec<Tile>,
+    back: Vec<Tile>,
+    front: Vec<Tile>,
     width: usize,
     height: usize,
     cursor: (usize, usize),
@@ -21,10 +22,12 @@ pub struct Canvas {
 impl Canvas {
     pub fn new(width: usize, height: usize) -> Self {
         // Instead fo a matrix lets use a unique vector
-        let tiles = vec![Tile::Empty; width * height];
+        let back = vec![Tile::Empty; width * height];
+        let front = vec![Tile::Empty; width * height];
         let cursor = (0, 0);
         Self {
-            tiles,
+            back,
+            front,
             width,
             height,
             cursor,
@@ -48,7 +51,7 @@ impl Canvas {
     ) -> Result<()> {
         // TODO: verify coordinates
         let tile = Tile::Filled { grapheme, style };
-        self.tiles[row * self.width + column] = tile;
+        self.back[row * self.width + column] = tile;
 
         Ok(())
     }
@@ -56,7 +59,7 @@ impl Canvas {
     pub fn empty_at(&mut self, row: usize, column: usize) -> Result<()> {
         // TODO: verify coordinates
         let tile = Tile::Empty;
-        self.tiles[row * self.width + column] = tile;
+        self.back[row * self.width + column] = tile;
 
         Ok(())
     }
@@ -66,6 +69,10 @@ impl Canvas {
         self.cursor = (row, column);
 
         Ok(())
+    }
+
+    pub fn flush(&mut self) {
+        self.front = self.back.clone();
     }
 }
 
@@ -79,35 +86,53 @@ impl From<&Config> for Canvas {
 }
 
 impl fmt::Display for Canvas {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", cursor::Hide)?;
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}", cursor::Hide)?;
+        let normal = Style::default();
 
-        for (position, tile) in self.tiles.iter().enumerate() {
+        for (position, (b, f)) in self.back.iter().zip(self.front.iter()).enumerate() {
             let column = position % self.width;
             let row = (position - column) / self.width;
-            match tile {
-                Tile::Filled { grapheme, style } => {
-                    write!(
-                        f,
-                        "{}{}",
-                        cursor::Goto(column as u16 + 1, row as u16 + 1),
-                        style.paint(grapheme)
-                    )?;
-                }
-                _ => {
-                    write!(
-                        f,
-                        "{}{}",
-                        cursor::Goto(column as u16 + 1, row as u16 + 1),
-                        Style::default().paint(" ")
-                    )?;
+            if b != f {
+                match b {
+                    // FIXME: This doesn't work well with graphemes that occupy more than one tile,
+                    // like emojis or kanjis
+                    //
+                    // graphemes like "y̆" take one tile but have multiple chars. That is,
+                    // visually they are one, internally they are big
+                    // Something like "公" is one char, but it takes two bytes and it also takes
+                    // two tiles to print
+                    //
+                    // So, there are things that are internally big but in the terminal only take 1
+                    // tile and things that are internally big and take more than one tile. How to
+                    // differentiate between them?
+                    Tile::Filled { grapheme, style } => {
+                        log::debug!("({}, {}) Back {:?} - Front {:?}", column, row, b, f);
+                        log::debug!("Grapheme len {:?}", grapheme.len());
+                        log::debug!("Grapheme chars len {:?}", grapheme.chars());
+                        write!(
+                            formatter,
+                            "{}{}",
+                            cursor::Goto(column as u16 + 1, row as u16 + 1),
+                            style.paint(grapheme)
+                        )?;
+                    }
+                    Tile::Empty => {
+                        log::debug!("({}, {}) Back {:?} - Front {:?}", column, row, b, f);
+                        write!(
+                            formatter,
+                            "{}{}",
+                            cursor::Goto(column as u16 + 1, row as u16 + 1),
+                            normal.paint(" ")
+                        )?;
+                    }
                 }
             }
         }
 
         let (r, c) = self.cursor;
         write!(
-            f,
+            formatter,
             "{}{}",
             cursor::Goto(c as u16 + 1, r as u16 + 1),
             cursor::Show
