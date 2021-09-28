@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v2.5.0] 2021-09-21
+### Changed
+- Update `futures` from `v0.3.13` to `v0.3.17`
+- Update `async-std` from `v1.9.0` to `v1.10.0`
+- Update `dirs` from `v3.0.1` to `v4.0.0`
+- Update `env_logger` from `v0.8.3` to `v0.9.0`
+- Update `libc` from `v0.2.89` to `v0.2.103`
+- Update `pico-args` from `v0.4.0` to `v0.4.2`
+- Update `rayon` from `v1.5.0` to `v1.5.1`
+- Update `serde` from `v1.0.124` to `v1.0.130`
+- Update `unicode-segmentation` from `v1.7.1` to `v1.8.0`
+
 ## [v2.4.1] 2021-03-18
 ### Fixed
 - Allow empty strings when using the search command line option. For example `--search=""` or `-s=""`
@@ -148,7 +160,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v2.4.1...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v2.5.0...HEAD
+[v2.5.0]: https://github.com/jhbabon/scout/compare/v2.4.1...v2.5.0
 [v2.4.1]: https://github.com/jhbabon/scout/compare/v2.4.0...v2.4.1
 [v2.4.0]: https://github.com/jhbabon/scout/compare/v2.3.0...v2.4.0
 [v2.3.0]: https://github.com/jhbabon/scout/compare/v2.2.0...v2.3.0
