@@ -60,7 +60,7 @@ pub fn score_acronyms(query: &Query, subject: &Text) -> Option<AcronymResult> {
             break 'query_loop;
         }
 
-        'subject_loop: while let Some((index, subject_grapheme)) = subject_iter.next() {
+        'subject_loop: for (index, subject_grapheme) in &mut subject_iter {
             progress += 1;
 
             if query_grapheme == subject_grapheme {

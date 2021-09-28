@@ -49,7 +49,7 @@ pub fn is_match(query: &Query, subject: &Text) -> bool {
             break 'query_loop;
         }
 
-        'subject_loop: while let Some(subject_grapheme) = subject_iter.next() {
+        'subject_loop: for subject_grapheme in &mut subject_iter {
             subject_count += 1;
 
             if query_grapheme == subject_grapheme {
