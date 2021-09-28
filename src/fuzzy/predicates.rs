@@ -36,7 +36,7 @@ lazy_static! {
 
 /// Check whether a query is inside a subject or not
 pub fn is_match(query: &Query, subject: &Text) -> bool {
-    let query_iter = query.lowercase_iter().filter(|g| !is_optional(&g));
+    let query_iter = query.lowercase_iter().filter(|g| !is_optional(g));
     let mut subject_iter = subject.lowercase_iter();
 
     let mut query_count = 0;

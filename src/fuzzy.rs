@@ -44,7 +44,7 @@ pub fn search<'pool>(
         let query: Query = q.into();
         matches = pool
             .par_iter()
-            .map(|c| compute_match(&query, &c))
+            .map(|c| compute_match(&query, c))
             .filter(|c| c.is_some())
             .map(|c| c.unwrap())
             .collect();

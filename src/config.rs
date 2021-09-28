@@ -67,7 +67,7 @@ impl Configurator {
             let file_path = home.join(".config/scout.toml");
             let file_path = file_path.to_str();
             if let Some(path) = file_path {
-                match self.read_file(&path) {
+                match self.read_file(path) {
                     Ok(contents) => {
                         self.from_toml(&contents);
                     }
