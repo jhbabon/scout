@@ -99,7 +99,9 @@ impl State {
     }
 
     pub fn selection(&self) -> Option<Text> {
-        self.matches.get(self.selection_idx).map(|candidate| candidate.text.clone())
+        self.matches
+            .get(self.selection_idx)
+            .map(|candidate| candidate.text.clone())
     }
 
     fn max_selection(&self) -> usize {
