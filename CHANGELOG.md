@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v2.5.1] 2021-09-21
+### Fixed
+Update crossbeam yanked dependencies:
+- `crossbeam-deque` from `v0.8.0` to `v0.8.1`
+- `crossbeam-epoch` from `v0.9.3` to `v0.9.5`
+- `crossbeam-utils` from `v0.8.3` to `v0.8.5`
+
 ## [v2.5.0] 2021-09-21
 ### Changed
 - Update `futures` from `v0.3.13` to `v0.3.17`
