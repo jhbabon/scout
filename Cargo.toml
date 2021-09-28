@@ -30,18 +30,18 @@ test = false
 
 [dependencies]
 futures = { version = "0.3", features = ["async-await"] }
-async-std = { version = "1.9", features = ["unstable"] }
+async-std = { version = "1.10", features = ["unstable"] }
 futures-timer = "3.0.2"
 termios = "0.3.1"
 termion = "1.5.3"
 log = "0.4.8"
-env_logger = "0.8.3"
-rayon = "1.3.0"
-libc = "0.2.65"
-pico-args = "0.4.0"
-serde = { version = "1.0.101", features = ["derive"] }
+env_logger = "0.9.0"
+rayon = "1.5.1"
+libc = "0.2.103"
+pico-args = "0.4.2"
+serde = { version = "1.0.130", features = ["derive"] }
 ansi_term = "0.12.1"
 lazy_static = "1.4.0"
 toml = "0.5.5"
-unicode-segmentation = "1.6.0"
-dirs = "3.0.1"
+unicode-segmentation = "1.8.0"
+dirs = "4.0.0"
