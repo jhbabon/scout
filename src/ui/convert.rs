@@ -1,5 +1,9 @@
 //! Convert config defined styles into actual ANSI styles
 
+// The structs ansi_term::{Color,Style} belong to an external crate,
+// which means we can't implement, for example, From<ansi_term::Color>
+#![allow(clippy::from_over_into)]
+
 use crate::config::styling;
 use ansi_term::{Color, Style};
 
