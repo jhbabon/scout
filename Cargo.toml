@@ -39,7 +39,7 @@ env_logger = "0.9.0"
 rayon = "1.5.1"
 libc = "0.2.112"
 pico-args = "0.4.2"
-serde = { version = "1.0.131", features = ["derive"] }
+serde = { version = "1.0.132", features = ["derive"] }
 ansi_term = "0.12.1"
 lazy_static = "1.4.0"
 toml = "0.5.5"
