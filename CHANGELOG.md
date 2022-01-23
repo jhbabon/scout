@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v2.6.0] 2022-01-23
+### Changed
+- Update to edition 2021 and set rust-version to 1.58
+- Bump `serde` from 1.0.130 to 1.0.133
+- Bump `futures` from 0.3.17 to 0.3.19
+- Bump `libc` from 0.2.103 to 0.2.113
+
 ## [v2.5.1] 2021-09-21
 ### Fixed
 Update crossbeam yanked dependencies:
@@ -167,7 +174,9 @@ Update crossbeam yanked dependencies:
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v2.6.0...HEAD
+[v2.6.0]: https://github.com/jhbabon/scout/compare/v2.5.1...v2.6.0
+[v2.5.1]: https://github.com/jhbabon/scout/compare/v2.5.0...v2.5.1
 [v2.5.0]: https://github.com/jhbabon/scout/compare/v2.4.1...v2.5.0
 [v2.4.1]: https://github.com/jhbabon/scout/compare/v2.4.0...v2.4.1
 [v2.4.0]: https://github.com/jhbabon/scout/compare/v2.3.0...v2.4.0
