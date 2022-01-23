@@ -8,7 +8,8 @@ repository = "https://github.com/jhbabon/scout"
 readme = "README.md"
 keywords = ["scout", "fuzzy", "fuzzyfinder", "cli", "async"]
 license = "MIT"
-edition = "2018"
+edition = "2021"
+rust-version = "1.58"
 exclude = [
   "media/*",
   ".github/*",
