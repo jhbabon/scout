@@ -44,5 +44,5 @@ serde = { version = "1.0.136", features = ["derive"] }
 ansi_term = "0.12.1"
 lazy_static = "1.4.0"
 toml = "0.5.5"
-unicode-segmentation = "1.8.0"
+unicode-segmentation = "1.9.0"
 dirs = "4.0.0"
