@@ -133,7 +133,7 @@ where
     Ok(())
 }
 
-fn keys(buffer: &mut Vec<u8>, num: usize) -> Vec<Key> {
+fn keys(buffer: &mut [u8], num: usize) -> Vec<Key> {
     let tmp: Vec<u8> = buffer.iter().take(num).copied().collect();
 
     tmp.keys()

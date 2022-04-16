@@ -255,13 +255,9 @@ mod tests {
             // Exact match
             ("core".into(), "0core0app.rb", vec![1, 2, 3, 4]),
             // Exact match, second position is better
-            (
-                "core".into(),
-                "0core0app_core.rb".into(),
-                vec![10, 11, 12, 13],
-            ),
+            ("core".into(), "0core0app_core.rb", vec![10, 11, 12, 13]),
             // Consecutive letters
-            ("core".into(), "controller".into(), vec![0, 1, 4, 8]),
+            ("core".into(), "controller", vec![0, 1, 4, 8]),
         ];
 
         for (query, string, expected) in cases {

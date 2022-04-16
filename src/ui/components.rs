@@ -154,15 +154,14 @@ pub struct ListRenderer<'r> {
 
 impl<'r> ListRenderer<'r> {
     pub fn len(&'r self) -> usize {
-        let len;
         let lines = self.list.height - 2;
         let matches_len = self.state.matches().len();
 
-        if matches_len >= self.list.offset {
-            len = matches_len - self.list.offset;
+        let len = if matches_len >= self.list.offset {
+            matches_len - self.list.offset
         } else {
-            len = self.list.offset - matches_len;
-        }
+            self.list.offset - matches_len
+        };
 
         if len >= lines {
             lines

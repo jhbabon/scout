@@ -121,8 +121,7 @@ pub fn score_acronyms(query: &Query, subject: &Text) -> Option<AcronymResult> {
 pub fn score_exact_match(query: &Query, subject: &Text) -> Option<ExactMatchResult> {
     let (mut position, mut same_case) = sequence_position(query, subject, 0)?;
 
-    let mut is_start;
-    is_start = is_start_of_word(subject, position);
+    let mut is_start = is_start_of_word(subject, position);
 
     if !is_start {
         // try a second sequence to see if is better (word start) than the previous one

@@ -1,14 +1,11 @@
 use scout::common::{Text, TextBuilder};
 use scout::fuzzy::*;
 
-fn as_pool(subjects: &Vec<&str>) -> Vec<Text> {
-    subjects
-        .into_iter()
-        .map(|s| TextBuilder::build(s))
-        .collect()
+fn as_pool(subjects: &[&str]) -> Vec<Text> {
+    subjects.iter().map(|s| TextBuilder::build(s)).collect()
 }
 
-fn perform_search(query: &str, cases: &Vec<&str>) -> Vec<Candidate> {
+fn perform_search(query: &str, cases: &[&str]) -> Vec<Candidate> {
     let pool = as_pool(cases);
 
     search(query, &pool)
@@ -20,7 +17,7 @@ fn assert_candidate(candidate: &Candidate, expected: &str) {
     assert_eq!(actual, expected)
 }
 
-fn assert_best_match(query: &str, cases: &Vec<&str>, expected: &str) {
+fn assert_best_match(query: &str, cases: &[&str], expected: &str) {
     let results = perform_search(query, cases);
 
     assert_candidate(&results[0], expected);
