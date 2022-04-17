@@ -44,38 +44,30 @@ where
                 render = true;
             }
 
-            Event::Flush((matches, len)) => {
+            Event::Flush((matches, len, selection_idx)) => {
                 log::trace!("flushing matches");
 
                 // Flush happens when the pool size
                 // changes or the pool is complete
-                state.set_matches((matches, len));
+                state.set_matches((matches, len, selection_idx));
                 render = true;
             }
 
-            Event::SearchDone((matches, len, timestamp)) => {
+            Event::SearchDone((matches, len, selection_idx, timestamp)) => {
                 // Only if the search timestamp is the same as the last query timestamp
                 // we will update the state. This way we will drop any intermediate search
                 // and reduce the number of renders
                 if timestamp >= last_timestamp {
                     log::trace!("printing new search results");
 
-                    state.set_matches((matches, len));
+                    state.set_matches((matches, len, selection_idx));
                     render = true;
                 }
             }
 
-            Event::Up => {
-                log::trace!("moving selection up");
-
-                state.select_up();
-                render = true;
-            }
-            Event::Down => {
-                log::trace!("moving selection down");
-
-                state.select_down();
-                render = true;
+            Event::Select(selection_idx) => {
+                state.set_selection_idx(selection_idx);
+                render = true
             }
 
             Event::Done => {

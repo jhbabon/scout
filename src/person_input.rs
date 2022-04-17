@@ -70,10 +70,10 @@ where
         for key in keys {
             match key {
                 Key::Ctrl('p') | Key::Up => {
-                    screen_sender.send(Event::Up).await?;
+                    engine_sender.send(Event::Up).await?;
                 }
                 Key::Ctrl('n') | Key::Down => {
-                    screen_sender.send(Event::Down).await?;
+                    engine_sender.send(Event::Down).await?;
                 }
 
                 Key::Esc | Key::Alt('\u{0}') => {

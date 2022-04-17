@@ -53,13 +53,10 @@ impl State {
         }
     }
 
-    pub fn set_matches(&mut self, matches: (Vec<Candidate>, usize)) {
+    pub fn set_matches(&mut self, matches: (Vec<Candidate>, usize, usize)) {
         self.matches = matches.0;
         self.pool_len = matches.1;
-
-        if self.selection_idx >= self.max_selection() {
-            self.selection_idx = self.max_selection();
-        }
+        self.selection_idx = matches.2;
 
         self.last_update = StateUpdate::All;
     }
@@ -75,22 +72,8 @@ impl State {
     pub fn last_update(&self) -> &StateUpdate {
         &self.last_update
     }
-
-    pub fn select_up(&mut self) {
-        if self.selection_idx == 0 {
-            self.selection_idx = self.max_selection();
-        } else {
-            self.selection_idx -= 1;
-        }
-        self.last_update = StateUpdate::All;
-    }
-
-    pub fn select_down(&mut self) {
-        if self.selection_idx == self.max_selection() {
-            self.selection_idx = 0;
-        } else {
-            self.selection_idx += 1;
-        }
+    pub fn set_selection_idx(&mut self, idx: usize) {
+        self.selection_idx = idx;
         self.last_update = StateUpdate::All;
     }
 
@@ -102,15 +85,5 @@ impl State {
         self.matches
             .get(self.selection_idx)
             .map(|candidate| candidate.text.clone())
-    }
-
-    fn max_selection(&self) -> usize {
-        let len = self.matches.len();
-
-        if len == 0 {
-            0
-        } else {
-            len - 1
-        }
     }
 }

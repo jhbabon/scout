@@ -13,6 +13,56 @@ use std::collections::VecDeque;
 const BUFFER_LIMIT: usize = 5000;
 const POOL_LIMIT: usize = 50000;
 
+#[derive(Debug, Default)]
+struct SelectionRef {
+    index: usize,
+    len: usize,
+}
+
+impl SelectionRef {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn up(&mut self) {
+        if self.index == 0 {
+            self.index = self.max();
+        } else {
+            self.index -= 1;
+        }
+    }
+
+    pub fn down(&mut self) {
+        if self.index == self.max() {
+            self.index = 0;
+        } else {
+            self.index += 1;
+        }
+    }
+
+    pub fn adjust(&mut self, len: usize) {
+        self.len = len;
+        if self.index > self.max() {
+            self.index = self.max();
+        }
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    fn max(&self) -> usize {
+        if self.len == 0 {
+            0
+        } else {
+            self.len - 1
+        }
+    }
+}
+
+// TODO: Send a new event, Context (Surround?) with context data of the current selection
+// TODO: OR bundle up the context on the selected candidate
+
 /// Run the search engine task
 pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>) -> Result<()> {
     log::trace!("starting search engine");
@@ -20,6 +70,7 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
     let mut pool: VecDeque<Text> = VecDeque::new();
     let mut count = 0;
     let mut query = String::from("");
+    let mut selection_ref = SelectionRef::new();
 
     while let Some(event) = input_recv.next().await {
         match event {
@@ -45,16 +96,18 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
                 if count > BUFFER_LIMIT {
                     count = 0;
                     let matches = fuzzy::search(&query, &pool);
+                    selection_ref.adjust(matches.len());
                     output_sender
-                        .send(Event::Flush((matches, pool.len())))
+                        .send(Event::Flush((matches, pool.len(), selection_ref.index())))
                         .await?;
                 }
             }
             Event::EOF => {
                 log::trace!("all input data done");
                 let matches = fuzzy::search(&query, &pool);
+                selection_ref.adjust(matches.len());
                 output_sender
-                    .send(Event::Flush((matches, pool.len())))
+                    .send(Event::Flush((matches, pool.len(), selection_ref.index())))
                     .await?;
             }
             Event::Search(prompt) => {
@@ -62,9 +115,29 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
                 log::trace!("performing new search: '{}'", query);
 
                 let matches = fuzzy::search(&query, &pool);
-                let results = Event::SearchDone((matches, pool.len(), prompt.timestamp()));
+                selection_ref.adjust(matches.len());
+                let results = Event::SearchDone((
+                    matches,
+                    pool.len(),
+                    selection_ref.index(),
+                    prompt.timestamp(),
+                ));
 
                 output_sender.send(results).await?;
+            }
+            Event::Up => {
+                log::trace!("moving selection up");
+                selection_ref.up();
+                output_sender
+                    .send(Event::Select(selection_ref.index()))
+                    .await?;
+            }
+            Event::Down => {
+                log::trace!("moving selection down");
+                selection_ref.down();
+                output_sender
+                    .send(Event::Select(selection_ref.index()))
+                    .await?;
             }
             Event::Done | Event::Exit => break,
             _ => (),

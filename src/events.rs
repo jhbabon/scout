@@ -17,6 +17,9 @@ pub enum Event {
     Up,
     /// Move selection down
     Down,
+    /// New selection index
+    Select(usize),
+
     /// Exit the program without selecting anything
     Exit,
     /// Exit with selection
@@ -25,9 +28,9 @@ pub enum Event {
     /// Perform a new search
     Search(Prompt),
     /// Results from a search
-    SearchDone((Vec<Candidate>, usize, Instant)),
+    SearchDone((Vec<Candidate>, usize, usize, Instant)),
     /// Flush the screen with the given list of candidates
-    Flush((Vec<Candidate>, usize)),
+    Flush((Vec<Candidate>, usize, usize)),
 
     /// NO-OP. Used to make some internal streams happy
     Ignore,
