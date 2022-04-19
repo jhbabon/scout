@@ -36,12 +36,31 @@ pub fn search(q: &str, pool: &[Text]) -> Vec<Candidate> {
     let mut matches: Vec<Candidate>;
 
     if q.is_empty() {
-        matches = pool.par_iter().map(|txt| txt.into()).collect();
+        matches = pool
+            .par_iter()
+            .enumerate()
+            .map(|(idx, txt)| {
+                let mut c: Candidate = txt.into();
+                // FIXME: A more idiomatic or better way to set the index?
+                c.set_pool_idx(idx);
+
+                c
+            })
+            .collect();
     } else {
         let query: Query = q.into();
         matches = pool
             .par_iter()
-            .map(|c| compute_match(&query, c))
+            .enumerate()
+            .map(|(idx, c)| {
+                let mut opt = compute_match(&query, c);
+                match opt.as_mut() {
+                    Some(can) => can.set_pool_idx(idx),
+                    None => {}
+                }
+
+                opt
+            })
             .filter(|c| c.is_some())
             .map(|c| c.unwrap())
             .collect();

@@ -64,6 +64,7 @@ pub struct Candidate {
     pub text: Text,
     score: f32,
     pub matches: Vec<usize>,
+    pool_idx: usize,
 }
 
 impl Candidate {
@@ -74,11 +75,23 @@ impl Candidate {
             text,
             score,
             matches,
+            pool_idx: 0,
         }
     }
 
+    /// Get the candidate's score.
     pub fn score(&self) -> f32 {
         self.score
+    }
+
+    /// Get the candidate's pool idx.
+    pub fn pool_idx(&self) -> usize {
+        self.pool_idx
+    }
+
+    /// Set the candidate's pool idx.
+    pub fn set_pool_idx(&mut self, pool_idx: usize) {
+        self.pool_idx = pool_idx;
     }
 }
 
