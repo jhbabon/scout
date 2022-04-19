@@ -32,10 +32,7 @@ const MISS_COEFF: f32 = 0.75;
 /// * If the query is empty it just returns the same pool of candidates
 /// * Otherwise it will try to compute the best match for each candidate
 ///   and then sort them from higher score to lower
-pub fn search<'pool>(
-    q: &str,
-    pool: &'pool impl IntoParallelRefIterator<'pool, Item = &'pool Text>,
-) -> Vec<Candidate> {
+pub fn search(q: &str, pool: &[Text]) -> Vec<Candidate> {
     let mut matches: Vec<Candidate>;
 
     if q.is_empty() {

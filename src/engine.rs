@@ -8,7 +8,6 @@ use crate::events::Event;
 use crate::fuzzy;
 use async_std::channel::{Receiver, Sender};
 use async_std::prelude::*;
-use std::collections::VecDeque;
 
 const BUFFER_LIMIT: usize = 5000;
 const POOL_LIMIT: usize = 50000;
@@ -17,8 +16,10 @@ const POOL_LIMIT: usize = 50000;
 pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>) -> Result<()> {
     log::trace!("starting search engine");
 
-    let mut pool: VecDeque<Text> = VecDeque::new();
-    let mut count = 0;
+    let mut pool: Vec<Text> = Vec::with_capacity(POOL_LIMIT);
+    let mut overflow: Vec<Text> = Vec::with_capacity(BUFFER_LIMIT);
+    let mut pool_count = 0;
+    let mut buffer_count = 0;
     let mut query = String::from("");
 
     while let Some(event) = input_recv.next().await {
@@ -26,24 +27,29 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
             Event::NewLine(s) => {
                 log::trace!("line: {:?}", s);
 
-                // Push the new line into the main pool
-                pool.push_back(TextBuilder::build(&s));
-                count += 1;
+                let text = TextBuilder::build(&s);
+                if pool_count < POOL_LIMIT {
+                    buffer_count += 1;
+                    pool_count += 1;
+                    pool.push(text);
+                } else {
+                    // If we get more elements than the pool limit we save
+                    // them in an overflow vec.
+                    overflow.push(text);
 
-                // The pool might be full (too many lines in memory)
-                // so we drop the first line
-                if pool.len() > POOL_LIMIT {
-                    log::trace!(
-                        "pool limit ({:?}) exceeded, dropping first line",
-                        POOL_LIMIT
-                    );
-                    let _f = pool.pop_front();
+                    if overflow.len() == BUFFER_LIMIT {
+                        // If the overflow vec is full, we can assign
+                        // these elements to the main pool
+                        pool.drain(0..BUFFER_LIMIT);
+                        pool.append(&mut overflow);
+                        buffer_count = BUFFER_LIMIT;
+                    }
                 }
 
                 // We've got enough lines to refresh the search and send it
                 // to the screen
-                if count > BUFFER_LIMIT {
-                    count = 0;
+                if buffer_count >= BUFFER_LIMIT {
+                    buffer_count = 0;
                     let matches = fuzzy::search(&query, &pool);
                     output_sender
                         .send(Event::Flush((matches, pool.len())))
@@ -52,6 +58,10 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
             }
             Event::EOF => {
                 log::trace!("all input data done");
+                if !overflow.is_empty() {
+                    pool.drain(0..overflow.len());
+                    pool.append(&mut overflow);
+                }
                 let matches = fuzzy::search(&query, &pool);
                 output_sender
                     .send(Event::Flush((matches, pool.len())))
