@@ -2,7 +2,7 @@
 //!
 //! All tasks communicate between them using events.
 
-use crate::common::Prompt;
+use crate::common::{Pool, Prompt, Text};
 use crate::fuzzy::Candidate;
 use std::time::Instant;
 
@@ -29,6 +29,9 @@ pub enum Event {
     /// Flush the screen with the given list of candidates
     Flush((Vec<Candidate>, usize)),
 
-    /// NO-OP. Used to make some internal streams happy
-    Ignore,
+    // Surroundings events
+    Pool(Pool<Text>),
+    // TODO: Use an Arc here?
+    Surroundings(Candidate),
+    SurroundingsDone((Vec<Text>, Vec<Text>)),
 }

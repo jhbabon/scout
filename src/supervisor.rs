@@ -37,6 +37,7 @@ use crate::engine;
 use crate::events::Event;
 use crate::person_input;
 use crate::screen;
+use crate::surroundings;
 use async_std::channel::{self, Receiver, Sender};
 use async_std::io;
 use async_std::task;
@@ -51,17 +52,26 @@ where
     W: io::Write + Send + Unpin + 'static,
 {
     // channels
+    // FIXME: too many channels, it's hard to keep track. Maybe a unique set of sender/receiver
+    // that can multiplex?
     let (input_sender, input_recv) = channel();
     let (output_sender, output_recv) = channel();
+    let (intra_sender, intra_recv) = channel();
 
-    let screen_task = task::spawn(screen::task(config.clone(), outbox, output_recv));
+    let screen_task = task::spawn(screen::task(
+        config.clone(),
+        outbox,
+        output_recv,
+        intra_sender.clone(),
+    ));
     let person_task = task::spawn(person_input::task(
         config,
         inbox,
         input_sender.clone(),
         output_sender.clone(),
     ));
-    let engine_task = task::spawn(engine::task(input_recv, output_sender));
+    let surroundings_task = task::spawn(surroundings::task(intra_recv, output_sender.clone()));
+    let engine_task = task::spawn(engine::task(input_recv, output_sender, intra_sender));
     let data_task = task::spawn(data_input::task(stdin, input_sender));
 
     let selection = screen_task.await;
@@ -69,6 +79,7 @@ where
     // Stop all remaining tasks
     drop(data_task);
     drop(person_task);
+    drop(surroundings_task);
     drop(engine_task);
 
     selection

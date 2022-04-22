@@ -11,13 +11,18 @@ use crate::config::Config;
 use crate::events::Event;
 use crate::state::State;
 use crate::ui::Canvas;
-use async_std::channel::Receiver;
+use async_std::channel::{Receiver, Sender};
 use async_std::io;
 use async_std::prelude::*;
 use std::time::Instant;
 
 /// Run the screen's task
-pub async fn task<W>(config: Config, outbound: W, mut recv: Receiver<Event>) -> Result<Option<Text>>
+pub async fn task<W>(
+    config: Config,
+    outbound: W,
+    mut recv: Receiver<Event>,
+    intra_sender: Sender<Event>,
+) -> Result<Option<Text>>
 where
     W: io::Write + Send + Unpin + 'static,
 {
@@ -78,6 +83,12 @@ where
                 render = true;
             }
 
+            Event::SurroundingsDone((before, after)) => {
+                // TODO: Render
+                log::trace!("Got before surroundings {:?}", before);
+                log::trace!("Got after surroundings {:?}", after);
+            }
+
             Event::Done => {
                 selection = state.selection();
                 break;
@@ -88,6 +99,12 @@ where
         };
 
         if render {
+            if let Some(candidate) = state.current() {
+                intra_sender
+                    .send(Event::Surroundings(candidate.clone()))
+                    .await?;
+            }
+
             canvas.render(&state).await?;
         }
     }

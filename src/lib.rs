@@ -15,5 +15,6 @@ pub mod ptty;
 pub mod screen;
 pub mod state;
 pub mod supervisor;
+pub mod surroundings;
 pub mod terminal_size;
 pub mod ui;

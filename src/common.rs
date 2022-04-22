@@ -1,12 +1,22 @@
 //! Set of common types used through the app
 
-use async_std::sync::Arc;
+use async_std::sync::{Arc, RwLock};
 use std::fmt;
 use std::slice::Iter;
 use std::time::Instant;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+// Pool of input text. It is an Arc + RwLock because it is shared among tasks and at least one has
+// to write to it.
+pub type Pool<T> = Arc<RwLock<Vec<T>>>;
+pub struct PoolBuilder;
+impl PoolBuilder {
+    pub fn with_capacity<T>(capacity: usize) -> Pool<T> {
+        Arc::new(RwLock::new(Vec::with_capacity(capacity)))
+    }
+}
 
 /// The Prompt represents the current query, the cursor position in that query and when it was
 /// updated.
