@@ -26,22 +26,17 @@
 //! * `Enter` will select the current candidate
 //! * `Esc` will exit the program without making a selection
 
+use crate::broadcast::{Broadcaster, Task};
 use crate::common::{Prompt, Result};
 use crate::config::Config;
 use crate::events::Event;
-use async_std::channel::Sender;
 use async_std::io;
 use async_std::prelude::*;
 use termion::event::Key;
 use termion::input::TermRead;
 
 /// Run the person's input task
-pub async fn task<R>(
-    config: Config,
-    mut input: R,
-    engine_sender: Sender<Event>,
-    screen_sender: Sender<Event>,
-) -> Result<()>
+pub async fn task<R>(config: Config, mut input: R, sender: Broadcaster) -> Result<()>
 where
     R: io::Read + Unpin + Send + 'static,
 {
@@ -54,8 +49,9 @@ where
     if let Some(q) = &config.initial_query {
         prompt = q.into();
 
-        engine_sender.send(Event::Search(prompt.clone())).await?;
-        screen_sender.send(Event::Search(prompt.clone())).await?;
+        sender
+            .send_many(Event::Search(prompt.clone()), &[Task::Screen, Task::Engine])
+            .await?;
     } else {
         prompt = Default::default();
     }
@@ -70,21 +66,19 @@ where
         for key in keys {
             match key {
                 Key::Ctrl('p') | Key::Up => {
-                    screen_sender.send(Event::Up).await?;
+                    sender.send_to(Event::Up, Task::Screen).await?;
                 }
                 Key::Ctrl('n') | Key::Down => {
-                    screen_sender.send(Event::Down).await?;
+                    sender.send_to(Event::Down, Task::Screen).await?;
                 }
 
                 Key::Esc | Key::Alt('\u{0}') => {
-                    screen_sender.send(Event::Exit).await?;
-                    engine_sender.send(Event::Exit).await?;
+                    sender.send_all(Event::Exit).await?;
 
                     break 'event;
                 }
                 Key::Char('\n') => {
-                    screen_sender.send(Event::Done).await?;
-                    engine_sender.send(Event::Done).await?;
+                    sender.send_all(Event::Done).await?;
 
                     break 'event;
                 }
@@ -103,19 +97,27 @@ where
 
                 Key::Left => {
                     prompt.left();
-                    screen_sender.send(Event::Search(prompt.clone())).await?;
+                    sender
+                        .send_to(Event::Search(prompt.clone()), Task::Screen)
+                        .await?;
                 }
                 Key::Right => {
                     prompt.right();
-                    screen_sender.send(Event::Search(prompt.clone())).await?;
+                    sender
+                        .send_to(Event::Search(prompt.clone()), Task::Screen)
+                        .await?;
                 }
                 Key::Ctrl('a') => {
                     prompt.cursor_at_start();
-                    screen_sender.send(Event::Search(prompt.clone())).await?;
+                    sender
+                        .send_to(Event::Search(prompt.clone()), Task::Screen)
+                        .await?;
                 }
                 Key::Ctrl('e') => {
                     prompt.cursor_at_end();
-                    screen_sender.send(Event::Search(prompt.clone())).await?;
+                    sender
+                        .send_to(Event::Search(prompt.clone()), Task::Screen)
+                        .await?;
                 }
 
                 _ => (),
@@ -123,8 +125,9 @@ where
         }
 
         if query_updated {
-            screen_sender.send(Event::Search(prompt.clone())).await?;
-            engine_sender.send(Event::Search(prompt.clone())).await?;
+            sender
+                .send_many(Event::Search(prompt.clone()), &[Task::Screen, Task::Engine])
+                .await?;
         }
     }
 

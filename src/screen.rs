@@ -6,12 +6,13 @@
 //!
 //! When the program finishes this is the task that will return the final person's selection.
 
+use crate::broadcast::{Broadcaster, Task};
 use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::events::Event;
 use crate::state::State;
 use crate::ui::Canvas;
-use async_std::channel::{Receiver, Sender};
+use async_std::channel::Receiver;
 use async_std::io;
 use async_std::prelude::*;
 use std::time::Instant;
@@ -20,8 +21,8 @@ use std::time::Instant;
 pub async fn task<W>(
     config: Config,
     outbound: W,
-    mut recv: Receiver<Event>,
-    intra_sender: Sender<Event>,
+    sender: Broadcaster,
+    mut receiver: Receiver<Event>,
 ) -> Result<Option<Text>>
 where
     W: io::Write + Send + Unpin + 'static,
@@ -37,7 +38,7 @@ where
 
     canvas.render(&state).await?;
 
-    while let Some(event) = recv.next().await {
+    while let Some(event) = receiver.next().await {
         render = false;
 
         match event {
@@ -100,8 +101,8 @@ where
 
         if render {
             if let Some(candidate) = state.current() {
-                intra_sender
-                    .send(Event::Surroundings(candidate.clone()))
+                sender
+                    .send_to(Event::Surroundings(candidate.clone()), Task::Surroundings)
                     .await?;
             }
 

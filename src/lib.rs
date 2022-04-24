@@ -4,6 +4,7 @@ extern crate lazy_static;
 
 #[macro_use]
 mod macros;
+pub mod broadcast;
 pub mod common;
 pub mod config;
 pub mod data_input;

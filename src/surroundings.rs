@@ -1,15 +1,16 @@
+use crate::broadcast::{Broadcaster, Task};
 use crate::common::{Pool, Result, Text};
 use crate::events::Event;
 
-use async_std::channel::{Receiver, Sender};
+use async_std::channel::Receiver;
 use async_std::prelude::*;
 
 /// This task looks for the surrounding text around a given candidate and returns it, all through
 /// events.
-pub async fn task(mut recv: Receiver<Event>, sender: Sender<Event>) -> Result<()> {
+pub async fn task(sender: Broadcaster, mut receiver: Receiver<Event>) -> Result<()> {
     let mut pool: Option<Pool<Text>> = None;
 
-    while let Some(event) = recv.next().await {
+    while let Some(event) = receiver.next().await {
         match event {
             Event::Pool(pl) => pool = Some(pl),
             Event::Surroundings(candidate) => {
@@ -33,7 +34,7 @@ pub async fn task(mut recv: Receiver<Event>, sender: Sender<Event>) -> Result<()
                     }
 
                     sender
-                        .send(Event::SurroundingsDone((before, after)))
+                        .send_to(Event::SurroundingsDone((before, after)), Task::Screen)
                         .await?;
                 }
             }

@@ -1,3 +1,4 @@
+// FIXME: Update docs with new task
 //! Setup and run the all the tasks that compose the program
 //!
 //! The program runs over four main tasks
@@ -30,15 +31,14 @@
 //! channels also makes the screen more responsive to interactions since it doesn't have to wait
 //! for the engine to finish searching in order to update the prompt, for example.
 
+use crate::broadcast::{self, Task};
 use crate::common::{Result, Text};
 use crate::config::Config;
 use crate::data_input;
 use crate::engine;
-use crate::events::Event;
 use crate::person_input;
 use crate::screen;
 use crate::surroundings;
-use async_std::channel::{self, Receiver, Sender};
 use async_std::io;
 use async_std::task;
 
@@ -51,28 +51,28 @@ where
     I: io::Read + Send + Unpin + 'static,
     W: io::Write + Send + Unpin + 'static,
 {
-    // channels
-    // FIXME: too many channels, it's hard to keep track. Maybe a unique set of sender/receiver
-    // that can multiplex?
-    let (input_sender, input_recv) = channel();
-    let (output_sender, output_recv) = channel();
-    let (intra_sender, intra_recv) = channel();
+    // broadcast channel
+    let (sender, receiver) = broadcast::broadband(
+        CHANNEL_SIZE,
+        &[Task::Screen, Task::Engine, Task::Surroundings],
+    );
 
     let screen_task = task::spawn(screen::task(
         config.clone(),
         outbox,
-        output_recv,
-        intra_sender.clone(),
+        sender.on(&[Task::Surroundings])?,
+        receiver.on(Task::Screen)?,
     ));
-    let person_task = task::spawn(person_input::task(
-        config,
-        inbox,
-        input_sender.clone(),
-        output_sender.clone(),
+    let engine_task = task::spawn(engine::task(
+        sender.on(&[Task::Screen, Task::Surroundings])?,
+        receiver.on(Task::Engine)?,
     ));
-    let surroundings_task = task::spawn(surroundings::task(intra_recv, output_sender.clone()));
-    let engine_task = task::spawn(engine::task(input_recv, output_sender, intra_sender));
-    let data_task = task::spawn(data_input::task(stdin, input_sender));
+    let surroundings_task = task::spawn(surroundings::task(
+        sender.on(&[Task::Screen])?,
+        receiver.on(Task::Surroundings)?,
+    ));
+    let data_task = task::spawn(data_input::task(stdin, sender.on(&[Task::Engine])?));
+    let person_task = task::spawn(person_input::task(config, inbox, sender));
 
     let selection = screen_task.await;
 
@@ -83,8 +83,4 @@ where
     drop(engine_task);
 
     selection
-}
-
-fn channel() -> (Sender<Event>, Receiver<Event>) {
-    channel::bounded::<Event>(CHANNEL_SIZE)
 }

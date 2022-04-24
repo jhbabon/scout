@@ -1,14 +1,14 @@
 //! Read lines from STDIN and signal when the STDIN has been consumed
 
+use crate::broadcast::{Broadcaster, Task};
 use crate::common::Result;
 use crate::events::Event;
-use async_std::channel::Sender;
 use async_std::io;
 use async_std::prelude::*;
 use async_std::stream;
 
 /// Run the data input task
-pub async fn task<R>(stdin: R, sender: Sender<Event>) -> Result<()>
+pub async fn task<R>(stdin: R, sender: Broadcaster) -> Result<()>
 where
     R: io::Read + Unpin + Send + 'static,
 {
@@ -23,7 +23,7 @@ where
         .chain(stream::once(Event::EOF));
 
     while let Some(event) = stream.next().await {
-        sender.send(event).await?;
+        sender.send_to(event, Task::Engine).await?;
     }
 
     log::trace!("input data done");

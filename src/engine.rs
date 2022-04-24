@@ -3,21 +3,18 @@
 //! This task will collect all the input from STDIN and search over them on new queries.
 //! Once a search is done all the results will be sent to the screen.
 
+use crate::broadcast::{Broadcaster, Task};
 use crate::common::{Pool, PoolBuilder, Result, Text, TextBuilder};
 use crate::events::Event;
 use crate::fuzzy;
-use async_std::channel::{Receiver, Sender};
+use async_std::channel::Receiver;
 use async_std::prelude::*;
 
 const BUFFER_LIMIT: usize = 5000;
 const POOL_LIMIT: usize = 50000;
 
 /// Run the search engine task
-pub async fn task(
-    mut input_recv: Receiver<Event>,
-    output_sender: Sender<Event>,
-    intra_sender: Sender<Event>,
-) -> Result<()> {
+pub async fn task(sender: Broadcaster, mut receiver: Receiver<Event>) -> Result<()> {
     log::trace!("starting search engine");
 
     let pool: Pool<Text> = PoolBuilder::with_capacity(POOL_LIMIT);
@@ -26,7 +23,7 @@ pub async fn task(
     let mut buffer_count = 0;
     let mut query = String::from("");
 
-    while let Some(event) = input_recv.next().await {
+    while let Some(event) = receiver.next().await {
         match event {
             Event::NewLine(s) => {
                 log::trace!("line: {:?}", s);
@@ -38,7 +35,9 @@ pub async fn task(
                     pool_count += 1;
                     pl.push(text);
 
-                    intra_sender.send(Event::Pool(pool.clone())).await?;
+                    sender
+                        .send_to(Event::Pool(pool.clone()), Task::Surroundings)
+                        .await?;
                 } else {
                     // If we get more elements than the pool limit we save
                     // them in an overflow vec.
@@ -51,7 +50,9 @@ pub async fn task(
                         pl.append(&mut overflow);
                         buffer_count = BUFFER_LIMIT;
 
-                        intra_sender.send(Event::Pool(pool.clone())).await?;
+                        sender
+                            .send_to(Event::Pool(pool.clone()), Task::Surroundings)
+                            .await?;
                     }
                 }
 
@@ -60,8 +61,8 @@ pub async fn task(
                 if buffer_count >= BUFFER_LIMIT {
                     buffer_count = 0;
                     let matches = fuzzy::search(&query, &pl);
-                    output_sender
-                        .send(Event::Flush((matches, pl.len())))
+                    sender
+                        .send_to(Event::Flush((matches, pl.len())), Task::Screen)
                         .await?;
                 }
             }
@@ -75,11 +76,13 @@ pub async fn task(
 
                 let pl = pool.read().await;
                 let matches = fuzzy::search(&query, &pl);
-                output_sender
-                    .send(Event::Flush((matches, pl.len())))
+                sender
+                    .send_to(Event::Flush((matches, pl.len())), Task::Screen)
                     .await?;
 
-                intra_sender.send(Event::Pool(pool.clone())).await?;
+                sender
+                    .send_to(Event::Pool(pool.clone()), Task::Surroundings)
+                    .await?;
             }
             Event::Search(prompt) => {
                 query = prompt.as_string();
@@ -89,7 +92,7 @@ pub async fn task(
                 let matches = fuzzy::search(&query, &pl);
                 let results = Event::SearchDone((matches, pl.len(), prompt.timestamp()));
 
-                output_sender.send(results).await?;
+                sender.send_to(results, Task::Screen).await?;
             }
             Event::Done | Event::Exit => break,
             _ => (),
