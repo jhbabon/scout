@@ -37,7 +37,7 @@ termios = "0.3.1"
 termion = "1.5.3"
 log = "0.4.17"
 env_logger = "0.9.0"
-rayon = "1.5.2"
+rayon = "1.5.3"
 libc = "0.2.125"
 pico-args = "0.4.2"
 serde = { version = "1.0.137", features = ["derive"] }
