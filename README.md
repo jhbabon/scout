@@ -51,6 +51,14 @@ $ brew tap jhbabon/tap
 $ brew install scout
 ```
 
+### Install via MacPorts (macOS)
+
+On macOS, you can also install `scout` via [MacPorts](https://www.macports.org):
+
+```
+$ sudo port install scout
+```
+
 ### Install from source
 
 Since `scout` is a Rust project, you will need to have Rust installed in your system. Check [`rustup`][rustup] to see how to install Rust. To build `scout` you will need Rust `v1.43` or higher.
