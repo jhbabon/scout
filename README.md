@@ -80,7 +80,7 @@ The main idea behind `scout`, or any other fuzzy finder, is to filter a list of 
 For example, you can try to find a file and `cat` its contents:
 
 ```
-$ find * -type f | scout | cat
+$ find * -type f | scout | xargs -n1 cat
 ```
 
 `scout` has a set of options that allows you to control how it looks. It also supports a set of control sequences and keys to navigate the UI.
