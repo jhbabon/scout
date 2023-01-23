@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [v2.7.0] 2023-01-23
 ### Added
 - New argument, `--pool`, and config option `advanced.pool_size` (or `advanced.pool`).
   This option can change the size of the pool of candidates that are kept in memory.
@@ -190,7 +192,8 @@ Update crossbeam yanked dependencies:
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v2.7.0...HEAD
+[v2.7.0]: https://github.com/jhbabon/scout/compare/v2.6.0...v2.7.0
 [v2.6.0]: https://github.com/jhbabon/scout/compare/v2.5.1...v2.6.0
 [v2.5.1]: https://github.com/jhbabon/scout/compare/v2.5.0...v2.5.1
 [v2.5.0]: https://github.com/jhbabon/scout/compare/v2.4.1...v2.5.0
