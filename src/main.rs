@@ -22,7 +22,7 @@ FLAGS:
     -f, --full-screen    Show scout in full screen (default)
     -h, --help           Prints help information
     -i, --inline         Show scout under the current line
-    -V, --version        Prints version information
+    -v, --version        Prints version information
 
 OPTIONS:
     -c, --config <FILE>     Uses a custom config file

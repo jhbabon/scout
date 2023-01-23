@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - If the setting `screen.lines` is present in the TOML config file, apply it only on inline mode
 - Respect `screen.lines` option from config file when no `--lines` argument is given
+- Ensure `-v` flag is in lowercase in CLI help message
 
 ### Changed
 - Bump `unicode-segmentation` 1.9.0 to 1.10.0
