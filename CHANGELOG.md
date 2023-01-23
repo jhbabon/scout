@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Fixed
+- If the setting `screen.lines` is present in the TOML config file, apply it only on inline mode
+- Respect `screen.lines` option from config file when no `--lines` argument is given
+
+### Changed
+- Bump `unicode-segmentation` 1.9.0 to 1.10.0
+- Bump `futures` from 0.3.21 to 0.3.25
+- Bump `env_logger` from 0.9.0 to 0.10.0
+- Bump `libc` from 0.2.129 to 0.2.139
 
 ## [v2.6.0] 2022-01-23
 ### Changed
