@@ -4,6 +4,7 @@
 //! Once a search is done all the results will be sent to the screen.
 
 use crate::common::{Result, Text, TextBuilder};
+use crate::config::Config;
 use crate::events::Event;
 use crate::fuzzy;
 use async_std::channel::{Receiver, Sender};
@@ -11,12 +12,16 @@ use async_std::prelude::*;
 use std::collections::VecDeque;
 
 const BUFFER_LIMIT: usize = 5000;
-const POOL_LIMIT: usize = 50000;
 
 /// Run the search engine task
-pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>) -> Result<()> {
+pub async fn task(
+    config: Config,
+    mut input_recv: Receiver<Event>,
+    output_sender: Sender<Event>,
+) -> Result<()> {
     log::trace!("starting search engine");
 
+    let pool_size = config.advanced.pool_size();
     let mut pool: VecDeque<Text> = VecDeque::new();
     let mut count = 0;
     let mut query = String::from("");
@@ -32,11 +37,8 @@ pub async fn task(mut input_recv: Receiver<Event>, output_sender: Sender<Event>)
 
                 // The pool might be full (too many lines in memory)
                 // so we drop the first line
-                if pool.len() > POOL_LIMIT {
-                    log::trace!(
-                        "pool limit ({:?}) exceeded, dropping first line",
-                        POOL_LIMIT
-                    );
+                if pool.len() > pool_size {
+                    log::trace!("pool limit ({:?}) exceeded, dropping first line", pool_size);
                     let _f = pool.pop_front();
                 }
 

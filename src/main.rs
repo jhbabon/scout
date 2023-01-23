@@ -28,6 +28,9 @@ OPTIONS:
     -c, --config <FILE>     Uses a custom config file
     -l, --lines <LINES>     Number of lines to display in inline mode, including prompt
     -s, --search <QUERY>    Start searching with the given query
+    -p, --pool <SIZE>       Advanced: size of the pool of candidates to keep in memory.
+                            Default is 50000. Note that increasing this number might
+                            result in the program using too much memory
 
 SUPPORTED KEYS:
     - Enter to select the current highlighted match and print it to STDOUT
@@ -158,6 +161,7 @@ fn parse_args() -> std::result::Result<Args, pico_args::Error> {
         search,
         lines: pargs.opt_value_from_str(["-l", "--lines"])?,
         config: pargs.opt_value_from_str(["-c", "--config"])?,
+        pool: pargs.opt_value_from_str(["-p", "--pool"])?,
     };
 
     let remaining = pargs.finish();

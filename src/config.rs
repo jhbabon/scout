@@ -25,6 +25,7 @@ pub struct Args {
     pub lines: Option<usize>,
     pub config: Option<String>,
     pub search: Option<String>,
+    pub pool: Option<usize>,
 }
 
 /// Arc version of Cfg
@@ -46,6 +47,9 @@ pub struct Cfg {
     pub candidate: CandidateConfig,
     #[serde(default)]
     pub selection: SelectionConfig,
+
+    #[serde(default)]
+    pub advanced: AdvancedConfig,
 }
 
 /// Configuration constructor
@@ -123,6 +127,10 @@ impl Configurator {
             if let Some(q) = &args.search {
                 let q = q.to_string();
                 config.initial_query = Some(q);
+            }
+
+            if let Some(pool) = args.pool {
+                config.advanced.set_pool_size(pool);
             }
 
             self.config = Some(config);

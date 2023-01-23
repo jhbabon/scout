@@ -5,16 +5,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
-### Fixed
-- If the setting `screen.lines` is present in the TOML config file, apply it only on inline mode
-- Respect `screen.lines` option from config file when no `--lines` argument is given
-- Ensure `-v` flag is in lowercase in CLI help message
+### Added
+- New argument, `--pool`, and config option `advanced.pool_size` (or `advanced.pool`).
+  This option can change the size of the pool of candidates that are kept in memory.
+  Increasing this number might result in the program using too much memory.
+  This is an advanced feature and should be used with care.
 
 ### Changed
 - Bump `unicode-segmentation` 1.9.0 to 1.10.0
 - Bump `futures` from 0.3.21 to 0.3.25
 - Bump `env_logger` from 0.9.0 to 0.10.0
 - Bump `libc` from 0.2.129 to 0.2.139
+
+### Fixed
+- If the setting `screen.lines` is present in the TOML config file, apply it only on inline mode
+- Respect `screen.lines` option from config file when no `--lines` argument is given
+- Ensure `-v` flag is in lowercase in CLI help message
 
 ## [v2.6.0] 2022-01-23
 ### Changed

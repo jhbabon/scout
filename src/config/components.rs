@@ -7,6 +7,8 @@ const DEFAULT_HEIGHT: usize = 6;
 const MIN_HEIGHT: usize = 3;
 const MIN_WIDTH: usize = 4;
 
+const DEFAULT_POOL_SIZE: usize = 50000;
+
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 enum Mode {
     #[serde(rename = "full")]
@@ -88,6 +90,23 @@ impl ScreenConfig {
     pub fn set_full_size(&mut self, width: usize, height: usize) {
         self.full_width = width;
         self.full_height = height;
+    }
+}
+
+/// Main advanced set of configuration options
+#[derive(Deserialize, Clone, Debug, Default)]
+pub struct AdvancedConfig {
+    #[serde(default, alias = "pool")]
+    pool_size: Option<usize>,
+}
+
+impl AdvancedConfig {
+    pub fn pool_size(&self) -> usize {
+        self.pool_size.unwrap_or(DEFAULT_POOL_SIZE)
+    }
+
+    pub fn set_pool_size(&mut self, pool_size: usize) {
+        self.pool_size = Some(pool_size)
     }
 }
 
