@@ -115,8 +115,9 @@ impl Configurator {
 
             if args.inline {
                 config.screen.inline_mode();
-                let given = args.lines.unwrap_or(6);
-                config.screen.set_height(given);
+                if let Some(given) = args.lines {
+                    config.screen.set_height(given);
+                }
             }
 
             if let Some(q) = &args.search {

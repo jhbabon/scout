@@ -3,6 +3,7 @@
 use super::styling::{Rule, Style};
 use serde::Deserialize;
 
+const DEFAULT_HEIGHT: usize = 6;
 const MIN_HEIGHT: usize = 3;
 const MIN_WIDTH: usize = 4;
 
@@ -67,21 +68,19 @@ impl ScreenConfig {
     }
 
     pub fn width(&self) -> usize {
-        let mut width = self.full_width;
-
-        if let Some(w) = self.width {
-            width = w;
-        }
+        let width = match self.mode {
+            Mode::Full => self.full_width,
+            Mode::Inline => self.width.unwrap_or(self.full_width),
+        };
 
         MIN_WIDTH.max(width)
     }
 
     pub fn height(&self) -> usize {
-        let mut height = self.full_height;
-
-        if let Some(w) = self.height {
-            height = w;
-        }
+        let height = match self.mode {
+            Mode::Full => self.full_height,
+            Mode::Inline => self.height.unwrap_or(DEFAULT_HEIGHT),
+        };
 
         MIN_HEIGHT.max(height)
     }
