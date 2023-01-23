@@ -136,8 +136,5 @@ where
 fn keys(buffer: &mut [u8], num: usize) -> Vec<Key> {
     let tmp: Vec<u8> = buffer.iter().take(num).copied().collect();
 
-    tmp.keys()
-        .filter(|k| k.is_ok())
-        .map(|k| k.unwrap())
-        .collect()
+    tmp.keys().filter_map(|k| k.ok()).collect()
 }
