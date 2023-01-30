@@ -43,6 +43,6 @@ pico-args = "0.5.0"
 serde = { version = "1.0.152", features = ["derive"] }
 ansi_term = "0.12.1"
 lazy_static = "1.4.0"
-toml = "0.5.9"
+toml = "0.7.0"
 unicode-segmentation = "1.10.0"
 dirs = "4.0.0"
