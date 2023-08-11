@@ -98,7 +98,8 @@ FLAGS:
     -f, --full-screen    Show scout in full screen (default)
     -h, --help           Prints help information
     -i, --inline         Show scout under the current line
-    -V, --version        Prints version information
+    -n, --no-sort        Do not sort the result by score
+    -v, --version        Prints version information
 
 OPTIONS:
     -c, --config <FILE>     Uses a custom config file
@@ -126,7 +127,7 @@ EXAMPLE:
     $ find * -type f | scout --config="./config.toml"
 
     # Select a git branch and check it out with an inline menu
-    $ git branch | cut -c 3- | scout -i | xargs git checkout
+    $ git branch --sort=-committerdate| cut -c 3- | scout -i -n | xargs git checkout
 ```
 
 ### Configuration
@@ -216,7 +217,7 @@ For color setting it really depends on your terminal color capabilities. Most mo
 
 ## Fuzzy matching algorithm
 
-You can learn more about the fuzzy matching algorithm in the `README` in the repository page of the  [`fuzzaldrin-plug`][fuzzaldrin-plus] package. The only missing part from that algorithm is the path scoring bonus.
+You can learn more about the fuzzy matching algorithm in the `README` in the repository page of the  [`fuzzaldrin-plus`][fuzzaldrin-plus] package. The only missing part from that algorithm is the path scoring bonus.
 
 From all the algorithms for fuzzy matching out there this is one of the most complete I found, so I decided to try to port it.
 

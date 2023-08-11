@@ -8,7 +8,7 @@ fn as_pool(subjects: &[&str]) -> Vec<Text> {
 fn perform_search(query: &str, cases: &[&str]) -> Vec<Candidate> {
     let pool = as_pool(cases);
 
-    search(query, &pool)
+    search(query, &pool, false)
 }
 
 fn assert_candidate(candidate: &Candidate, expected: &str) {
