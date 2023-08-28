@@ -20,7 +20,7 @@ pub struct Args {
     // flags
     pub full_screen: bool,
     pub inline: bool,
-    pub no_sort: bool,
+    pub preserve_order: bool,
 
     // options
     pub lines: Option<usize>,
@@ -40,7 +40,7 @@ pub struct Cfg {
     #[serde(default)]
     pub initial_query: Option<String>,
     #[serde(default)]
-    pub no_sort: bool,
+    pub preserve_order: bool,
 
     #[serde(default)]
     pub prompt: PromptConfig,
@@ -127,8 +127,8 @@ impl Configurator {
                 }
             }
 
-            if args.no_sort {
-                config.no_sort = true;
+            if args.preserve_order {
+                config.preserve_order = true;
             }
 
             if let Some(q) = &args.search {

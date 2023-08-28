@@ -22,7 +22,7 @@ FLAGS:
     -f, --full-screen    Show scout in full screen (default)
     -h, --help           Prints help information
     -i, --inline         Show scout under the current line
-    -n, --no-sort        Do not sort the result by score
+    -p, --preserve-order Do not sort the result by score
     -v, --version        Prints version information
 
 OPTIONS:
@@ -157,7 +157,7 @@ fn parse_args() -> std::result::Result<Args, pico_args::Error> {
         // flags
         full_screen: pargs.contains(["-f", "--full-screen"]),
         inline: pargs.contains(["-i", "--inline"]),
-        no_sort: pargs.contains(["-n", "--no-sort"]),
+        preserve_order: pargs.contains(["-p", "--preserve-order"]),
 
         // options
         search,

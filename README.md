@@ -98,7 +98,7 @@ FLAGS:
     -f, --full-screen    Show scout in full screen (default)
     -h, --help           Prints help information
     -i, --inline         Show scout under the current line
-    -n, --no-sort        Do not sort the result by score
+    -p, --preserve-order Do not sort the result by score
     -v, --version        Prints version information
 
 OPTIONS:
