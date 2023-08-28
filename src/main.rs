@@ -54,7 +54,7 @@ EXAMPLES:
     $ find * -type f | scout --config="./config.toml"
 
     # Select a git branch and check it out with an inline menu
-    $ git branch --sort=-committerdate| cut -c 3- | scout -i -n | xargs git checkout"#;
+    $ git branch --sort=-committerdate| cut -c 3- | scout -i -p | xargs git checkout"#;
 
 fn main() {
     env_logger::init();
