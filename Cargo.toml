@@ -1,6 +1,6 @@
 [package]
 name = "scout"
-version = "2.7.0"
+version = "2.8.0"
 authors = ["Juan Hernández <juan.hernandez.babon@gmail.com>"]
 description = "Friendly fuzzy finder for the command line"
 homepage = "https://github.com/jhbabon/scout"

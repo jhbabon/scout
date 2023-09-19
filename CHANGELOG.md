@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v2.8.0] 2023-09-19
+### Added
+- New argument, `-p`, `--preserve-order`. This option keeps the original order of
+  the items in the candidates list, without ranking them by match score.
+
 ## [v2.7.0] 2023-01-23
 ### Added
 - New argument, `--pool`, and config option `advanced.pool_size` (or `advanced.pool`).
@@ -192,7 +197,8 @@ Update crossbeam yanked dependencies:
 - You can move through the list of choices.
 - It is UTF-8 aware.
 
-[Unreleased]: https://github.com/jhbabon/scout/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/jhbabon/scout/compare/v2.8.0...HEAD
+[v2.8.0]: https://github.com/jhbabon/scout/compare/v2.7.0...v2.8.0
 [v2.7.0]: https://github.com/jhbabon/scout/compare/v2.6.0...v2.7.0
 [v2.6.0]: https://github.com/jhbabon/scout/compare/v2.5.1...v2.6.0
 [v2.5.1]: https://github.com/jhbabon/scout/compare/v2.5.0...v2.5.1
