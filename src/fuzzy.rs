@@ -30,11 +30,13 @@ const MISS_COEFF: f32 = 0.75;
 /// Search for candidates that fuzzy-match a query
 ///
 /// * If the query is empty it just returns the same pool of candidates
-/// * Otherwise it will try to compute the best match for each candidate
-///   and then sort them from higher score to lower
+/// * Otherwise it will try to compute the best match for each candidate.
+/// * If `preserve_order` is not set, the candidates will be sorted from higher
+///   score to lower.
 pub fn search<'pool>(
     q: &str,
     pool: &'pool impl IntoParallelRefIterator<'pool, Item = &'pool Text>,
+    preserve_order: bool,
 ) -> Vec<Candidate> {
     let mut matches: Vec<Candidate>;
 
@@ -49,7 +51,9 @@ pub fn search<'pool>(
             .map(|c| c.unwrap())
             .collect();
 
-        matches.par_sort_unstable_by(|a, b| b.cmp(a));
+        if !preserve_order {
+            matches.par_sort_unstable_by(|a, b| b.cmp(a));
+        }
     }
 
     matches

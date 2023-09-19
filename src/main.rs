@@ -22,6 +22,7 @@ FLAGS:
     -f, --full-screen    Show scout in full screen (default)
     -h, --help           Prints help information
     -i, --inline         Show scout under the current line
+    -p, --preserve-order Do not sort the result by score
     -v, --version        Prints version information
 
 OPTIONS:
@@ -53,7 +54,7 @@ EXAMPLES:
     $ find * -type f | scout --config="./config.toml"
 
     # Select a git branch and check it out with an inline menu
-    $ git branch | cut -c 3- | scout -i | xargs git checkout"#;
+    $ git branch --sort=-committerdate| cut -c 3- | scout -i -p | xargs git checkout"#;
 
 fn main() {
     env_logger::init();
@@ -156,6 +157,7 @@ fn parse_args() -> std::result::Result<Args, pico_args::Error> {
         // flags
         full_screen: pargs.contains(["-f", "--full-screen"]),
         inline: pargs.contains(["-i", "--inline"]),
+        preserve_order: pargs.contains(["-p", "--preserve-order"]),
 
         // options
         search,

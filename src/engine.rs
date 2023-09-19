@@ -46,7 +46,7 @@ pub async fn task(
                 // to the screen
                 if count > BUFFER_LIMIT {
                     count = 0;
-                    let matches = fuzzy::search(&query, &pool);
+                    let matches = fuzzy::search(&query, &pool, config.preserve_order);
                     output_sender
                         .send(Event::Flush((matches, pool.len())))
                         .await?;
@@ -54,7 +54,7 @@ pub async fn task(
             }
             Event::EOF => {
                 log::trace!("all input data done");
-                let matches = fuzzy::search(&query, &pool);
+                let matches = fuzzy::search(&query, &pool, config.preserve_order);
                 output_sender
                     .send(Event::Flush((matches, pool.len())))
                     .await?;
@@ -63,7 +63,7 @@ pub async fn task(
                 query = prompt.as_string();
                 log::trace!("performing new search: '{}'", query);
 
-                let matches = fuzzy::search(&query, &pool);
+                let matches = fuzzy::search(&query, &pool, config.preserve_order);
                 let results = Event::SearchDone((matches, pool.len(), prompt.timestamp()));
 
                 output_sender.send(results).await?;
