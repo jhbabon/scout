@@ -121,7 +121,7 @@ EXAMPLE:
     $ find * -type f | scout
 
     # Pass an initial query to start filtering right away
-    $ find * -type f | scout --search=foo
+    $ find * -type f | scout --search foo
 
     # Use a custom config file
     $ find * -type f | scout --config="./config.toml"
